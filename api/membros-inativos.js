@@ -1,9 +1,8 @@
-// O Node.js na Vercel já possui fetch nativo.
 module.exports = async (req, res) => {
   const { Discord_Bot_Token, GUILD_ID, POLICE_ROLE_ID } = process.env;
 
   try {
-    // 1. Busca todos os canais do servidor
+    // 1. Busca canais (Texto: 0, Anúncios: 5, Threads: 11 e 12)
     const channelsRes = await fetch(
       `https://discord.com/api/v10/guilds/${GUILD_ID}/channels`,
       {
@@ -11,9 +10,14 @@ module.exports = async (req, res) => {
       }
     );
     const allChannels = await channelsRes.json();
-    const textChannels = allChannels.filter((c) => c.type === 0);
 
-    // 2. Busca os membros com cargo de polícia
+    // Filtra canais onde mensagens costumam ser enviadas
+    const validChannelTypes = [0, 5, 11, 12];
+    const textChannels = allChannels.filter((c) =>
+      validChannelTypes.includes(c.type)
+    );
+
+    // 2. Busca membros da Polícia
     const membersRes = await fetch(
       `https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`,
       {
@@ -35,37 +39,36 @@ module.exports = async (req, res) => {
       };
     });
 
-    // 3. Varredura Profunda (200 mensagens por canal)
+    // 3. Varredura Otimizada
+    // Processamos os canais em paralelo para ganhar tempo
     await Promise.all(
       textChannels.map(async (channel) => {
         try {
-          // Primeira busca (100 mensagens)
-          let res1 = await fetch(
+          // Buscamos as 100 mais recentes (geralmente cobre "ontem")
+          const msgRes = await fetch(
             `https://discord.com/api/v10/channels/${channel.id}/messages?limit=100`,
             {
               headers: { Authorization: `Bot ${Discord_Bot_Token}` },
             }
           );
-          let msgs = await res1.json();
 
-          if (Array.isArray(msgs) && msgs.length > 0) {
-            processMessages(msgs, activityMap);
-
-            // Se retornou 100, vamos buscar as próximas 100 (totalizando 200)
-            if (msgs.length === 100) {
-              const lastId = msgs[msgs.length - 1].id;
-              let res2 = await fetch(
-                `https://discord.com/api/v10/channels/${channel.id}/messages?limit=100&before=${lastId}`,
-                {
-                  headers: { Authorization: `Bot ${Discord_Bot_Token}` },
+          if (msgRes.status === 200) {
+            const msgs = await msgRes.json();
+            if (Array.isArray(msgs)) {
+              msgs.forEach((msg) => {
+                const uId = msg.author.id;
+                if (activityMap[uId]) {
+                  const ts = new Date(msg.timestamp).getTime();
+                  // Só atualiza se a mensagem encontrada for MAIS NOVA que a já registrada
+                  if (ts > activityMap[uId].lastMsg) {
+                    activityMap[uId].lastMsg = ts;
+                  }
                 }
-              );
-              let msgs2 = await res2.json();
-              if (Array.isArray(msgs2)) processMessages(msgs2, activityMap);
+              });
             }
           }
         } catch (e) {
-          /* Ignora canais sem permissão */
+          // Ignora erros de permissão em canais específicos
         }
       })
     );
@@ -75,15 +78,3 @@ module.exports = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
-// Função auxiliar para processar as mensagens e atualizar o mapa
-function processMessages(msgs, activityMap) {
-  msgs.forEach((msg) => {
-    if (activityMap[msg.author.id]) {
-      const ts = new Date(msg.timestamp).getTime();
-      if (ts > activityMap[msg.author.id].lastMsg) {
-        activityMap[msg.author.id].lastMsg = ts;
-      }
-    }
-  });
-}

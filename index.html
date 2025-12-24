@@ -1,31 +1,3 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Administração - Polícia Civil</title>
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
-  <link rel="shortcut icon" href="Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png" type="image/x-icon">
-  <script>
-    (function () {
-      const sessionStr = localStorage.getItem("pc_session");
-      if (!sessionStr) {
-        window.location.href = "login.html";
-        return;
-      }
-
-      const session = JSON.parse(sessionStr);
-      if (Date.now() > session.expira) {
-        localStorage.removeItem("pc_session");
-        window.location.href = "login.html";
-      }
-    })();
-  </script>
-</head>
-
 <body>
 
   <div class="app-container">
@@ -36,13 +8,17 @@
         <p>Painel de Controle</p>
       </div>
       <nav class="sidebar-nav">
-        <a href="#" class="nav-item active">
+        <a href="#" id="nav-inatividade" class="nav-item active" onclick="abrirInatividade()">
           <i class="fa-solid fa-user-clock"></i>
           <span>Inatividade (7 Dias)</span>
         </a>
         <a href="https://sistema-emissao.vercel.app/" class="nav-item">
           <i class="fa-solid fa-file-signature"></i>
           <span>Porte de Armas</span>
+        </a>
+        <a href="#" id="nav-core" class="nav-item" onclick="abrirMetaCore()">
+          <i class="fa-solid fa-crosshairs"></i>
+          <span>Relatório CORE</span>
         </a>
       </nav>
       <div class="sidebar-footer">
@@ -53,20 +29,22 @@
     <main class="main-content">
       <header class="top-bar">
         <div class="page-title">
-          <h1>SISTEMA DE AUDITORIA DE ATIVIDADE</h1>
-          <span>Controle de Presença em Canais Oficiais</span>
+          <h1 id="titulo-pagina">SISTEMA DE AUDITORIA DE ATIVIDADE</h1>
+          <span id="subtitulo-pagina">Controle de Presença em Canais Oficiais</span>
         </div>
         <div class="header-actions">
-          <button onclick="carregarInatividade()" id="btn-sincronizar" class="btn-gold">
-            <i class="fa-solid fa-rotate"></i> SINCRONIZAR DADOS
-          </button>
-          <button onclick="copiarRelatorioDiscord()" id="btn-copiar" class="btn-outline-gold" style="display: none; margin-left: 10px;">
-            <i class="fa-solid fa-copy"></i> COPIAR RELATÓRIO (DISCORD)
-          </button>
+          <div id="botoes-inatividade">
+            <button onclick="carregarInatividade()" id="btn-sincronizar" class="btn-gold">
+              <i class="fa-solid fa-rotate"></i> SINCRONIZAR DADOS
+            </button>
+            <button onclick="copiarRelatorioDiscord()" id="btn-copiar" class="btn-outline-gold" style="display: none; margin-left: 10px;">
+              <i class="fa-solid fa-copy"></i> COPIAR RELATÓRIO (DISCORD)
+            </button>
+          </div>
         </div>
       </header>
 
-      <div class="content-body">
+      <div class="content-body" id="secao-inatividade">
         <div class="info-alert-gold">
           <div class="alert-icon">
             <i class="fa-solid fa-scale-balanced"></i>
@@ -104,7 +82,7 @@
               <tbody id="corpo-inatividade">
                 <tr>
                   <td colspan="5" style="text-align: center; padding: 40px; color: #888;">
-                    Nenhum dado sincronizado. Clique em "Sincronizar Dados". O Processo de Sincronização pode levar de 1 a 5 minutos.
+                    Nenhum dado sincronizado. Clique em "Sincronizar Dados".
                   </td>
                 </tr>
               </tbody>
@@ -112,20 +90,51 @@
           </div>
         </div>
       </div>
+
+      <section id="secao-meta-core" style="display: none; padding: 20px;">
+        <div class="info-alert-gold">
+          <div class="alert-icon"><i class="fa-solid fa-crosshairs"></i></div>
+          <div class="alert-text">
+            <h3>Metas Semanais CORE</h3>
+            <p>O sistema contabiliza automaticamente ações, relatórios de CGPC e atividades de Ensino dos últimos 7 dias.</p>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h3><i class="fa-solid fa-chart-line"></i> Desempenho Operacional</h3>
+            <button id="btn-sincronizar-core" onclick="carregarMetaCore()" class="btn-gold" style="font-size: 0.8rem;">
+              <i class="fa-solid fa-rotate"></i> ATUALIZAR METAS
+            </button>
+          </div>
+
+          <div id="progress-container-core" style="display: none; padding: 20px;">
+            <div class="progress-bar-bg" style="background: #1a1a1e; height: 8px; border-radius: 4px;">
+              <div id="prog-bar-core" style="background: #d4af37; width: 0%; height: 100%; border-radius: 4px; transition: 0.3s;"></div>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="audit-table">
+              <thead>
+                <tr>
+                  <th>Oficial CORE</th>
+                  <th>Ações (Mín. 4)</th>
+                  <th>CGPC (Mín. 1)</th>
+                  <th>Ensino</th>
+                  <th style="text-align: center;">Status</th>
+                </tr>
+              </thead>
+              <tbody id="corpo-meta-core"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
-  <div id="modal-relatorio" class="modal-pcerj" style="display: none;">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3><i class="fa-solid fa-copy"></i> DIVISOR DE RELATÓRIO</h3>
-        <button onclick="fecharModalRelatorio()" class="btn-close">&times;</button>
-      </div>
-      <p>O relatório foi dividido para evitar limites do Discord. Copie e cole uma parte por vez.</p>
-      <div id="container-botoes-partes" class="grid-partes">
-      </div>
-    </div>
-  </div>
+
   <script src="script.js"></script>
+  <script src="script-core.js"></script>
 </body>
 
 </html>

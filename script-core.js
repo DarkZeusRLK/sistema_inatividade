@@ -21,7 +21,7 @@ window.abrirMetaCore = function () {
   document.querySelector(".nav-item.active")?.classList.remove("active");
   document.getElementById("nav-core").classList.add("active");
 
-  // Opcional: Auto-preencher datas com a última semana se estiverem vazias
+  // Auto-preencher datas com a última semana se estiverem vazias
   const campoInicio = document.getElementById("data-inicio-core");
   const campoFim = document.getElementById("data-fim-core");
   if (!campoInicio.value) {
@@ -51,13 +51,12 @@ window.abrirInatividade = function () {
   document.getElementById("nav-inatividade").classList.add("active");
 };
 
-// 3. CARREGAR DADOS DA CORE (COM FILTRO DE DATA)
+// 3. CARREGAR DADOS DA CORE (LAYOUT VERTICAL EM CARDS)
 window.carregarMetaCore = async function () {
   const corpo = document.getElementById("corpo-meta-core");
   const progBar = document.getElementById("prog-bar-core");
   const progContainer = document.getElementById("progress-container-core");
 
-  // Captura as datas dos inputs
   const dataInicio = document.getElementById("data-inicio-core").value;
   const dataFim = document.getElementById("data-fim-core").value;
 
@@ -69,69 +68,97 @@ window.carregarMetaCore = async function () {
   }
 
   corpo.innerHTML =
-    '<tr><td colspan="5" align="center">Sincronizando com Discord...</td></tr>';
+    '<p style="text-align: center; color: #d4af37; padding: 20px;">Iniciando varredura nos canais operacionais...</p>';
   progContainer.style.display = "block";
   progBar.style.width = "30%";
 
   try {
-    // Envia as datas para a API
     const res = await fetch(
       `/api/meta-core?start=${dataInicio}&end=${dataFim}`
     );
     const dados = await res.json();
     listaMetaCoreAtual = dados;
 
-    corpo.innerHTML = "";
+    corpo.innerHTML = ""; // Limpa o container
     progBar.style.width = "70%";
 
+    // Cria um container flex para os cards se não existir
+    corpo.style.display = "flex";
+    corpo.style.flexDirection = "column";
+    corpo.style.gap = "10px";
+    corpo.style.padding = "10px";
+
     dados.forEach((m) => {
-      const tr = document.createElement("tr");
+      const card = document.createElement("div");
+
+      // Estilo Base do Card
+      card.style =
+        "background: #111; border: 1px solid #333; border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 12px; border-left: 5px solid #444; transition: 0.3s;";
 
       // CASO 1: OFICIAL DE FÉRIAS
       if (m.isFerias) {
-        tr.innerHTML = `
-                    <td><strong>${m.name}</strong></td>
-                    <td colspan="3" align="center" style="color: #3498db; font-weight: bold; letter-spacing: 1px;">🌴 EM PERÍODO DE FÉRIAS</td>
-                    <td align="center">
-                        <span class="badge-info" style="background: #3498db; color: white; padding: 5px 10px; border-radius: 4px;">FÉRIAS</span>
-                    </td>
-                `;
+        card.style.borderLeftColor = "#3498db";
+        card.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+              <strong style="color: #fff; font-size: 1.1rem; letter-spacing: 1px;">${m.name.toUpperCase()}</strong>
+              <span style="background: #3498db; color: white; padding: 3px 10px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;">🌴 FÉRIAS</span>
+          </div>
+          <div style="color: #3498db; font-size: 0.9rem; font-style: italic;">Oficial em período de licença ou férias regulamentares.</div>
+        `;
       }
-      // CASO 2: OFICIAL ATIVO (CÁLCULO DE METAS)
+      // CASO 2: OFICIAL ATIVO
       else {
         const acoesOk = m.acoes >= 4;
-        // Se o oficial NÃO tem a tag CGPC/Ensino, a meta daquela coluna é considerada OK automaticamente
         const cgpcOk = !m.temCGPC || m.cgpc >= 1;
         const ensinoOk =
           !m.temEnsino || m.ensino_cursos >= 4 || m.ensino_recrut >= 2;
-
         const metaFinal = acoesOk && cgpcOk && ensinoOk;
 
-        tr.innerHTML = `
-                    <td><strong>${m.name}</strong></td>
-                    <td style="color: ${acoesOk ? "#2ecc71" : "#ff4d4d"}">${
-          m.acoes
-        }/4</td>
-                    <td>${
-                      m.temCGPC
-                        ? m.cgpc >= 1
-                          ? "✅ OK"
-                          : '<span style="color:#ff4d4d">❌ PENDENTE</span>'
-                        : '<span style="color:#555">--</span>'
-                    }</td>
-                    <td>${
-                      m.temEnsino
-                        ? `${m.ensino_cursos}C / ${m.ensino_recrut}R`
-                        : '<span style="color:#555">--</span>'
-                    }</td>
-                    <td align="center">
-                        <span class="badge-${metaFinal ? "success" : "danger"}">
-                            ${metaFinal ? "✅ META BATIDA" : "❌ PENDENTE"}
-                        </span>
-                    </td>
-                `;
+        card.style.borderLeftColor = metaFinal ? "#2ecc71" : "#ff4d4d";
+
+        card.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222; padding-bottom: 8px;">
+              <strong style="color: #fff; font-size: 1.1rem; letter-spacing: 1px;">${m.name.toUpperCase()}</strong>
+              <span class="badge-${
+                metaFinal ? "success" : "danger"
+              }" style="padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 0.75rem;">
+                  ${metaFinal ? "✅ META BATIDA" : "❌ PENDENTE"}
+              </span>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 5px;">
+              <div style="text-align: center; background: #0a0a0a; padding: 8px; border-radius: 6px; border: 1px solid #222;">
+                  <small style="color: #888; display: block; margin-bottom: 4px; font-size: 0.65rem;">AÇÕES</small>
+                  <span style="color: ${
+                    acoesOk ? "#2ecc71" : "#ff4d4d"
+                  }; font-weight: bold;">${m.acoes}/4</span>
+              </div>
+              
+              <div style="text-align: center; background: #0a0a0a; padding: 8px; border-radius: 6px; border: 1px solid #222;">
+                  <small style="color: #888; display: block; margin-bottom: 4px; font-size: 0.65rem;">CGPC</small>
+                  <span style="color: ${
+                    m.temCGPC ? (cgpcOk ? "#2ecc71" : "#ff4d4d") : "#555"
+                  }; font-weight: bold;">
+                      ${m.temCGPC ? (m.cgpc >= 1 ? "OK" : "0/1") : "--"}
+                  </span>
+              </div>
+
+              <div style="text-align: center; background: #0a0a0a; padding: 8px; border-radius: 6px; border: 1px solid #222;">
+                  <small style="color: #888; display: block; margin-bottom: 4px; font-size: 0.65rem;">ENSINO</small>
+                  <span style="color: ${
+                    m.temEnsino ? (ensinoOk ? "#2ecc71" : "#ff4d4d") : "#555"
+                  }; font-weight: bold; font-size: 0.8rem;">
+                      ${
+                        m.temEnsino
+                          ? `${m.ensino_cursos}C | ${m.ensino_recrut}R`
+                          : "--"
+                      }
+                  </span>
+              </div>
+          </div>
+        `;
       }
-      corpo.appendChild(tr);
+      corpo.appendChild(card);
     });
 
     progBar.style.width = "100%";
@@ -169,19 +196,16 @@ window.copiarRelatorioCORE = function () {
     if (m.isFerias) {
       texto += `👤 <@${m.id}> ➔ **🌴 EM FÉRIAS**\n`;
     } else {
-      const statusIcon =
+      const ok =
         m.acoes >= 4 &&
         (!m.temCGPC || m.cgpc >= 1) &&
-        (!m.temEnsino || m.ensino_cursos >= 4 || m.ensino_recrut >= 2)
-          ? "✅"
-          : "❌";
+        (!m.temEnsino || m.ensino_cursos >= 4 || m.ensino_recrut >= 2);
+      const statusIcon = ok ? "✅" : "❌";
 
       texto += `👤 <@${m.id}> ➔ ${statusIcon} **Ações:** ${m.acoes}/4`;
-
       if (m.temCGPC) texto += ` | **CGPC:** ${m.cgpc >= 1 ? "OK" : "PENDENTE"}`;
       if (m.temEnsino)
         texto += ` | **Ensino:** ${m.ensino_cursos}C/${m.ensino_recrut}R`;
-
       texto += "\n";
     }
   });

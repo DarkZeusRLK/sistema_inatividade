@@ -111,8 +111,8 @@
         const userData = await userRes.json();
 
         // 2. Verificar se está no servidor e tem o cargo (Ajuste o Guild ID)
-        const GUILD_ID = 'SEU_GUILD_ID';
-        const ROLE_ID = 'SEU_ROLE_ID_POLICIA';
+        const GUILD_ID = '1052430488205283449';
+        const ROLE_ID = '1053677888983023667';
 
         const memberRes = await fetch(`https://discord.com/api/users/@me/guilds/${GUILD_ID}/member`, {
           headers: { Authorization: `Bearer ${token}` }

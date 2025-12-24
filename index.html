@@ -9,6 +9,21 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
   <link rel="shortcut icon" href="Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png" type="image/x-icon">
+  <script>
+    (function () {
+      const sessionStr = localStorage.getItem("pc_session");
+      if (!sessionStr) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      const session = JSON.parse(sessionStr);
+      if (Date.now() > session.expira) {
+        localStorage.removeItem("pc_session");
+        window.location.href = "login.html";
+      }
+    })();
+  </script>
 </head>
 
 <body>

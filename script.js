@@ -87,3 +87,15 @@ window.carregarInatividade = async function () {
     btn.disabled = false;
   }
 };
+document.addEventListener("DOMContentLoaded", function () {
+  const sessionStr = localStorage.getItem("pc_session");
+  if (sessionStr) {
+    const session = JSON.parse(sessionStr);
+    // Procure o elemento do nome no seu HTML e atualize
+    const nomeElemento = document.getElementById("user-name");
+    const avatarElemento = document.getElementById("user-avatar");
+
+    if (nomeElemento) nomeElemento.textContent = session.nome;
+    if (avatarElemento) avatarElemento.src = session.avatar;
+  }
+});

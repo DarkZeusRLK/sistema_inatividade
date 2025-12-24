@@ -1,11 +1,7 @@
-const fetch = (...args) =>
-  import("node-fetch").then(({ default: fetch }) => fetch(...args));
-
 module.exports = async (req, res) => {
   const { Discord_Bot_Token, GUILD_ID, POLICE_ROLE_ID } = process.env;
 
   try {
-    // 1. Busca todos os canais
     const channelsRes = await fetch(
       `https://discord.com/api/v10/guilds/${GUILD_ID}/channels`,
       {

@@ -219,3 +219,58 @@ body {
   background: rgba(212, 175, 55, 0.1);
   transform: translateY(-2px);
 }
+/* Alerta Personalizado PCERJ */
+#custom-alert-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+}
+
+.pc-alert {
+  background: #16161a;
+  color: #fff;
+  border-left: 4px solid #d4af37;
+  padding: 15px 25px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  animation: slideIn 0.5s ease forwards;
+  min-width: 300px;
+}
+
+.pc-alert i {
+  color: #d4af37;
+  font-size: 1.2rem;
+}
+.pc-alert.error {
+  border-left-color: #ff4d4d;
+}
+.pc-alert.error i {
+  color: #ff4d4d;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.pc-alert.fade-out {
+  animation: slideOut 0.5s ease forwards;
+}
+
+@keyframes slideOut {
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}

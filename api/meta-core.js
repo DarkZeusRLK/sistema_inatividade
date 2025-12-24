@@ -17,13 +17,28 @@ module.exports = async (req, res) => {
 
   try {
     const headers = { Authorization: `Bot ${Discord_Bot_Token}` };
-    const seteDiasAtras = Date.now() - 7 * 24 * 60 * 60 * 1000;
 
+    // 1. CAPTURA DE DATAS DINÂMICAS (Vindo do seu novo filtro no frontend)
+    const { start, end } = req.query;
+
+    // Se não houver data, o padrão é os últimos 7 dias
+    const dataInicioMs = start
+      ? new Date(start).getTime()
+      : Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+    // Se houver data de fim, ajustamos para o final do dia (23:59:59)
+    const dataFimMs = end
+      ? new Date(end).setHours(23, 59, 59, 999)
+      : Date.now();
+
+    // 2. BUSCA DE MEMBROS
     const membersRes = await fetch(
       `https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`,
       { headers }
     );
     const allMembers = await membersRes.json();
+
+    // Filtra apenas quem é do CORE
     const coreMembers = allMembers.filter((m) =>
       m.roles.includes(CORE_ROLE_ID)
     );
@@ -33,11 +48,10 @@ module.exports = async (req, res) => {
       metaMap[m.user.id] = {
         id: m.user.id,
         name: m.nick || m.user.username,
-        // USO DOS IDs: Aqui "limpamos" o aviso de variável não lida
         temCGPC: m.roles.includes(CGPC_ROLE_ID),
         temEnsino: m.roles.includes(ENSINO_ROLE_ID),
         isFerias: m.roles.includes(FERIAS_ROLE_ID),
-        roles: m.roles, // Mantemos para checagens de Auditoria Pericial/Prisional
+        roles: m.roles,
         acoes: 0,
         cgpc: 0,
         ensino_cursos: 0,
@@ -45,8 +59,9 @@ module.exports = async (req, res) => {
       };
     });
 
-    // Função de varredura
+    // 3. FUNÇÃO DE VARREDURA POR CANAL
     async function processarCanal(channelId, tipo) {
+      // Buscamos as últimas 100 mensagens (ajuste o limite se necessário)
       const url = `https://discord.com/api/v10/channels/${channelId}/messages?limit=100`;
       const r = await fetch(url, { headers });
       if (!r.ok) return;
@@ -54,23 +69,27 @@ module.exports = async (req, res) => {
 
       msgs.forEach((msg) => {
         const ts = new Date(msg.timestamp).getTime();
-        if (ts < seteDiasAtras) return;
+
+        // --- FILTRO DE DATA ATUALIZADO ---
+        // Ignora mensagens fora do intervalo selecionado
+        if (ts < dataInicioMs || ts > dataFimMs) return;
 
         const autorId = msg.author.id;
 
-        // Lógica de Ações: Conta se o ID do membro CORE está no texto (menção ou texto puro)
+        // Lógica de Ações: Conta menções ou texto puro com ID do oficial
         if (tipo === "ACOES") {
           Object.keys(metaMap).forEach((id) => {
             if (msg.content.includes(id)) metaMap[id].acoes++;
           });
         }
 
-        // Lógica CGPC: Só conta se o autor for do CORE e tiver cargo de auditor
+        // Lógica CGPC: Conta relatórios de auditores CORE
         else if (tipo === "PERICIAL" || tipo === "PRISIONAL") {
           const roleNecessaria =
             tipo === "PERICIAL"
               ? AUDITOR_PERICIAL_ROLE_ID
               : AUDITOR_PRISIONAL_ROLE_ID;
+
           if (
             metaMap[autorId] &&
             metaMap[autorId].roles.includes(roleNecessaria)
@@ -79,7 +98,7 @@ module.exports = async (req, res) => {
           }
         }
 
-        // Lógica Ensino: Se o autor é do ensino ou foi mencionado no relatório
+        // Lógica Ensino: Conta cursos ou recrutamentos para quem tem a tag de Ensino
         else if (tipo === "CURSO" || tipo === "RECRUT") {
           Object.keys(metaMap).forEach((id) => {
             if (
@@ -94,7 +113,7 @@ module.exports = async (req, res) => {
       });
     }
 
-    // Varre todos os canais
+    // 4. EXECUÇÃO PARALELA DA VARREDURA
     await Promise.all([
       processarCanal(CH_ACOES_ID, "ACOES"),
       processarCanal(CH_PERICIAL_ID, "PERICIAL"),
@@ -103,8 +122,10 @@ module.exports = async (req, res) => {
       processarCanal(CH_CURSO_ID, "CURSO"),
     ]);
 
+    // Retorna os dados processados para o Frontend
     res.status(200).json(Object.values(metaMap));
   } catch (err) {
+    console.error("Erro no processamento das metas:", err);
     res.status(500).json({ error: err.message });
   }
 };

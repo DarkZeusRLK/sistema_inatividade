@@ -12,7 +12,11 @@ function mostrarAviso(mensagem, tipo = "success") {
   const icon =
     tipo === "success" ? "fa-check-circle" : "fa-exclamation-triangle";
 
-  alert.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${mensagem}</span>`;
+  alert.innerHTML = `
+        <i class="fa-solid ${icon}"></i>
+        <span>${mensagem}</span>
+    `;
+
   container.appendChild(alert);
 
   setTimeout(() => {
@@ -21,28 +25,54 @@ function mostrarAviso(mensagem, tipo = "success") {
   }, 4000);
 }
 
+// 2. VARIÁVEIS GLOBAIS
 let listaMembrosAtual = [];
 
+// 3. FUNÇÃO DE FECHAR MODAL
 window.fecharModalRelatorio = function () {
   document.getElementById("modal-relatorio").style.display = "none";
 };
 
-// 2. SINCRONIZAÇÃO
+// 4. SINCRONIZAÇÃO E BARRA DE PROGRESSO
 window.carregarInatividade = async function () {
   const corpo = document.getElementById("corpo-inatividade");
   const btn = document.getElementById("btn-sincronizar");
+  const btnCopiar = document.getElementById("btn-copiar");
   const progContainer = document.getElementById("progress-container");
   const progBar = document.getElementById("progress-bar");
   const progLabel = document.getElementById("progress-label");
+  const progPercent = document.getElementById("progress-percentage");
 
   corpo.innerHTML = "";
   progContainer.style.display = "block";
+  progBar.style.width = "0%";
+  progPercent.innerText = "0%";
+  progLabel.innerText = "CONECTANDO AO DISCORD...";
+
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> PROCESSANDO...';
   btn.disabled = true;
+
+  let width = 0;
+  const interval = setInterval(() => {
+    if (width < 90) {
+      width += Math.random() * 2;
+      progBar.style.width = width + "%";
+      progPercent.innerText = Math.floor(width) + "%";
+      if (width > 30) progLabel.innerText = "VASCULHANDO MENSAGENS RECENTES...";
+      if (width > 70) progLabel.innerText = "FILTRANDO OFICIAIS EM FÉRIAS...";
+    }
+  }, 200);
 
   try {
     const res = await fetch("/api/membros-inativos");
     const dados = await res.json();
+
     if (!Array.isArray(dados)) throw new Error("Erro");
+
+    clearInterval(interval);
+    progBar.style.width = "100%";
+    progPercent.innerText = "100%";
+    progLabel.innerText = "AUDITORIA FINALIZADA!";
 
     listaMembrosAtual = dados;
     const agora = new Date();
@@ -85,20 +115,26 @@ window.carregarInatividade = async function () {
                     }">
                         ${statusExonerar ? "⚠️ EXONERAR" : "✅ REGULAR"}
                     </span>
-                </td>`;
+                </td>
+            `;
       corpo.appendChild(tr);
     });
 
+    if (btnCopiar) btnCopiar.style.display = "inline-block";
     mostrarAviso("Banco de dados sincronizado.");
   } catch (err) {
-    mostrarAviso("Erro ao buscar dados.", "error");
+    clearInterval(interval);
+    mostrarAviso("Erro ao buscar dados do servidor.", "error");
   } finally {
+    btn.innerHTML = '<i class="fa-solid fa-rotate"></i> SINCRONIZAR DADOS';
     btn.disabled = false;
-    progContainer.style.display = "none";
+    setTimeout(() => {
+      progContainer.style.display = "none";
+    }, 3000);
   }
 };
 
-// 3. RELATÓRIO VERTICAL E LIMITE NITRO (4000 CHARS)
+// 5. LÓGICA DE CÓPIA (LIMITE 4000 CARACTERES)
 window.copiarRelatorioDiscord = function () {
   if (listaMembrosAtual.length === 0) return;
 
@@ -117,35 +153,45 @@ window.copiarRelatorioDiscord = function () {
     return;
   }
 
+  // CABEÇALHO DO RELATÓRIO
   let cabecalho = "📋 **RELATÓRIO DE EXONERAÇÃO - CORREGEDORIA PCERJ** 📋\n";
   cabecalho += `📅 **DATA DO RELATÓRIO:** ${dataHoje}\n`;
   cabecalho += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
 
-  function formatarMensagem(membros) {
+  // FUNÇÃO INTERNA PARA GERAR O CORPO VERTICAL
+  const gerarCorpoVertical = (membros) => {
     let texto = "";
     membros.forEach((m) => {
       let partesNick = m.fullNickname.split("|");
       let idRP = partesNick[1] ? partesNick[1].trim() : "---";
-      texto += `QRA: <@${m.id}>\nNOME NA CIDADE: ${m.name}\nID: ${idRP}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────\n`;
+
+      texto += `QRA: <@${m.id}>\n`;
+      texto += `NOME NA CIDADE: ${m.name}\n`;
+      texto += `ID: ${idRP}\n`;
+      texto += `DATA: ${dataHoje}\n`;
+      texto += `MOTIVO: INATIVIDADE\n`;
+      texto += `────────────────────────────────\n`;
     });
     return texto;
-  }
+  };
 
-  let relatorioCompleto =
-    cabecalho +
-    formatarMensagem(exonerados) +
+  let relatorioCompleto = cabecalho + gerarCorpoVertical(exonerados);
+  relatorioCompleto +=
     "\n⚠️ *Oficiais citados devem entrar em contato com a Corregedoria.*";
 
+  // VERIFICAÇÃO DE LIMITE NITRO (4000)
   if (relatorioCompleto.length <= 4000) {
-    navigator.clipboard
-      .writeText(relatorioCompleto)
-      .then(() => mostrarAviso("Relatório copiado (Nitro)"));
+    navigator.clipboard.writeText(relatorioCompleto).then(() => {
+      mostrarAviso("Relatório copiado (Formato Nitro)");
+    });
   } else {
-    gerarModalDePartes(exonerados, dataHoje, cabecalho);
+    // Abre o modal de divisão se for muito grande
+    abrirModalDivisor(exonerados, dataHoje, cabecalho, gerarCorpoVertical);
   }
 };
 
-function gerarModalDePartes(exonerados, dataHoje, cabecalho) {
+// 6. FUNÇÃO ÚNICA PARA DIVIDIR EM PARTES
+function abrirModalDivisor(exonerados, dataHoje, cabecalho, formatador) {
   const tamanhoBloco = 12;
   const partes = [];
 
@@ -153,16 +199,13 @@ function gerarModalDePartes(exonerados, dataHoje, cabecalho) {
     const bloco = exonerados.slice(i, i + tamanhoBloco);
     let textoPart =
       cabecalho + `(PARTE ${Math.floor(i / tamanhoBloco) + 1})\n\n`;
-    bloco.forEach((m) => {
-      let partesNick = m.fullNickname.split("|");
-      let idRP = partesNick[1] ? partesNick[1].trim() : "---";
-      textoPart += `QRA: <@${m.id}>\nNOME NA CIDADE: ${m.name}\nID: ${idRP}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────\n`;
-    });
+    textoPart += formatador(bloco);
     partes.push(textoPart);
   }
 
   const container = document.getElementById("container-botoes-partes");
   container.innerHTML = "";
+
   partes.forEach((texto, index) => {
     const btn = document.createElement("button");
     btn.className = "btn-parte";
@@ -176,5 +219,6 @@ function gerarModalDePartes(exonerados, dataHoje, cabecalho) {
     };
     container.appendChild(btn);
   });
+
   document.getElementById("modal-relatorio").style.display = "flex";
 }

@@ -73,8 +73,10 @@ module.exports = async (req, res) => {
     police.forEach((p) => {
       activityMap[p.user.id] = {
         id: p.user.id,
-        // Prioridade: 1. Nome da Admissão | 2. Apelido Discord | 3. Nome de Usuário
-        name: nomesRP[p.user.id] || p.nick || p.user.username,
+        // name: Agora é estritamente o nome que está no Discord (Apelido ou Global)
+        name: p.nick || p.user.username,
+        // rpName: O nome extraído da ficha de admissão
+        rpName: nomesRP[p.user.id] || p.nick || p.user.username,
         lastMsg: 0,
         avatar: p.user.avatar
           ? `https://cdn.discordapp.com/avatars/${p.user.id}/${p.user.avatar}.png`

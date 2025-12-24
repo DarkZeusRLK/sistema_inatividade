@@ -97,8 +97,7 @@ window.carregarInatividade = async function () {
                           membro.avatar ||
                           "https://cdn.discordapp.com/embed/avatars/0.png"
                         }" class="avatar-img">
-                        <strong>${membro.name}</strong>
-                    </div>
+                        <strong>${membro.name}</strong> </div>
                 </td>
                 <td><code style="color:#888">${membro.id}</code></td>
                 <td>${
@@ -153,12 +152,11 @@ window.copiarRelatorioDiscord = function () {
     return;
   }
 
-  // CABEÇALHO DO RELATÓRIO
-  let cabecalho = "📋 **RELATÓRIO DE EXONERAÇÃO - CORREGEDORIA PCERJ** 📋\n";
+  let cabecalho = "📋 **RELATÓRIO DE EXONERAÇÃO - ADMINISTRAÇÃO PCERJ** 📋\n";
   cabecalho += `📅 **DATA DO RELATÓRIO:** ${dataHoje}\n`;
   cabecalho += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
 
-  // FUNÇÃO INTERNA PARA GERAR O CORPO VERTICAL
+  // FUNÇÃO PARA GERAR O CORPO (Usa rpName para o relatório formal)
   const gerarCorpoVertical = (membros) => {
     let texto = "";
     membros.forEach((m) => {
@@ -166,7 +164,7 @@ window.copiarRelatorioDiscord = function () {
       let idRP = partesNick[1] ? partesNick[1].trim() : "---";
 
       texto += `QRA: <@${m.id}>\n`;
-      texto += `NOME NA CIDADE: ${m.name}\n`;
+      texto += `NOME NA CIDADE: ${m.rpName || m.name}\n`; // Puxa nome da admissão
       texto += `ID: ${idRP}\n`;
       texto += `DATA: ${dataHoje}\n`;
       texto += `MOTIVO: INATIVIDADE\n`;
@@ -177,22 +175,20 @@ window.copiarRelatorioDiscord = function () {
 
   let relatorioCompleto = cabecalho + gerarCorpoVertical(exonerados);
   relatorioCompleto +=
-    "\n⚠️ *Oficiais citados devem entrar em contato com a Corregedoria.*";
+    "\n⚠️ *Oficiais citados devem entrar em contato com a Administração.*";
 
-  // VERIFICAÇÃO DE LIMITE NITRO (4000)
   if (relatorioCompleto.length <= 4000) {
     navigator.clipboard.writeText(relatorioCompleto).then(() => {
       mostrarAviso("Relatório copiado (Formato Nitro)");
     });
   } else {
-    // Abre o modal de divisão se for muito grande
     abrirModalDivisor(exonerados, dataHoje, cabecalho, gerarCorpoVertical);
   }
 };
 
 // 6. FUNÇÃO ÚNICA PARA DIVIDIR EM PARTES
 function abrirModalDivisor(exonerados, dataHoje, cabecalho, formatador) {
-  const tamanhoBloco = 12;
+  const tamanhoBloco = 12; // Aproximadamente 12 membros cabem em 4000 caracteres no formato vertical
   const partes = [];
 
   for (let i = 0; i < exonerados.length; i += tamanhoBloco) {

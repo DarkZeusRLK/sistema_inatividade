@@ -2,52 +2,41 @@ window.carregarInatividade = async function () {
   const corpo = document.getElementById("corpo-inatividade");
   const btn = document.getElementById("btn-sincronizar");
 
-  // Fallback caso a função mostrarAlerta não esteja acessível
-  const dispararAlerta = (titulo, msg, tipo) => {
-    if (typeof mostrarAlerta === "function") {
-      mostrarAlerta(titulo, msg, tipo);
-    } else {
-      alert(titulo + ": " + msg);
-    }
-  };
-
   btn.innerHTML =
-    '<i class="fa-solid fa-spinner fa-spin"></i> SINCRONIZANDO...';
+    '<i class="fa-solid fa-spinner fa-spin"></i> SINCRONIZANDO (VASCULHANDO 200 MSGS)...';
   btn.disabled = true;
 
   try {
     const res = await fetch("/api/membros-inativos");
     const dados = await res.json();
 
-    if (!Array.isArray(dados)) {
-      console.error("Erro na API:", dados);
-      dispararAlerta(
-        "Atenção",
-        dados.error || "A API não retornou uma lista válida.",
-        "error"
-      );
-      return;
-    }
+    if (!Array.isArray(dados)) throw new Error("Resposta inválida");
 
     corpo.innerHTML = "";
-    const agora = Date.now();
+    const agora = new Date();
+    const dataBaseAuditoria = new Date("2025-12-08T00:00:00"); // Sua data de início
+    const msPorDia = 1000 * 60 * 60 * 24;
 
-    // Ordena: os mais inativos no topo
     dados.sort((a, b) => a.lastMsg - b.lastMsg);
 
     dados.forEach((membro) => {
-      const inativoMs = agora - membro.lastMsg;
-      const dias =
-        membro.lastMsg === 0
-          ? "∞"
-          : Math.floor(inativoMs / (1000 * 60 * 60 * 24));
-      const statusExonerar = dias >= 7 || dias === "∞";
+      let dataReferencia;
+      let nota = "";
+
+      // Se o bot não achou mensagem nas 200 últimas de cada canal
+      if (membro.lastMsg === 0) {
+        dataReferencia = dataBaseAuditoria;
+        nota =
+          '<br><small style="color:#ce9178">Inativo desde o início (08/12)</small>';
+      } else {
+        dataReferencia = new Date(membro.lastMsg);
+      }
+
+      const diffMs = agora - dataReferencia;
+      const diasInativo = Math.floor(diffMs / msPorDia);
+      const statusExonerar = diasInativo >= 7;
 
       const tr = document.createElement("tr");
-      tr.style.borderLeft = statusExonerar
-        ? "4px solid #ff4d4d"
-        : "4px solid #04d361";
-
       tr.innerHTML = `
                 <td>
                     <div class="user-cell">
@@ -55,33 +44,38 @@ window.carregarInatividade = async function () {
                           membro.avatar ||
                           "https://cdn.discordapp.com/embed/avatars/0.png"
                         }" class="avatar-img">
-                        <strong>${membro.name}</strong>
+                        <div>
+                            <strong>${membro.name}</strong>
+                            ${nota}
+                        </div>
                     </div>
                 </td>
                 <td><code style="color:#888">${membro.id}</code></td>
                 <td>${
                   membro.lastMsg === 0
-                    ? "SEM REGISTRO"
-                    : new Date(membro.lastMsg).toLocaleDateString("pt-BR")
+                    ? "SEM MENSAGENS RECENTES"
+                    : dataReferencia.toLocaleDateString("pt-BR")
                 }</td>
-                <td><span style="color: ${
-                  statusExonerar ? "#ff4d4d" : "#fff"
-                }">${dias} DIAS</span></td>
+                <td>
+                    <strong style="color: ${
+                      statusExonerar ? "#ff4d4d" : "#d4af37"
+                    }">
+                        ${diasInativo} Dias
+                    </strong>
+                </td>
                 <td align="center">
                     <span class="${
                       statusExonerar ? "badge-danger" : "badge-success"
                     }">
-                        ${statusExonerar ? "⚠️ EXONERAR" : "✅ ATIVO"}
+                        ${statusExonerar ? "⚠️ EXONERAR" : "✅ REGULAR"}
                     </span>
                 </td>
             `;
       corpo.appendChild(tr);
     });
-
-    dispararAlerta("Sucesso", "Dados sincronizados com o servidor.", "success");
   } catch (err) {
     console.error(err);
-    dispararAlerta("Erro Fatal", "Não foi possível conectar à API.", "error");
+    alert("Erro ao sincronizar. Tente novamente em alguns segundos.");
   } finally {
     btn.innerHTML = '<i class="fa-solid fa-rotate"></i> SINCRONIZAR DADOS';
     btn.disabled = false;

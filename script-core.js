@@ -150,3 +150,23 @@ window.copiarRelatorioCORE = function () {
     .writeText(texto)
     .then(() => alert("Relatório Vertical copiado para o Discord!"));
 };
+// FUNÇÃO PARA VOLTAR PARA A ABA DE INATIVIDADE
+window.abrirInatividade = function () {
+  // 1. Alterna a visibilidade das seções
+  document.getElementById("secao-inatividade").style.display = "block";
+  document.getElementById("secao-meta-core").style.display = "none";
+
+  // 2. Alterna os botões da barra superior
+  document.getElementById("botoes-inatividade").style.display = "block";
+  document.getElementById("botoes-core").style.display = "none";
+
+  // 3. Restaura os títulos originais
+  document.getElementById("titulo-pagina").innerText =
+    "SISTEMA DE AUDITORIA DE ATIVIDADE";
+  document.getElementById("subtitulo-pagina").innerText =
+    "Controle de Presença em Canais Oficiais";
+
+  // 4. Atualiza o estado visual da Sidebar (Menu lateral)
+  document.querySelector(".nav-item.active")?.classList.remove("active");
+  document.getElementById("nav-inatividade").classList.add("active");
+};

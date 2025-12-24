@@ -137,11 +137,11 @@
         <div class="controls" style="display: flex; align-items: center; gap: 20px; margin-bottom: 20px; background: #16161a; padding: 20px; border-radius: 8px; border: 1px solid #333;">
           <div style="display: flex; flex-direction: column; gap: 5px;">
             <label style="color: #d4af37; font-size: 0.75rem; font-weight: bold;">DATA INICIAL</label>
-            <input type="date" id="data-inicio-core" style="background: #000; color: #fff; border: 1px solid #444; padding: 8px; border-radius: 4px; outline: none;">
+            <input type="date" id="data-inicio-core" style="background: #000; color: #fff; border: 1px solid #444; padding: 8px; border-radius: 4px; outline: none; cursor: pointer;">
           </div>
           <div style="display: flex; flex-direction: column; gap: 5px;">
             <label style="color: #d4af37; font-size: 0.75rem; font-weight: bold;">DATA FINAL</label>
-            <input type="date" id="data-fim-core" style="background: #000; color: #fff; border: 1px solid #444; padding: 8px; border-radius: 4px; outline: none;">
+            <input type="date" id="data-fim-core" style="background: #000; color: #fff; border: 1px solid #444; padding: 8px; border-radius: 4px; outline: none; cursor: pointer;">
           </div>
           <button onclick="carregarMetaCore()" class="btn-gold" style="margin-top: 18px; height: 40px;">
             <i class="fa-solid fa-magnifying-glass"></i> FILTRAR METAS
@@ -154,28 +154,13 @@
           </div>
 
           <div id="progress-container-core" style="display: none; padding: 20px;">
-            <div class="progress-bar-bg" style="background: #1a1a1e; height: 8px; border-radius: 4px;">
-              <div id="prog-bar-core" style="background: #d4af37; width: 0%; height: 100%; border-radius: 4px; transition: 0.3s;"></div>
+            <div style="background: #1a1a1e; height: 8px; border-radius: 4px; overflow: hidden;">
+              <div id="prog-bar-core" style="background: #d4af37; width: 0%; height: 100%; transition: 0.3s;"></div>
             </div>
           </div>
 
-          <div class="table-responsive">
-            <table class="audit-table">
-              <thead>
-                <tr>
-                  <th>Oficial CORE</th>
-                  <th>Ações (Mín. 4)</th>
-                  <th>CGPC (Mín. 1)</th>
-                  <th>Ensino</th>
-                  <th style="text-align: center;">Status Final</th>
-                </tr>
-              </thead>
-              <tbody id="corpo-meta-core">
-                <tr>
-                  <td colspan="5" style="text-align: center; padding: 30px; color: #666;">Selecione as datas e clique em Filtrar Metas.</td>
-                </tr>
-              </tbody>
-            </table>
+          <div id="corpo-meta-core" style="padding: 15px; display: flex; flex-direction: column; gap: 12px;">
+            <p style="text-align: center; color: #666; padding: 30px;">Selecione as datas e clique em Filtrar Metas.</p>
           </div>
         </div>
       </section>

@@ -83,12 +83,17 @@
   </div>
 
   <script>
-    const CLIENT_ID = '145134268248725931'; // Pegue no Discord Developer Portal
-    const REDIRECT_URI = window.location.origin + '/login.html'; // URL do seu site
-
     function iniciarLogin() {
-      const scope = 'identify guilds guilds.members.read';
-      const url = `https://discord.com/api/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=${encodeURIComponent(scope)}`;
+      const CLIENT_ID = '145134268248725931';
+      const REDIRECT_URI = window.location.origin + '/login.html';
+
+      // Scopes necessários para ler o perfil e o cargo do usuário
+      const scope = encodeURIComponent('identify guilds guilds.members.read');
+      const redirect = encodeURIComponent(REDIRECT_URI);
+
+      const url = `https://discord.com/api/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${redirect}&response_type=token&scope=${scope}`;
+
+      console.log("Tentando logar com o ID:", CLIENT_ID);
       window.location.href = url;
     }
 

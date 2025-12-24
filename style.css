@@ -274,3 +274,11 @@ body {
     opacity: 0;
   }
 }
+#progress-bar {
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+}
+
+/* Ajuste no alerta para não sobrepor a barra se necessário */
+#custom-alert-container {
+  top: 80px; /* Desce um pouco os alertas */
+}

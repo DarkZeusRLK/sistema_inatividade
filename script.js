@@ -31,24 +31,53 @@ window.carregarInatividade = async function () {
   const corpo = document.getElementById("corpo-inatividade");
   const btn = document.getElementById("btn-sincronizar");
   const btnCopiar = document.getElementById("btn-copiar");
+  const progContainer = document.getElementById("progress-container");
+  const progBar = document.getElementById("progress-bar");
+  const progLabel = document.getElementById("progress-label");
+  const progPercent = document.getElementById("progress-percentage");
 
-  btn.innerHTML =
-    '<i class="fa-solid fa-spinner fa-spin"></i> AUDITANDO SERVIDOR...';
+  // Reset e Mostrar Barra
+  corpo.innerHTML = "";
+  progContainer.style.display = "block";
+  progBar.style.width = "0%";
+  progPercent.innerText = "0%";
+  progLabel.innerText = "CONECTANDO AO BANCO DE DADOS DO DISCORD...";
+
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> PROCESSANDO...';
   btn.disabled = true;
+
+  // Simulação de progresso (O bot leva tempo processando os canais sequencialmente)
+  let width = 0;
+  const interval = setInterval(() => {
+    if (width < 90) {
+      width += Math.random() * 2;
+      progBar.style.width = width + "%";
+      progPercent.innerText = Math.floor(width) + "%";
+
+      if (width > 20) progLabel.innerText = "ANALISANDO CANAIS DE TEXTO...";
+      if (width > 50)
+        progLabel.innerText = "VERIFICANDO HISTÓRICO DE MENSAGENS...";
+      if (width > 80) progLabel.innerText = "FINALIZANDO RELATÓRIO...";
+    }
+  }, 200);
 
   try {
     const res = await fetch("/api/membros-inativos");
     const dados = await res.json();
 
-    if (!Array.isArray(dados)) throw new Error("Erro na resposta");
+    if (!Array.isArray(dados)) throw new Error("Erro");
+
+    // Finaliza a barra
+    clearInterval(interval);
+    progBar.style.width = "100%";
+    progPercent.innerText = "100%";
+    progLabel.innerText = "AUDITORIA CONCLUÍDA!";
 
     listaMembrosAtual = dados;
-    corpo.innerHTML = "";
     const agora = new Date();
     const dataBaseAuditoria = new Date("2025-12-08T00:00:00").getTime();
     const msPorDia = 1000 * 60 * 60 * 24;
 
-    // Ordenar: mais inativos primeiro
     dados.sort((a, b) => a.lastMsg - b.lastMsg);
 
     dados.forEach((membro) => {
@@ -70,7 +99,7 @@ window.carregarInatividade = async function () {
                         <strong>${membro.name}</strong>
                     </div>
                 </td>
-                <td><code>${membro.id}</code></td>
+                <td><code style="color:#888">${membro.id}</code></td>
                 <td>${
                   membro.lastMsg === 0
                     ? "INÍCIO DA AUDITORIA"
@@ -91,12 +120,17 @@ window.carregarInatividade = async function () {
     });
 
     if (btnCopiar) btnCopiar.style.display = "inline-block";
-    mostrarAviso("Sincronização concluída com sucesso.");
+    mostrarAviso("Relatório de inatividade atualizado com sucesso.");
   } catch (err) {
-    mostrarAviso("Erro ao conectar com o Discord.", "error");
+    clearInterval(interval);
+    mostrarAviso("Erro na comunicação com a API do Discord.", "error");
   } finally {
     btn.innerHTML = '<i class="fa-solid fa-rotate"></i> SINCRONIZAR DADOS';
     btn.disabled = false;
+    // Esconde a barra após 3 segundos
+    setTimeout(() => {
+      progContainer.style.display = "none";
+    }, 3000);
   }
 };
 

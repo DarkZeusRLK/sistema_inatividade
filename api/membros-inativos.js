@@ -10,29 +10,44 @@ module.exports = async (req, res) => {
   try {
     const headers = { Authorization: `Bot ${Discord_Bot_Token}` };
 
-    // 1. Busca Banco de Dados de Admissão (Mapeia ID do Discord -> Nome no RP)
+    // 1. Busca Banco de Dados de Admissão (Aumentado para 500 mensagens)
     let nomesRP = {};
-    const admissaoRes = await fetch(
-      `https://discord.com/api/v10/channels/${ADMISSAO_CHANNEL_ID}/messages?limit=100`,
-      { headers }
-    );
-    if (admissaoRes.ok) {
+    let ultimoIdMsg = null;
+
+    // Fazemos 5 buscas de 100 mensagens para pegar um histórico de 500 fichas
+    for (let i = 0; i < 5; i++) {
+      let url = `https://discord.com/api/v10/channels/${ADMISSAO_CHANNEL_ID}/messages?limit=100`;
+      if (ultimoIdMsg) url += `&before=${ultimoIdMsg}`;
+
+      const admissaoRes = await fetch(url, { headers });
+      if (!admissaoRes.ok) break;
+
       const msgsAdmissao = await admissaoRes.json();
+      if (msgsAdmissao.length === 0) break;
+
       msgsAdmissao.forEach((msg) => {
-        // Procura por uma menção de usuário na mensagem
-        const mencao = msg.content.match(/<@!?(\d+)>/);
-        // Procura pelo termo "NOME DO RP:" (ignora maiúsculas/minúsculas)
-        const nomeMatch = msg.content.match(/NOME DO RP:\s*(.*)/i);
+        // Limpamos asteriscos (negrito) para não atrapalhar a leitura
+        const conteudoLimpo = msg.content.replace(/\*/g, "");
+
+        const mencao = conteudoLimpo.match(/<@!?(\d+)>/);
+        const nomeMatch = conteudoLimpo.match(/NOME\s*DO\s*RP:\s*(.*)/i);
 
         if (mencao && nomeMatch) {
           const userId = mencao[1];
-          const nomeExtraido = nomeMatch[1].split("\n")[0].trim(); // Pega apenas a linha do nome
-          nomesRP[userId] = nomeExtraido;
+          // Pega o nome, remove espaços extras e quebras de linha
+          const nomeExtraido = nomeMatch[1].split("\n")[0].trim();
+
+          // Só salva se ainda não existir (garante que pega a admissão mais recente)
+          if (!nomesRP[userId]) {
+            nomesRP[userId] = nomeExtraido;
+          }
         }
       });
+
+      ultimoIdMsg = msgsAdmissao[msgsAdmissao.length - 1].id;
     }
 
-    // 2. Busca Canais e Membros (Filtro de Polícia e Férias)
+    // 2. Busca Canais e Membros
     const channelsRes = await fetch(
       `https://discord.com/api/v10/guilds/${GUILD_ID}/channels`,
       { headers }
@@ -58,17 +73,17 @@ module.exports = async (req, res) => {
     police.forEach((p) => {
       activityMap[p.user.id] = {
         id: p.user.id,
-        // Se achou no canal de admissão, usa. Se não, tenta pegar do apelido
+        // Prioridade: 1. Nome da Admissão | 2. Apelido Discord | 3. Nome de Usuário
         name: nomesRP[p.user.id] || p.nick || p.user.username,
         lastMsg: 0,
         avatar: p.user.avatar
           ? `https://cdn.discordapp.com/avatars/${p.user.id}/${p.user.avatar}.png`
           : null,
-        fullNickname: p.nick || p.user.username, // Guardamos o apelido completo para extrair o ID (ex: 722)
+        fullNickname: p.nick || p.user.username,
       };
     });
 
-    // 3. Varredura de Atividade
+    // 3. Varredura de Atividade (Mensagens)
     for (const channel of textChannels) {
       try {
         const msgRes = await fetch(
@@ -76,11 +91,13 @@ module.exports = async (req, res) => {
           { headers }
         );
         if (msgRes.ok) {
-          (await msgRes.json()).forEach((msg) => {
+          const msgs = await msgRes.json();
+          msgs.forEach((msg) => {
             if (activityMap[msg.author.id]) {
               const ts = new Date(msg.timestamp).getTime();
-              if (ts > activityMap[msg.author.id].lastMsg)
+              if (ts > activityMap[msg.author.id].lastMsg) {
                 activityMap[msg.author.id].lastMsg = ts;
+              }
             }
           });
         }

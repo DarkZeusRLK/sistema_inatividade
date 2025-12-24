@@ -1,51 +1,74 @@
 module.exports = async (req, res) => {
-  // Adicionamos o FERIAS_ROLE_ID aqui
-  const { Discord_Bot_Token, GUILD_ID, POLICE_ROLE_ID, FERIAS_ROLE_ID } =
-    process.env;
+  const {
+    Discord_Bot_Token,
+    GUILD_ID,
+    POLICE_ROLE_ID,
+    FERIAS_ROLE_ID,
+    ADMISSAO_CHANNEL_ID,
+  } = process.env;
 
   try {
     const headers = { Authorization: `Bot ${Discord_Bot_Token}` };
 
-    // 1. Busca Canais
+    // 1. Busca Banco de Dados de Admissão (Mapeia ID do Discord -> Nome no RP)
+    let nomesRP = {};
+    const admissaoRes = await fetch(
+      `https://discord.com/api/v10/channels/${ADMISSAO_CHANNEL_ID}/messages?limit=100`,
+      { headers }
+    );
+    if (admissaoRes.ok) {
+      const msgsAdmissao = await admissaoRes.json();
+      msgsAdmissao.forEach((msg) => {
+        // Procura por uma menção de usuário na mensagem
+        const mencao = msg.content.match(/<@!?(\d+)>/);
+        // Procura pelo termo "NOME DO RP:" (ignora maiúsculas/minúsculas)
+        const nomeMatch = msg.content.match(/NOME DO RP:\s*(.*)/i);
+
+        if (mencao && nomeMatch) {
+          const userId = mencao[1];
+          const nomeExtraido = nomeMatch[1].split("\n")[0].trim(); // Pega apenas a linha do nome
+          nomesRP[userId] = nomeExtraido;
+        }
+      });
+    }
+
+    // 2. Busca Canais e Membros (Filtro de Polícia e Férias)
     const channelsRes = await fetch(
       `https://discord.com/api/v10/guilds/${GUILD_ID}/channels`,
       { headers }
     );
-    const allChannels = await channelsRes.json();
-    const textChannels = allChannels.filter((c) =>
+    const textChannels = (await channelsRes.json()).filter((c) =>
       [0, 5, 11, 12].includes(c.type)
     );
 
-    // 2. Busca Membros
     const membersRes = await fetch(
       `https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`,
       { headers }
     );
     const members = await membersRes.json();
 
-    // FILTRO LOGÍCO: Deve ter o cargo de polícia E NÃO PODE ter o cargo de férias
     const police = members.filter((m) => {
-      const temCargoPolicia = m.roles.includes(POLICE_ROLE_ID);
-      const estaDeFerias = FERIAS_ROLE_ID
-        ? m.roles.includes(FERIAS_ROLE_ID)
-        : false;
-
-      return temCargoPolicia && !estaDeFerias;
+      return (
+        m.roles.includes(POLICE_ROLE_ID) &&
+        (!FERIAS_ROLE_ID || !m.roles.includes(FERIAS_ROLE_ID))
+      );
     });
 
     let activityMap = {};
     police.forEach((p) => {
       activityMap[p.user.id] = {
         id: p.user.id,
-        name: p.nick || p.user.username,
+        // Se achou no canal de admissão, usa. Se não, tenta pegar do apelido
+        name: nomesRP[p.user.id] || p.nick || p.user.username,
         lastMsg: 0,
         avatar: p.user.avatar
           ? `https://cdn.discordapp.com/avatars/${p.user.id}/${p.user.avatar}.png`
           : null,
+        fullNickname: p.nick || p.user.username, // Guardamos o apelido completo para extrair o ID (ex: 722)
       };
     });
 
-    // 3. Varredura Sequencial (Filtramos os canais um a um para precisão total)
+    // 3. Varredura de Atividade
     for (const channel of textChannels) {
       try {
         const msgRes = await fetch(
@@ -53,17 +76,15 @@ module.exports = async (req, res) => {
           { headers }
         );
         if (msgRes.ok) {
-          const msgs = await msgRes.json();
-          msgs.forEach((msg) => {
+          (await msgRes.json()).forEach((msg) => {
             if (activityMap[msg.author.id]) {
               const ts = new Date(msg.timestamp).getTime();
-              if (ts > activityMap[msg.author.id].lastMsg) {
+              if (ts > activityMap[msg.author.id].lastMsg)
                 activityMap[msg.author.id].lastMsg = ts;
-              }
             }
           });
         }
-        await new Promise((r) => setTimeout(r, 50));
+        await new Promise((r) => setTimeout(r, 40));
       } catch (e) {
         continue;
       }

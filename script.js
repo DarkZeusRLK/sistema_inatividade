@@ -150,41 +150,87 @@ window.copiarRelatorioDiscord = function () {
   });
 
   if (exonerados.length === 0) {
-    mostrarAviso("Nenhum oficial para exoneração.", "error");
+    mostrarAviso("Nenhum oficial identificado.", "error");
     return;
   }
 
-  // Gerar versão única para teste de tamanho
-  let relatorioCompleto =
-    "📋 **RELATÓRIO DE EXONERAÇÃO - CORREGEDORIA PCERJ** 📋\n";
-  relatorioCompleto += `📅 **DATA:** ${dataHoje}\n`;
-  relatorioCompleto += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
+  // GERAÇÃO DO TEXTO VERTICAL PADRONIZADO
+  function formatarMensagem(membros) {
+    let texto = "";
+    membros.forEach((m) => {
+      // Extrai o ID numérico do apelido (ex: "| 722" -> "722")
+      let partesNick = m.fullNickname.split("|");
+      let idRP = partesNick[1] ? partesNick[1].trim() : "---";
 
-  exonerados.forEach((m) => {
-    let partesNome = m.name.split(" | ");
-    let nomeRP = partesNome[0] ? partesNome[0].trim() : m.name;
-    let idRP = partesNome[1] ? partesNome[1].trim() : "---";
+      texto += `QRA: <@${m.id}>\n`;
+      texto += `NOME NA CIDADE: ${m.name}\n`;
+      texto += `ID: ${idRP}\n`;
+      texto += `DATA: ${dataHoje}\n`;
+      texto += `MOTIVO: INATIVIDADE\n`;
+      texto += `────────────────────────────────\n`;
+    });
+    return texto;
+  }
 
-    relatorioCompleto += `🚔 **QRA:** <@${m.id}>\n`;
-    relatorioCompleto += `👤 **NOME NO RP:** ${nomeRP}\n`;
-    relatorioCompleto += `🆔 **ID:** ${idRP}\n`;
-    relatorioCompleto += `📅 **DATA:** ${dataHoje}\n`;
-    relatorioCompleto += `⚖️ **MOTIVO:** Inatividade\n`;
-    relatorioCompleto += "────────────────────────────────\n";
-  });
+  let cabecalho = "📋 **RELATÓRIO DE EXONERAÇÃO - CORREGEDORIA PCERJ** 📋\n";
+  cabecalho += `📅 **DATA DO RELATÓRIO:** ${dataHoje}\n`;
+  cabecalho += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
 
+  let relatorioCompleto = cabecalho + formatarMensagem(exonerados);
   relatorioCompleto +=
     "\n⚠️ *Oficiais citados devem entrar em contato com a Corregedoria.*";
 
-  // Decisão: Copiar direto ou Abrir Modal de Partes
+  // NOVO LIMITE: 4000 caracteres (Nitro)
   if (relatorioCompleto.length <= 4000) {
     navigator.clipboard.writeText(relatorioCompleto).then(() => {
-      mostrarAviso("Relatório copiado!");
+      mostrarAviso("Relatório copiado (Formato Nitro)");
     });
   } else {
-    gerarModalDePartes(exonerados, dataHoje);
+    // Se passar de 4000, abre o modal de divisão
+    gerarModalDePartes(exonerados, dataHoje, cabecalho);
   }
 };
+
+// Ajuste na função de divisão para manter o formato vertical
+function gerarModalDePartes(exonerados, dataHoje, cabecalho) {
+  const tamanhoBloco = 12; // Aumentado para 12 membros pois o limite agora é 4000
+  const partes = [];
+
+  for (let i = 0; i < exonerados.length; i += tamanhoBloco) {
+    const bloco = exonerados.slice(i, i + tamanhoBloco);
+    let textoPart =
+      cabecalho + `(PARTE ${Math.floor(i / tamanhoBloco) + 1})\n\n`;
+
+    bloco.forEach((m) => {
+      let partesNick = m.fullNickname.split("|");
+      let idRP = partesNick[1] ? partesNick[1].trim() : "---";
+
+      textoPart += `QRA: <@${m.id}>\n`;
+      textoPart += `NOME NA CIDADE: ${m.name}\n`;
+      textoPart += `ID: ${idRP}\n`;
+      textoPart += `DATA: ${dataHoje}\n`;
+      textoPart += `MOTIVO: INATIVIDADE\n`;
+      textoPart += `────────────────────────────────\n`;
+    });
+    partes.push(textoPart);
+  }
+
+  const container = document.getElementById("container-botoes-partes");
+  container.innerHTML = "";
+  partes.forEach((texto, index) => {
+    const btn = document.createElement("button");
+    btn.className = "btn-parte";
+    btn.innerHTML = `<i class="fa-solid fa-copy"></i> PARTE ${index + 1}`;
+    btn.onclick = () => {
+      navigator.clipboard.writeText(texto).then(() => {
+        mostrarAviso(`Parte ${index + 1} copiada!`);
+        btn.classList.add("copiado");
+      });
+    };
+    container.appendChild(btn);
+  });
+  document.getElementById("modal-relatorio").style.display = "flex";
+}
 
 // 6. GERADOR DE PARTES (SÓ ABRE SE > 4000 CARACTERES)
 function gerarModalDePartes(exonerados, dataHoje) {

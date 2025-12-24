@@ -134,6 +134,10 @@ window.carregarInatividade = async function () {
   }
 };
 
+window.fecharModalRelatorio = function () {
+  document.getElementById("modal-relatorio").style.display = "none";
+};
+
 window.copiarRelatorioDiscord = function () {
   if (listaMembrosAtual.length === 0) return;
 
@@ -152,24 +156,55 @@ window.copiarRelatorioDiscord = function () {
     return;
   }
 
-  let relatorio = "📋 **RELATÓRIO DE EXONERAÇÃO - CORREGEDORIA PCERJ** 📋\n";
-  relatorio += `📅 **DATA:** ${dataHoje}\n`;
-  relatorio += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
+  // DIVISÃO EM PARTES (Máximo 8 membros por bloco)
+  const tamanhoBloco = 8;
+  const partes = [];
 
-  exonerados.forEach((m) => {
-    let partes = m.name.split(" | ");
-    let nomeRP = partes[0] ? partes[0].trim() : m.name;
-    let idRP = partes[1] ? partes[1].trim() : "---";
+  for (let i = 0; i < exonerados.length; i += tamanhoBloco) {
+    const bloco = exonerados.slice(i, i + tamanhoBloco);
+    let textoPart = `📋 **RELATÓRIO DE EXONERAÇÃO - PARTE ${
+      Math.floor(i / tamanhoBloco) + 1
+    }** 📋\n`;
+    textoPart += `📅 **DATA:** ${dataHoje}\n`;
+    textoPart += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
 
-    relatorio += `🚔 **QRA:** <@${m.id}>\n`;
-    relatorio += `👤 **NOME NO RP:** ${nomeRP}\n`;
-    relatorio += `🆔 **ID:** ${idRP}\n`;
-    relatorio += `📅 **DATA:** ${dataHoje}\n`;
-    relatorio += `⚖️ **MOTIVO:** Inatividade\n`;
-    relatorio += "────────────────────────────────\n";
+    bloco.forEach((m) => {
+      let partesNome = m.name.split(" | ");
+      let nomeRP = partesNome[0] ? partesNome[0].trim() : m.name;
+      let idRP = partesNome[1] ? partesNome[1].trim() : "---";
+
+      textoPart += `🚔 **QRA:** <@${m.id}>\n`;
+      textoPart += `👤 **NOME NO RP:** ${nomeRP}\n`;
+      textoPart += `🆔 **ID:** ${idRP}\n`;
+      textoPart += `📅 **DATA:** ${dataHoje}\n`;
+      textoPart += `⚖️ **MOTIVO:** Inatividade\n`;
+      textoPart += "────────────────────────────────\n";
+    });
+
+    if (i + tamanhoBloco >= exonerados.length) {
+      textoPart +=
+        "\n⚠️ *Oficiais citados devem entrar em contato com a Corregedoria.*";
+    }
+    partes.push(textoPart);
+  }
+
+  // GERAR BOTOES NO MODAL
+  const container = document.getElementById("container-botoes-partes");
+  container.innerHTML = "";
+
+  partes.forEach((texto, index) => {
+    const btn = document.createElement("button");
+    btn.className = "btn-parte";
+    btn.innerHTML = `<i class="fa-solid fa-copy"></i> PARTE ${index + 1}`;
+    btn.onclick = () => {
+      navigator.clipboard.writeText(texto).then(() => {
+        mostrarAviso(`Parte ${index + 1} copiada!`);
+        btn.classList.add("copiado");
+        btn.innerHTML = `<i class="fa-solid fa-check"></i> COPIADA`;
+      });
+    };
+    container.appendChild(btn);
   });
 
-  navigator.clipboard.writeText(relatorio).then(() => {
-    mostrarAviso("Relatório copiado para o Discord!");
-  });
+  document.getElementById("modal-relatorio").style.display = "flex";
 };

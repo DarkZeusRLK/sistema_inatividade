@@ -12,11 +12,7 @@ function mostrarAviso(mensagem, tipo = "success") {
   const icon =
     tipo === "success" ? "fa-check-circle" : "fa-exclamation-triangle";
 
-  alert.innerHTML = `
-        <i class="fa-solid ${icon}"></i>
-        <span>${mensagem}</span>
-    `;
-
+  alert.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${mensagem}</span>`;
   container.appendChild(alert);
 
   setTimeout(() => {
@@ -25,55 +21,28 @@ function mostrarAviso(mensagem, tipo = "success") {
   }, 4000);
 }
 
-// 2. VARIÁVEIS GLOBAIS
 let listaMembrosAtual = [];
 
-// 3. FUNÇÃO DE FECHAR MODAL
 window.fecharModalRelatorio = function () {
   document.getElementById("modal-relatorio").style.display = "none";
 };
 
-// 4. SINCRONIZAÇÃO E BARRA DE PROGRESSO
+// 2. SINCRONIZAÇÃO
 window.carregarInatividade = async function () {
   const corpo = document.getElementById("corpo-inatividade");
   const btn = document.getElementById("btn-sincronizar");
-  const btnCopiar = document.getElementById("btn-copiar");
   const progContainer = document.getElementById("progress-container");
   const progBar = document.getElementById("progress-bar");
   const progLabel = document.getElementById("progress-label");
-  const progPercent = document.getElementById("progress-percentage");
 
   corpo.innerHTML = "";
   progContainer.style.display = "block";
-  progBar.style.width = "0%";
-  progPercent.innerText = "0%";
-  progLabel.innerText = "CONECTANDO AO DISCORD...";
-
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> PROCESSANDO...';
   btn.disabled = true;
-
-  // Simulação visual de progresso
-  let width = 0;
-  const interval = setInterval(() => {
-    if (width < 90) {
-      width += Math.random() * 2;
-      progBar.style.width = width + "%";
-      progPercent.innerText = Math.floor(width) + "%";
-      if (width > 30) progLabel.innerText = "VASCULHANDO MENSAGENS RECENTES...";
-      if (width > 70) progLabel.innerText = "ORGANIZANDO QRA DOS OFICIAIS...";
-    }
-  }, 200);
 
   try {
     const res = await fetch("/api/membros-inativos");
     const dados = await res.json();
-
     if (!Array.isArray(dados)) throw new Error("Erro");
-
-    clearInterval(interval);
-    progBar.style.width = "100%";
-    progPercent.innerText = "100%";
-    progLabel.innerText = "AUDITORIA FINALIZADA!";
 
     listaMembrosAtual = dados;
     const agora = new Date();
@@ -83,11 +52,11 @@ window.carregarInatividade = async function () {
     dados.sort((a, b) => a.lastMsg - b.lastMsg);
 
     dados.forEach((membro) => {
-      let dataReferencia =
+      let dataRef =
         membro.lastMsg < dataBaseAuditoria
           ? new Date(dataBaseAuditoria)
           : new Date(membro.lastMsg);
-      const dias = Math.floor((agora - dataReferencia) / msPorDia);
+      const dias = Math.floor((agora - dataRef) / msPorDia);
       const statusExonerar = dias >= 7;
 
       const tr = document.createElement("tr");
@@ -116,26 +85,20 @@ window.carregarInatividade = async function () {
                     }">
                         ${statusExonerar ? "⚠️ EXONERAR" : "✅ REGULAR"}
                     </span>
-                </td>
-            `;
+                </td>`;
       corpo.appendChild(tr);
     });
 
-    if (btnCopiar) btnCopiar.style.display = "inline-block";
     mostrarAviso("Banco de dados sincronizado.");
   } catch (err) {
-    clearInterval(interval);
-    mostrarAviso("Erro ao buscar dados do servidor.", "error");
+    mostrarAviso("Erro ao buscar dados.", "error");
   } finally {
-    btn.innerHTML = '<i class="fa-solid fa-rotate"></i> SINCRONIZAR DADOS';
     btn.disabled = false;
-    setTimeout(() => {
-      progContainer.style.display = "none";
-    }, 3000);
+    progContainer.style.display = "none";
   }
 };
 
-// 5. LÓGICA DE CÓPIA INTELIGENTE (COM DIVISOR SE NECESSÁRIO)
+// 3. RELATÓRIO VERTICAL E LIMITE NITRO (4000 CHARS)
 window.copiarRelatorioDiscord = function () {
   if (listaMembrosAtual.length === 0) return;
 
@@ -154,109 +117,52 @@ window.copiarRelatorioDiscord = function () {
     return;
   }
 
-  // GERAÇÃO DO TEXTO VERTICAL PADRONIZADO
-  function formatarMensagem(membros) {
-    let texto = "";
-    membros.forEach((m) => {
-      // Extrai o ID numérico do apelido (ex: "| 722" -> "722")
-      let partesNick = m.fullNickname.split("|");
-      let idRP = partesNick[1] ? partesNick[1].trim() : "---";
-
-      texto += `QRA: <@${m.id}>\n`;
-      texto += `NOME NA CIDADE: ${m.name}\n`;
-      texto += `ID: ${idRP}\n`;
-      texto += `DATA: ${dataHoje}\n`;
-      texto += `MOTIVO: INATIVIDADE\n`;
-      texto += `────────────────────────────────\n`;
-    });
-    return texto;
-  }
-
   let cabecalho = "📋 **RELATÓRIO DE EXONERAÇÃO - CORREGEDORIA PCERJ** 📋\n";
   cabecalho += `📅 **DATA DO RELATÓRIO:** ${dataHoje}\n`;
   cabecalho += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
 
-  let relatorioCompleto = cabecalho + formatarMensagem(exonerados);
-  relatorioCompleto +=
+  function formatarMensagem(membros) {
+    let texto = "";
+    membros.forEach((m) => {
+      let partesNick = m.fullNickname.split("|");
+      let idRP = partesNick[1] ? partesNick[1].trim() : "---";
+      texto += `QRA: <@${m.id}>\nNOME NA CIDADE: ${m.name}\nID: ${idRP}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────\n`;
+    });
+    return texto;
+  }
+
+  let relatorioCompleto =
+    cabecalho +
+    formatarMensagem(exonerados) +
     "\n⚠️ *Oficiais citados devem entrar em contato com a Corregedoria.*";
 
-  // NOVO LIMITE: 4000 caracteres (Nitro)
   if (relatorioCompleto.length <= 4000) {
-    navigator.clipboard.writeText(relatorioCompleto).then(() => {
-      mostrarAviso("Relatório copiado (Formato Nitro)");
-    });
+    navigator.clipboard
+      .writeText(relatorioCompleto)
+      .then(() => mostrarAviso("Relatório copiado (Nitro)"));
   } else {
-    // Se passar de 4000, abre o modal de divisão
     gerarModalDePartes(exonerados, dataHoje, cabecalho);
   }
 };
 
-// Ajuste na função de divisão para manter o formato vertical
 function gerarModalDePartes(exonerados, dataHoje, cabecalho) {
-  const tamanhoBloco = 12; // Aumentado para 12 membros pois o limite agora é 4000
+  const tamanhoBloco = 12;
   const partes = [];
 
   for (let i = 0; i < exonerados.length; i += tamanhoBloco) {
     const bloco = exonerados.slice(i, i + tamanhoBloco);
     let textoPart =
       cabecalho + `(PARTE ${Math.floor(i / tamanhoBloco) + 1})\n\n`;
-
     bloco.forEach((m) => {
       let partesNick = m.fullNickname.split("|");
       let idRP = partesNick[1] ? partesNick[1].trim() : "---";
-
-      textoPart += `QRA: <@${m.id}>\n`;
-      textoPart += `NOME NA CIDADE: ${m.name}\n`;
-      textoPart += `ID: ${idRP}\n`;
-      textoPart += `DATA: ${dataHoje}\n`;
-      textoPart += `MOTIVO: INATIVIDADE\n`;
-      textoPart += `────────────────────────────────\n`;
+      textoPart += `QRA: <@${m.id}>\nNOME NA CIDADE: ${m.name}\nID: ${idRP}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────\n`;
     });
     partes.push(textoPart);
   }
 
   const container = document.getElementById("container-botoes-partes");
   container.innerHTML = "";
-  partes.forEach((texto, index) => {
-    const btn = document.createElement("button");
-    btn.className = "btn-parte";
-    btn.innerHTML = `<i class="fa-solid fa-copy"></i> PARTE ${index + 1}`;
-    btn.onclick = () => {
-      navigator.clipboard.writeText(texto).then(() => {
-        mostrarAviso(`Parte ${index + 1} copiada!`);
-        btn.classList.add("copiado");
-      });
-    };
-    container.appendChild(btn);
-  });
-  document.getElementById("modal-relatorio").style.display = "flex";
-}
-
-// 6. GERADOR DE PARTES (SÓ ABRE SE > 4000 CARACTERES)
-function gerarModalDePartes(exonerados, dataHoje) {
-  const tamanhoBloco = 8;
-  const partes = [];
-
-  for (let i = 0; i < exonerados.length; i += tamanhoBloco) {
-    const bloco = exonerados.slice(i, i + tamanhoBloco);
-    let textoPart = `📋 **RELATÓRIO DE EXONERAÇÃO - PARTE ${
-      Math.floor(i / tamanhoBloco) + 1
-    }** 📋\n`;
-    textoPart += `📅 **DATA:** ${dataHoje}\n\n`;
-
-    bloco.forEach((m) => {
-      let partesNome = m.name.split(" | ");
-      let nomeRP = partesNome[0] ? partesNome[0].trim() : m.name;
-      let idRP = partesNome[1] ? partesNome[1].trim() : "---";
-      textoPart += `🚔 **QRA:** <@${m.id}> | **ID:** ${idRP} | **Motivo:** Inatividade\n`;
-    });
-
-    partes.push(textoPart);
-  }
-
-  const container = document.getElementById("container-botoes-partes");
-  container.innerHTML = "";
-
   partes.forEach((texto, index) => {
     const btn = document.createElement("button");
     btn.className = "btn-parte";
@@ -270,6 +176,5 @@ function gerarModalDePartes(exonerados, dataHoje) {
     };
     container.appendChild(btn);
   });
-
   document.getElementById("modal-relatorio").style.display = "flex";
 }

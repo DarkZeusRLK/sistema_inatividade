@@ -10,11 +10,10 @@ module.exports = async (req, res) => {
   try {
     const headers = { Authorization: `Bot ${Discord_Bot_Token}` };
 
-    // 1. Busca Banco de Dados de Admissão (Aumentado para 500 mensagens)
+    // 1. Busca Banco de Dados de Admissão (Histórico de 500 mensagens)
     let nomesRP = {};
     let ultimoIdMsg = null;
 
-    // Fazemos 5 buscas de 100 mensagens para pegar um histórico de 500 fichas
     for (let i = 0; i < 5; i++) {
       let url = `https://discord.com/api/v10/channels/${ADMISSAO_CHANNEL_ID}/messages?limit=100`;
       if (ultimoIdMsg) url += `&before=${ultimoIdMsg}`;
@@ -26,18 +25,13 @@ module.exports = async (req, res) => {
       if (msgsAdmissao.length === 0) break;
 
       msgsAdmissao.forEach((msg) => {
-        // Limpamos asteriscos (negrito) para não atrapalhar a leitura
         const conteudoLimpo = msg.content.replace(/\*/g, "");
-
         const mencao = conteudoLimpo.match(/<@!?(\d+)>/);
         const nomeMatch = conteudoLimpo.match(/NOME\s*DO\s*RP:\s*(.*)/i);
 
         if (mencao && nomeMatch) {
           const userId = mencao[1];
-          // Pega o nome, remove espaços extras e quebras de linha
           const nomeExtraido = nomeMatch[1].split("\n")[0].trim();
-
-          // Só salva se ainda não existir (garante que pega a admissão mais recente)
           if (!nomesRP[userId]) {
             nomesRP[userId] = nomeExtraido;
           }
@@ -73,11 +67,11 @@ module.exports = async (req, res) => {
     police.forEach((p) => {
       activityMap[p.user.id] = {
         id: p.user.id,
-        // name: Agora é estritamente o nome que está no Discord (Apelido ou Global)
         name: p.nick || p.user.username,
-        // rpName: O nome extraído da ficha de admissão
         rpName: nomesRP[p.user.id] || p.nick || p.user.username,
         lastMsg: 0,
+        // CORREÇÃO: Adicionado o momento em que o membro entrou no servidor
+        joinedAt: new Date(p.joined_at).getTime(),
         avatar: p.user.avatar
           ? `https://cdn.discordapp.com/avatars/${p.user.id}/${p.user.avatar}.png`
           : null,

@@ -82,12 +82,25 @@ window.carregarInatividade = async function () {
     dados.sort((a, b) => a.lastMsg - b.lastMsg);
 
     dados.forEach((membro) => {
-      let dataRef =
-        membro.lastMsg < dataBaseAuditoria
-          ? new Date(dataBaseAuditoria)
-          : new Date(membro.lastMsg);
-      const dias = Math.floor((agora - dataRef) / msPorDia);
+      // PROTEÇÃO PARA RECRUTAS: Pega a data mais recente entre (Mensagem, Entrada no Discord, Data Base)
+      let dataReferenciaReal = Math.max(
+        membro.lastMsg || 0,
+        membro.joinedAt || 0,
+        dataBaseAuditoria
+      );
+
+      const dias = Math.floor((agora - dataReferenciaReal) / msPorDia);
       const statusExonerar = dias >= 7;
+
+      // Define o que mostrar na coluna de "Última Atividade"
+      let textoAtividade = "";
+      if (membro.lastMsg > 0) {
+        textoAtividade = new Date(membro.lastMsg).toLocaleDateString("pt-BR");
+      } else if (membro.joinedAt > dataBaseAuditoria) {
+        textoAtividade = "RECRUTA (RECENTE)";
+      } else {
+        textoAtividade = "DESDE 08/12";
+      }
 
       const tr = document.createElement("tr");
       tr.innerHTML = `
@@ -97,14 +110,11 @@ window.carregarInatividade = async function () {
                           membro.avatar ||
                           "https://cdn.discordapp.com/embed/avatars/0.png"
                         }" class="avatar-img">
-                        <strong>${membro.name}</strong> </div>
+                        <strong>${membro.name}</strong> 
+                    </div>
                 </td>
                 <td><code style="color:#888">${membro.id}</code></td>
-                <td>${
-                  membro.lastMsg === 0
-                    ? "DESDE 08/12"
-                    : new Date(membro.lastMsg).toLocaleDateString("pt-BR")
-                }</td>
+                <td>${textoAtividade}</td>
                 <td><strong style="color: ${
                   statusExonerar ? "#ff4d4d" : "#d4af37"
                 }">${dias} Dias</strong></td>
@@ -133,7 +143,7 @@ window.carregarInatividade = async function () {
   }
 };
 
-// 5. LÓGICA DE CÓPIA (LIMITE 4000 CARACTERES)
+// 5. LÓGICA DE CÓPIA (PROTEGIDA PARA NOVOS MEMBROS)
 window.copiarRelatorioDiscord = function () {
   if (listaMembrosAtual.length === 0) return;
 
@@ -142,8 +152,13 @@ window.copiarRelatorioDiscord = function () {
   const dataBaseAuditoria = new Date("2025-12-08T00:00:00").getTime();
 
   const exonerados = listaMembrosAtual.filter((m) => {
-    let dataRef = m.lastMsg < dataBaseAuditoria ? dataBaseAuditoria : m.lastMsg;
-    let dias = Math.floor((agora - dataRef) / (1000 * 60 * 60 * 24));
+    // Mesma lógica de proteção: só conta inatividade após a entrada dele ou após 08/12
+    let dataReferenciaReal = Math.max(
+      m.lastMsg || 0,
+      m.joinedAt || 0,
+      dataBaseAuditoria
+    );
+    let dias = Math.floor((agora - dataReferenciaReal) / (1000 * 60 * 60 * 24));
     return dias >= 7;
   });
 
@@ -156,7 +171,6 @@ window.copiarRelatorioDiscord = function () {
   cabecalho += `📅 **DATA DO RELATÓRIO:** ${dataHoje}\n`;
   cabecalho += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
 
-  // FUNÇÃO PARA GERAR O CORPO (Usa rpName para o relatório formal)
   const gerarCorpoVertical = (membros) => {
     let texto = "";
     membros.forEach((m) => {
@@ -164,7 +178,7 @@ window.copiarRelatorioDiscord = function () {
       let idRP = partesNick[1] ? partesNick[1].trim() : "---";
 
       texto += `QRA: <@${m.id}>\n`;
-      texto += `NOME NA CIDADE: ${m.rpName || m.name}\n`; // Puxa nome da admissão
+      texto += `NOME NA CIDADE: ${m.rpName || m.name}\n`;
       texto += `ID: ${idRP}\n`;
       texto += `DATA: ${dataHoje}\n`;
       texto += `MOTIVO: INATIVIDADE\n`;
@@ -188,7 +202,7 @@ window.copiarRelatorioDiscord = function () {
 
 // 6. FUNÇÃO ÚNICA PARA DIVIDIR EM PARTES
 function abrirModalDivisor(exonerados, dataHoje, cabecalho, formatador) {
-  const tamanhoBloco = 12; // Aproximadamente 12 membros cabem em 4000 caracteres no formato vertical
+  const tamanhoBloco = 12;
   const partes = [];
 
   for (let i = 0; i < exonerados.length; i += tamanhoBloco) {

@@ -1,5 +1,7 @@
 module.exports = async (req, res) => {
-  const { Discord_Bot_Token, GUILD_ID, POLICE_ROLE_ID } = process.env;
+  // Adicionamos o FERIAS_ROLE_ID aqui
+  const { Discord_Bot_Token, GUILD_ID, POLICE_ROLE_ID, FERIAS_ROLE_ID } =
+    process.env;
 
   try {
     const headers = { Authorization: `Bot ${Discord_Bot_Token}` };
@@ -20,7 +22,16 @@ module.exports = async (req, res) => {
       { headers }
     );
     const members = await membersRes.json();
-    const police = members.filter((m) => m.roles.includes(POLICE_ROLE_ID));
+
+    // FILTRO LOGÍCO: Deve ter o cargo de polícia E NÃO PODE ter o cargo de férias
+    const police = members.filter((m) => {
+      const temCargoPolicia = m.roles.includes(POLICE_ROLE_ID);
+      const estaDeFerias = FERIAS_ROLE_ID
+        ? m.roles.includes(FERIAS_ROLE_ID)
+        : false;
+
+      return temCargoPolicia && !estaDeFerias;
+    });
 
     let activityMap = {};
     police.forEach((p) => {
@@ -34,8 +45,7 @@ module.exports = async (req, res) => {
       };
     });
 
-    // 3. Varredura Sequencial (Evita Rate Limit e perda de dados)
-    // Buscamos 100 msgs por canal, o que é suficiente para cobrir os últimos dias na maioria dos canais
+    // 3. Varredura Sequencial (Filtramos os canais um a um para precisão total)
     for (const channel of textChannels) {
       try {
         const msgRes = await fetch(
@@ -53,7 +63,6 @@ module.exports = async (req, res) => {
             }
           });
         }
-        // Pequena pausa para não ser bloqueado pelo Discord
         await new Promise((r) => setTimeout(r, 50));
       } catch (e) {
         continue;

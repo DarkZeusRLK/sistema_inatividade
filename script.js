@@ -177,7 +177,7 @@ window.copiarRelatorioDiscord = function () {
     "\n⚠️ *Oficiais citados devem entrar em contato com a Corregedoria.*";
 
   // Decisão: Copiar direto ou Abrir Modal de Partes
-  if (relatorioCompleto.length <= 2000) {
+  if (relatorioCompleto.length <= 4000) {
     navigator.clipboard.writeText(relatorioCompleto).then(() => {
       mostrarAviso("Relatório copiado!");
     });
@@ -186,7 +186,7 @@ window.copiarRelatorioDiscord = function () {
   }
 };
 
-// 6. GERADOR DE PARTES (SÓ ABRE SE > 2000 CARACTERES)
+// 6. GERADOR DE PARTES (SÓ ABRE SE > 4000 CARACTERES)
 function gerarModalDePartes(exonerados, dataHoje) {
   const tamanhoBloco = 8;
   const partes = [];

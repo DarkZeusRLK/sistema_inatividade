@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Polícia Civil</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      background: radial-gradient(circle, #1a1a1e 0%, #0a0a0c 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    .login-card {
+      background: #16161a;
+      padding: 40px;
+      border-radius: 12px;
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      text-align: center;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    }
+
+    .login-card img {
+      width: 120px;
+      margin-bottom: 20px;
+      filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.2));
+    }
+
+    .login-card h1 {
+      color: #d4af37;
+      font-size: 1.5rem;
+      letter-spacing: 2px;
+      margin-bottom: 5px;
+    }
+
+    .login-card p {
+      color: #888;
+      font-size: 0.9rem;
+      margin-bottom: 30px;
+    }
+
+    .btn-discord {
+      background: #5865F2;
+      color: white;
+      padding: 15px;
+      border-radius: 6px;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-weight: bold;
+      transition: 0.3s;
+      border: none;
+      width: 100%;
+      cursor: pointer;
+    }
+
+    .btn-discord:hover {
+      background: #4752c4;
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="login-card">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/b/b2/Bras%C3%A3o_da_PPCERJ.png" alt="PCERJ">
+    <h1>AUTENTICAÇÃO</h1>
+    <p>Acesso restrito a oficiais da Polícia Civil</p>
+
+    <button onclick="iniciarLogin()" class="btn-discord">
+      <i class="fa-brands fa-discord"></i> ENTRAR COM DISCORD
+    </button>
+  </div>
+
+  <script>
+    const CLIENT_ID = '145134268248725931'; // Pegue no Discord Developer Portal
+    const REDIRECT_URI = window.location.origin + '/login.html'; // URL do seu site
+
+    function iniciarLogin() {
+      const scope = 'identify guilds guilds.members.read';
+      const url = `https://discord.com/api/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=${encodeURIComponent(scope)}`;
+      window.location.href = url;
+    }
+
+    async function validarAcesso() {
+      const hash = window.location.hash;
+      if (hash.includes("access_token")) {
+        const params = new URLSearchParams(hash.replace("#", "?"));
+        const token = params.get("access_token");
+
+        // 1. Puxar Info do Usuário
+        const userRes = await fetch('https://discord.com/api/users/@me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const userData = await userRes.json();
+
+        // 2. Verificar se está no servidor e tem o cargo (Ajuste o Guild ID)
+        const GUILD_ID = 'SEU_GUILD_ID';
+        const ROLE_ID = 'SEU_ROLE_ID_POLICIA';
+
+        const memberRes = await fetch(`https://discord.com/api/users/@me/guilds/${GUILD_ID}/member`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (memberRes.ok) {
+          const memberData = await memberRes.json();
+          if (memberData.roles.includes(ROLE_ID)) {
+            // SALVAR SESSÃO
+            const sessao = {
+              id: userData.id,
+              nome: memberData.nick || userData.username,
+              avatar: `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png`,
+              expira: Date.now() + (24 * 60 * 60 * 1000) // 24h
+            };
+            localStorage.setItem("pc_session", JSON.stringify(sessao));
+            window.location.href = "index.html";
+          } else {
+            alert("Acesso Negado: Você não possui o cargo de Oficial.");
+            window.location.hash = "";
+          }
+        } else {
+          alert("Você não faz parte do servidor oficial da Polícia Civil.");
+        }
+      }
+    }
+
+    window.onload = validarAcesso;
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Corregedoria - Auditoria de Inatividade</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+  <div class="app-container">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/b/b2/Bras%C3%A3o_da_PPCERJ.png" alt="Brasão PC">
+        <h2>POLÍCIA CIVIL</h2>
+        <p>Painel de Controle</p>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active">
+          <i class="fa-solid fa-user-clock"></i>
+          <span>Inatividade (7 Dias)</span>
+        </a>
+        <a href="#" class="nav-item">
+          <i class="fa-solid fa-file-signature"></i>
+          <span>Porte de Armas</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <small>Sistema de Auditoria v1.0</small>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="top-bar">
+        <div class="page-title">
+          <h1>SISTEMA DE AUDITORIA DE ATIVIDADE</h1>
+          <span>Controle de Presença em Canais Oficiais</span>
+        </div>
+        <div class="header-actions">
+          <button onclick="carregarInatividade()" id="btn-sincronizar" class="btn-gold">
+            <i class="fa-solid fa-rotate"></i> SINCRONIZAR DADOS
+          </button>
+        </div>
+      </header>
+
+      <div class="content-body">
+        <div class="info-alert-gold">
+          <div class="alert-icon">
+            <i class="fa-solid fa-scale-balanced"></i>
+          </div>
+          <div class="alert-text">
+            <h3>Protocolo de Exoneração</h3>
+            <p>De acordo com o regulamento interno, oficiais sem atividade por um período superior a <strong>07 dias</strong> estão sujeitos à exoneração administrativa imediata.</p>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <div class="card-header">
+            <h3><i class="fa-solid fa-list-check"></i> Relação de Oficiais</h3>
+          </div>
+          <div class="table-responsive">
+            <table class="audit-table">
+              <thead>
+                <tr>
+                  <th>Oficial</th>
+                  <th>ID Discord</th>
+                  <th>Última Mensagem</th>
+                  <th>Dias Ausente</th>
+                  <th style="text-align: center;">Veredito</th>
+                </tr>
+              </thead>
+              <tbody id="corpo-inatividade">
+                <tr>
+                  <td colspan="5" style="text-align: center; padding: 40px; color: #888;">
+                    Nenhum dado sincronizado. Clique em "Sincronizar Dados".
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+
+</html>

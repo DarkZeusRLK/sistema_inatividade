@@ -1,6 +1,7 @@
+// VARIÁVEL GLOBAL PARA ARMAZENAR OS DADOS DO RELATÓRIO
 let listaMetaCoreAtual = [];
 
-// 1. ABRIR ABA CORE
+// 1. NAVEGAÇÃO - ABRIR ABA CORE
 window.abrirMetaCore = function () {
   document.getElementById("secao-inatividade").style.display = "none";
   document.getElementById("secao-meta-core").style.display = "block";
@@ -18,7 +19,6 @@ window.abrirMetaCore = function () {
   const campoInicio = document.getElementById("data-inicio-core");
   const campoFim = document.getElementById("data-fim-core");
 
-  // Só preenche se estiver vazio para não sobrescrever o que você alterou
   if (!campoInicio.value) {
     const hoje = new Date();
     const umaSemanaAtras = new Date();
@@ -28,7 +28,23 @@ window.abrirMetaCore = function () {
   }
 };
 
-// 2. CARREGAR DADOS (FILTRO DE DATAS)
+// 2. VOLTAR PARA INATIVIDADE (CORREÇÃO DE NAVEGAÇÃO)
+window.abrirInatividade = function () {
+  document.getElementById("secao-inatividade").style.display = "block";
+  document.getElementById("secao-meta-core").style.display = "none";
+  document.getElementById("botoes-inatividade").style.display = "block";
+  document.getElementById("botoes-core").style.display = "none";
+
+  document.getElementById("titulo-pagina").innerText =
+    "SISTEMA DE AUDITORIA DE ATIVIDADE";
+  document.getElementById("subtitulo-pagina").innerText =
+    "Controle de Presença em Canais Oficiais";
+
+  document.querySelector(".nav-item.active")?.classList.remove("active");
+  document.getElementById("nav-inatividade").classList.add("active");
+};
+
+// 3. CARREGAR DADOS CORE (ALERTAS FORMALIZADOS)
 window.carregarMetaCore = async function () {
   const corpo = document.getElementById("corpo-meta-core");
   const progBar = document.getElementById("prog-bar-core");
@@ -38,12 +54,12 @@ window.carregarMetaCore = async function () {
   const dataFim = document.getElementById("data-fim-core").value;
 
   if (!dataInicio || !dataFim) {
-    alert("Selecione o período.");
+    mostrarAviso("Por favor, selecione o período para filtragem.", "warning");
     return;
   }
 
   corpo.innerHTML =
-    '<p style="text-align: center; color: #d4af37; padding: 20px;">Buscando logs operacionais...</p>';
+    '<p style="text-align: center; color: #d4af37; padding: 20px;">Sincronizando registros operacionais...</p>';
   progContainer.style.display = "block";
   progBar.style.width = "40%";
 
@@ -59,7 +75,6 @@ window.carregarMetaCore = async function () {
 
     dados.forEach((m) => {
       const card = document.createElement("div");
-      card.className = "meta-card-item";
       card.style =
         "background: #111; border: 1px solid #333; border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 10px; border-left: 5px solid #444;";
 
@@ -96,8 +111,10 @@ window.carregarMetaCore = async function () {
       }
       corpo.appendChild(card);
     });
+
+    mostrarAviso("Metas CORE sincronizadas com sucesso!");
   } catch (e) {
-    alert("Erro ao carregar metas.");
+    mostrarAviso("Erro ao conectar com o servidor de metas.", "error");
   } finally {
     setTimeout(() => {
       progContainer.style.display = "none";
@@ -105,10 +122,15 @@ window.carregarMetaCore = async function () {
   }
 };
 
-// 3. COPIAR RELATÓRIO (FORMATO VERTICAL SOLICITADO)
+// 4. COPIAR RELATÓRIO DISCORD (VERTICAL)
 window.copiarRelatorioCORE = function () {
-  if (listaMetaCoreAtual.length === 0)
-    return alert("Filtre as metas antes de copiar.");
+  if (listaMetaCoreAtual.length === 0) {
+    mostrarAviso(
+      "Não há dados para copiar. Filtre as metas primeiro.",
+      "error"
+    );
+    return;
+  }
 
   const dIni = document
     .getElementById("data-inicio-core")
@@ -131,8 +153,6 @@ window.copiarRelatorioCORE = function () {
         m.acoes >= 4 &&
         (!m.temCGPC || m.cgpc >= 1) &&
         (!m.temEnsino || m.ensino_cursos >= 4 || m.ensino_recrut >= 2);
-
-      // Formato Vertical um abaixo do outro
       texto += `👤 **OFICIAL:** <@${m.id}>\n`;
       texto += `📊 **STATUS:** ${ok ? "✅ META BATIDA" : "❌ PENDENTE"}\n`;
       texto += `┠ **Ações:** ${m.acoes}/4\n`;
@@ -144,29 +164,9 @@ window.copiarRelatorioCORE = function () {
     }
   });
 
-  texto += `━━━━━━━━━━━━━━━━━━\n⚠️ *Regularizem suas pendências operacionais.*`;
+  texto += `━━━━━━━━━━━━━━━━━━\n⚠️ *Relatório formalizado via Painel Administrativo.*`;
 
-  navigator.clipboard
-    .writeText(texto)
-    .then(() => alert("Relatório Vertical copiado para o Discord!"));
-};
-// FUNÇÃO PARA VOLTAR PARA A ABA DE INATIVIDADE
-window.abrirInatividade = function () {
-  // 1. Alterna a visibilidade das seções
-  document.getElementById("secao-inatividade").style.display = "block";
-  document.getElementById("secao-meta-core").style.display = "none";
-
-  // 2. Alterna os botões da barra superior
-  document.getElementById("botoes-inatividade").style.display = "block";
-  document.getElementById("botoes-core").style.display = "none";
-
-  // 3. Restaura os títulos originais
-  document.getElementById("titulo-pagina").innerText =
-    "SISTEMA DE AUDITORIA DE ATIVIDADE";
-  document.getElementById("subtitulo-pagina").innerText =
-    "Controle de Presença em Canais Oficiais";
-
-  // 4. Atualiza o estado visual da Sidebar (Menu lateral)
-  document.querySelector(".nav-item.active")?.classList.remove("active");
-  document.getElementById("nav-inatividade").classList.add("active");
+  navigator.clipboard.writeText(texto).then(() => {
+    mostrarAviso("Relatório vertical copiado para o Discord!");
+  });
 };

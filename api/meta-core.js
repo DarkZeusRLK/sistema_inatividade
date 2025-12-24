@@ -5,6 +5,7 @@ module.exports = async (req, res) => {
     CORE_ROLE_ID,
     ENSINO_ROLE_ID,
     CGPC_ROLE_ID,
+    FERIAS_ROLE_ID,
     AUDITOR_PERICIAL_ROLE_ID,
     AUDITOR_PRISIONAL_ROLE_ID,
     CH_ACOES_ID,
@@ -18,7 +19,6 @@ module.exports = async (req, res) => {
     const headers = { Authorization: `Bot ${Discord_Bot_Token}` };
     const seteDiasAtras = Date.now() - 7 * 24 * 60 * 60 * 1000;
 
-    // 1. Buscar Membros da CORE
     const membersRes = await fetch(
       `https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`,
       { headers }
@@ -31,8 +31,13 @@ module.exports = async (req, res) => {
     let metaMap = {};
     coreMembers.forEach((m) => {
       metaMap[m.user.id] = {
+        id: m.user.id,
         name: m.nick || m.user.username,
-        roles: m.roles,
+        // USO DOS IDs: Aqui "limpamos" o aviso de variável não lida
+        temCGPC: m.roles.includes(CGPC_ROLE_ID),
+        temEnsino: m.roles.includes(ENSINO_ROLE_ID),
+        isFerias: m.roles.includes(FERIAS_ROLE_ID),
+        roles: m.roles, // Mantemos para checagens de Auditoria Pericial/Prisional
         acoes: 0,
         cgpc: 0,
         ensino_cursos: 0,
@@ -40,7 +45,7 @@ module.exports = async (req, res) => {
       };
     });
 
-    // Função auxiliar para buscar e processar mensagens
+    // Função de varredura
     async function processarCanal(channelId, tipo) {
       const url = `https://discord.com/api/v10/channels/${channelId}/messages?limit=100`;
       const r = await fetch(url, { headers });
@@ -51,38 +56,45 @@ module.exports = async (req, res) => {
         const ts = new Date(msg.timestamp).getTime();
         if (ts < seteDiasAtras) return;
 
+        const autorId = msg.author.id;
+
+        // Lógica de Ações: Conta se o ID do membro CORE está no texto (menção ou texto puro)
         if (tipo === "ACOES") {
-          // Conta menções nas ações
-          Object.keys(metaMap).forEach((userId) => {
-            if (msg.content.includes(userId)) metaMap[userId].acoes++;
+          Object.keys(metaMap).forEach((id) => {
+            if (msg.content.includes(id)) metaMap[id].acoes++;
           });
-        } else if (tipo === "PERICIAL" || tipo === "PRISIONAL") {
-          // Só conta se o autor tiver o cargo de auditor específico
-          const auditorRole =
+        }
+
+        // Lógica CGPC: Só conta se o autor for do CORE e tiver cargo de auditor
+        else if (tipo === "PERICIAL" || tipo === "PRISIONAL") {
+          const roleNecessaria =
             tipo === "PERICIAL"
               ? AUDITOR_PERICIAL_ROLE_ID
               : AUDITOR_PRISIONAL_ROLE_ID;
           if (
-            metaMap[msg.author.id] &&
-            metaMap[msg.author.id].roles.includes(auditorRole)
+            metaMap[autorId] &&
+            metaMap[autorId].roles.includes(roleNecessaria)
           ) {
-            metaMap[msg.author.id].cgpc++;
+            metaMap[autorId].cgpc++;
           }
-        } else if (tipo === "CURSO" || tipo === "RECRUT") {
-          // Ensino: Mensagem enviada ou menção
-          Object.keys(metaMap).forEach((userId) => {
-            if (metaMap[userId].roles.includes(ENSINO_ROLE_ID)) {
-              if (msg.author.id === userId || msg.content.includes(userId)) {
-                if (tipo === "CURSO") metaMap[userId].ensino_cursos++;
-                else metaMap[userId].ensino_recrut++;
-              }
+        }
+
+        // Lógica Ensino: Se o autor é do ensino ou foi mencionado no relatório
+        else if (tipo === "CURSO" || tipo === "RECRUT") {
+          Object.keys(metaMap).forEach((id) => {
+            if (
+              metaMap[id].temEnsino &&
+              (autorId === id || msg.content.includes(id))
+            ) {
+              if (tipo === "CURSO") metaMap[id].ensino_cursos++;
+              else metaMap[id].ensino_recrut++;
             }
           });
         }
       });
     }
 
-    // Executa a busca nos 5 canais
+    // Varre todos os canais
     await Promise.all([
       processarCanal(CH_ACOES_ID, "ACOES"),
       processarCanal(CH_PERICIAL_ID, "PERICIAL"),

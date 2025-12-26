@@ -84,31 +84,30 @@
   </div>
 
   <script>
-    // 1. Defina o seu Client ID aqui para o redirecionamento funcionar
-    const DISCORD_CLIENT_ID = '1453204169661087794';
+    // Configuração Pública
+    const CLIENT_ID = '1453204169661087794';
 
-    // Esta é a função que faltava!
+    // 1. Redireciona para o Discord
     function iniciarLogin() {
       const REDIRECT_URI = window.location.origin + '/login.html';
       const scope = encodeURIComponent('identify guilds guilds.members.read');
       const redirect = encodeURIComponent(REDIRECT_URI);
-
-      const url = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${redirect}&response_type=token&scope=${scope}`;
-
+      const url = `https://discord.com/api/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${redirect}&response_type=token&scope=${scope}`;
       window.location.href = url;
     }
 
+    // 2. Valida o retorno do Discord com o seu Servidor
     async function validarAcesso() {
       const hash = window.location.hash;
       if (hash.includes("access_token")) {
         const params = new URLSearchParams(hash.replace("#", "?"));
         const token = params.get("access_token");
 
-        // Limpa a URL para não expor o token
+        // Limpa o token da URL por segurança
         window.history.replaceState({}, document.title, window.location.pathname);
 
         try {
-          // Envia o token para o seu servidor (que tem os IDs no .env)
+          // CHAMA O SEU SERVER.JS
           const res = await fetch('/api/auth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -118,6 +117,7 @@
           if (res.ok) {
             const dadosSessao = await res.json();
 
+            // Salva a sessão no navegador (incluindo o tema escolhido pelo server)
             const sessao = {
               ...dadosSessao,
               expira: Date.now() + (24 * 60 * 60 * 1000)
@@ -126,16 +126,15 @@
             localStorage.setItem("pc_session", JSON.stringify(sessao));
             window.location.href = "index.html";
           } else {
-            alert("Acesso negado: Você não possui os cargos necessários.");
+            const erro = await res.json();
+            alert(erro.error || "Acesso negado.");
           }
         } catch (error) {
-          console.error(error);
-          alert("Erro ao conectar com o servidor de autenticação.");
+          alert("Não foi possível conectar ao servidor de autenticação.");
         }
       }
     }
 
-    // Executa a validação assim que a página carrega
     window.onload = validarAcesso;
   </script>
 </body>

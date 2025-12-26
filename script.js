@@ -323,21 +323,21 @@ window.carregarInatividade = async function () {
 };
 
 // =========================================================
-// 4. LÓGICA DE COPIAR RELATÓRIO DE INATIVIDADE (ESTILO PCERJ)
+// 4. LÓGICA DE COPIAR RELATÓRIO DE INATIVIDADE (CORRIGIDA)
 // =========================================================
 
-// Função robusta de cópia para garantir funcionamento em todos os dispositivos
 async function executarCopia(texto) {
+  console.log("Tentando copiar texto...");
   if (navigator.clipboard && window.isSecureContext) {
     try {
       await navigator.clipboard.writeText(texto);
       return true;
     } catch (err) {
-      console.error("Erro Clipboard API:", err);
+      console.error("Falha na Clipboard API:", err);
     }
   }
 
-  // Fallback para navegadores que bloqueiam a API de Clipboard
+  // Fallback: Método antigo para navegadores sem HTTPS ou suporte à API
   const textArea = document.createElement("textarea");
   textArea.value = texto;
   textArea.style.position = "fixed";
@@ -347,29 +347,31 @@ async function executarCopia(texto) {
   textArea.focus();
   textArea.select();
   try {
-    const bemSucedido = document.execCommand("copy");
+    const ok = document.execCommand("copy");
     document.body.removeChild(textArea);
-    return bemSucedido;
+    return ok;
   } catch (err) {
+    console.error("Falha no fallback de cópia:", err);
     document.body.removeChild(textArea);
     return false;
   }
 }
 
 window.copiarRelatorioDiscord = function () {
+  console.log("Botão de cópia clicado.");
   const { org } = obterSessao();
   const label = getOrgLabel(org);
 
-  // Verifica se há dados carregados
   if (!listaMembrosAtual || listaMembrosAtual.length === 0) {
-    return mostrarAviso("Sincronize os dados antes de copiar.", "warning");
+    console.warn("Lista de membros vazia.");
+    return mostrarAviso("Sincronize os dados primeiro!", "warning");
   }
 
   const agora = new Date();
   const dataHoje = agora.toLocaleDateString("pt-BR");
   const dataBaseAuditoria = new Date("2025-12-08T00:00:00").getTime();
 
-  // Filtra apenas quem tem 7 dias ou mais de inatividade
+  // Filtra inativos (7 dias+)
   const exonerados = listaMembrosAtual.filter((m) => {
     let dataRef = Math.max(m.lastMsg || 0, m.joinedAt || 0, dataBaseAuditoria);
     let dias = Math.floor((agora - dataRef) / (1000 * 60 * 60 * 24));
@@ -377,14 +379,14 @@ window.copiarRelatorioDiscord = function () {
   });
 
   if (exonerados.length === 0) {
-    return mostrarAviso("Nenhum membro inativo para exonerar.", "info");
+    return mostrarAviso("Nenhum membro inativo encontrado.", "info");
   }
 
-  // Formatador oficial (Padrão PCERJ)
+  // Formatador padrão PCERJ/PRF
   const formatador = (membros) => {
     return membros
       .map((m) => {
-        // Tenta extrair o ID do Nickname (Ex: Nome Sobrenome | 12345)
+        // Separa o Nickname (Ex: João Silva | 12345)
         const partes = m.fullNickname ? m.fullNickname.split("|") : [];
         const idRP = partes[1] ? partes[1].trim() : "---";
         const nomeCidade = partes[0] ? partes[0].trim() : m.rpName || m.name;
@@ -395,52 +397,50 @@ window.copiarRelatorioDiscord = function () {
   };
 
   let cabecalho = `📋 **RELATÓRIO DE EXONERAÇÃO - ${label.unidade} (${label.nome})** 📋\n📅 **DATA:** ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-
   let relatorioCompleto = cabecalho + formatador(exonerados);
 
-  // Se o relatório for muito grande, abre o divisor (Limite do Discord é 2000 caracteres)
+  // Se o relatório for pequeno (Discord aceita até 2000), copia direto
   if (relatorioCompleto.length <= 1900) {
     executarCopia(relatorioCompleto).then((sucesso) => {
-      if (sucesso) mostrarAviso("Relatório copiado com sucesso!");
-      else
-        mostrarAviso("Erro ao copiar para a área de transferência.", "error");
+      if (sucesso) mostrarAviso("Relatório copiado!");
+      else mostrarAviso("Erro ao copiar.", "error");
     });
   } else {
+    // Se for grande, abre o modal divisor
     abrirModalDivisor(exonerados, dataHoje, cabecalho, formatador);
   }
 };
 
-// Função para dividir o relatório em partes (Modal)
 function abrirModalDivisor(membros, data, header, formatador) {
+  const modal = document.getElementById("modal-relatorio");
   const container = document.getElementById("container-botoes-partes");
-  if (!container) return;
+
+  if (!modal || !container) {
+    console.error("Modal de divisão não encontrado no HTML!");
+    return mostrarAviso("Erro: Estrutura do Modal ausente no HTML.", "error");
+  }
 
   container.innerHTML = "";
-  const limitePorParte = 6; // Quantidade de membros por bloco para não estourar o Discord
+  const limitePorParte = 6;
 
   for (let i = 0; i < membros.length; i += limitePorParte) {
     const bloco = membros.slice(i, i + limitePorParte);
-    const numParte = Math.floor(i / limitePorParte) + 1;
+    const parte = Math.floor(i / limitePorParte) + 1;
 
     const btn = document.createElement("button");
-    btn.className = "btn-parte";
+    btn.className = "btn-gold";
     btn.style.margin = "5px";
-    btn.innerHTML = `<i class="fa-solid fa-copy"></i> COPIAR PARTE ${numParte}`;
-
+    btn.innerHTML = `<i class="fa-solid fa-copy"></i> PARTE ${parte}`;
     btn.onclick = () => {
-      const textoParte = header + `(PARTE ${numParte})\n\n` + formatador(bloco);
-      executarCopia(textoParte).then((sucesso) => {
-        if (sucesso) {
-          mostrarAviso(`Parte ${numParte} copiada!`);
-          btn.style.background = "#28a745"; // Verde para indicar que já foi clicado
-        }
+      const texto = header + `(PARTE ${parte})\n\n` + formatador(bloco);
+      executarCopia(texto).then(() => {
+        mostrarAviso(`Parte ${parte} copiada!`);
+        btn.style.background = "#28a745";
       });
     };
     container.appendChild(btn);
   }
-
-  const modal = document.getElementById("modal-relatorio");
-  if (modal) modal.style.display = "flex";
+  modal.style.display = "flex";
 }
 // =========================================================
 // 5. FILTRAR METAS GRR (CORRIGIDA/ADICIONADA)

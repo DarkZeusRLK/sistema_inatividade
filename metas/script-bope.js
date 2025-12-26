@@ -4,12 +4,12 @@
 let listaMetaBOPEAtual = [];
 
 window.carregarMetaBOPE = async function () {
-  const corpo = document.getElementById("corpo-meta-core"); // Reutiliza o container de metas
-  const progBar = document.getElementById("prog-bar-core");
+  const corpo = document.getElementById("corpo-meta-bope"); // Reutiliza o container de metas
+  const progBar = document.getElementById("prog-bar-bope");
   const progContainer = document.getElementById("progress-container-core");
 
-  const dataInicio = document.getElementById("data-inicio-core").value;
-  const dataFim = document.getElementById("data-fim-core").value;
+  const dataInicio = document.getElementById("data-inicio-bope").value;
+  const dataFim = document.getElementById("data-fim-bope").value;
 
   if (!dataInicio || !dataFim) {
     return mostrarAviso("Selecione o período para o BOPE.", "warning");
@@ -25,7 +25,7 @@ window.carregarMetaBOPE = async function () {
   try {
     // Chamada para a API com a flag da PMERJ
     const res = await fetch(
-      `/api/meta-core?start=${dataInicio}&end=${dataFim}&org=PMERJ`
+      `/api/meta-bope?start=${dataInicio}&end=${dataFim}&org=PMERJ`
     );
     const { dados } = await res.json();
     listaMetaBOPEAtual = dados;
@@ -104,12 +104,12 @@ window.copiarRelatorioBOPE = function () {
     return mostrarAviso("Filtre os dados do BOPE primeiro.", "error");
 
   const dIni = document
-    .getElementById("data-inicio-core")
+    .getElementById("data-inicio-bope")
     .value.split("-")
     .reverse()
     .join("/");
   const dFim = document
-    .getElementById("data-fim-core")
+    .getElementById("data-fim-bope")
     .value.split("-")
     .reverse()
     .join("/");

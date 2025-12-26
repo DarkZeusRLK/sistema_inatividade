@@ -17,11 +17,7 @@ const getOrgLabel = (org) => {
       nome: "PCERJ",
       logo: "Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png",
     },
-    PRF: {
-      unidade: "GRR",
-      nome: "PRF",
-      logo: "Imagens/PRF_new.png",
-    },
+    PRF: { unidade: "GRR", nome: "PRF", logo: "Imagens/PRF_new.png" },
     PMERJ: {
       unidade: "BOPE",
       nome: "PMERJ",
@@ -50,7 +46,6 @@ function mostrarAviso(msg, tipo = "success") {
 function aplicarRestricoes() {
   const { org } = obterSessao();
   const configOrg = getOrgLabel(org);
-
   const logoElemento = document.getElementById("logo-sidebar");
   if (logoElemento) logoElemento.src = configOrg.logo;
 
@@ -103,7 +98,6 @@ function resetarTelas() {
       el.style.visibility = "hidden";
     }
   });
-
   const gruposBotoes = [
     "botoes-inatividade",
     "botoes-core",
@@ -115,7 +109,6 @@ function resetarTelas() {
     const el = document.getElementById(id);
     if (el) el.style.display = "none";
   });
-
   document
     .querySelectorAll(".nav-item")
     .forEach((item) => item.classList.remove("active"));
@@ -132,15 +125,6 @@ window.abrirInatividade = function () {
   document.getElementById(
     "titulo-pagina"
   ).innerText = `AUDITORIA - ${label.nome}`;
-};
-
-window.abrirGestaoFerias = function () {
-  resetarTelas();
-  document.getElementById("secao-gestao-ferias").style.display = "block";
-  document.getElementById("secao-gestao-ferias").style.visibility = "visible";
-  document.getElementById("botoes-ferias").style.display = "block";
-  document.getElementById("nav-ferias").classList.add("active");
-  if (window.atualizarListaFerias) window.atualizarListaFerias();
 };
 
 // =========================================================
@@ -195,8 +179,10 @@ window.carregarInatividade = async function () {
         ...m,
         diasInatividade: dias,
         precisaExonerar: dias >= 7,
-        rpName: m.rpName || m.name,
-        cidadeId: m.cidadeId || m.id,
+        discordNick: m.name || "Sem Nome", // Nome do Discord
+        discordId: m.id, // ID do Discord (numérico longo)
+        rpName: m.rpName || "Não Identificado", // Nome da Cidade
+        cidadeId: m.cidadeId || "00", // ID da Cidade
       };
     });
 
@@ -212,8 +198,8 @@ window.carregarInatividade = async function () {
       tr.innerHTML = `
         <td><div class="user-cell"><img src="${
           m.avatar || "https://cdn.discordapp.com/embed/avatars/0.png"
-        }" class="avatar-img"><strong>${m.rpName}</strong></div></td>
-        <td><code>${m.cidadeId}</code></td>
+        }" class="avatar-img"><strong>${m.discordNick}</strong></div></td>
+        <td><code>${m.discordId}</code></td>
         <td>${
           m.lastMsg > 0
             ? new Date(m.lastMsg).toLocaleDateString("pt-BR")
@@ -242,7 +228,7 @@ window.carregarInatividade = async function () {
 };
 
 // =========================================================
-// 5. FUNÇÕES DE CÓPIA (MODELO COMPACTO)
+// 5. FUNÇÕES DE CÓPIA (APENAS BOTÕES)
 // =========================================================
 
 window.copiarRelatorioDiscord = function () {
@@ -265,13 +251,13 @@ window.copiarRelatorioDiscord = function () {
   let textoAtual = `📋 **RELATÓRIO DE EXONERAÇÃO - ${label.nome}** 📋\n📅 DATA: ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
   exonerados.forEach((m) => {
-    const item = `QRA: <@${m.id}>\nID: ${m.cidadeId}\nNome na cidade: ${m.rpName}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────\n`;
+    // MODELO DE CÓPIA PARA DISCORD
+    const item = `QRA: <@${m.discordId}>\nID: ${m.cidadeId}\nNome na cidade: ${m.rpName}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────\n`;
 
-    if ((textoAtual + item).length > 2500) {
+    if ((textoAtual + item).length > 2000) {
       partes.push(textoAtual);
       textoAtual =
-        `📋 **RELATÓRIO DE EXONERAÇÃO - ${label.nome} (Continuação)** 📋\n\n` +
-        item;
+        `📋 **RELATÓRIO DE EXONERAÇÃO - ${label.nome} (Cont.)** 📋\n\n` + item;
     } else {
       textoAtual += item;
     }
@@ -281,48 +267,7 @@ window.copiarRelatorioDiscord = function () {
   abrirModalRelatorioDividido(partes);
 };
 
-window.copiarRelatorioCore = () =>
-  copiarMetasGenerico("CORE (PCERJ)", "corpo-meta-core");
-window.copiarRelatorioGRR = () =>
-  copiarMetasGenerico("GRR (PRF)", "corpo-meta-grr");
-window.copiarRelatorioBOPE = () =>
-  copiarMetasGenerico("BOPE (PMERJ)", "corpo-meta-bope");
-
-function copiarMetasGenerico(titulo, containerId) {
-  const container = document.getElementById(containerId);
-  if (
-    !container ||
-    container.innerText.trim() === "" ||
-    container.innerText.includes("Carregando")
-  ) {
-    mostrarAviso("Não há dados de metas para copiar.", "warning");
-    return;
-  }
-
-  const dataHoje = new Date().toLocaleDateString("pt-BR");
-  const partes = [];
-  let textoAtual = `📊 **RELATÓRIO DE METAS - ${titulo}** 📊\n📅 DATA: ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-
-  const itens = container.querySelectorAll("tr, .card-meta");
-  itens.forEach((el) => {
-    const info = el.innerText.replace(/\s+/g, " ").trim();
-    const item = `${info}\n────────────────────────────────\n`;
-
-    if ((textoAtual + item).length > 3950) {
-      partes.push(textoAtual);
-      textoAtual =
-        `📊 **RELATÓRIO DE METAS - ${titulo} (Cont.)** 📊\n\n` + item;
-    } else {
-      textoAtual += item;
-    }
-  });
-  partes.push(textoAtual);
-
-  mostrarAviso("Relatório gerado!");
-  abrirModalRelatorioDividido(partes);
-}
-
-// --- MODAL DE COPIA APENAS COM BOTÕES (COMPACTO) ---
+// --- MODAL DE COPIA INTELIGENTE (APENAS BOTÕES) ---
 
 function abrirModalRelatorioDividido(partes) {
   let modal = document.getElementById("modal-relatorio");
@@ -330,8 +275,8 @@ function abrirModalRelatorioDividido(partes) {
 
   const container = document.getElementById("container-botoes-partes");
   container.innerHTML = "";
-  container.style.display = "flex";
-  container.style.flexDirection = "column";
+  container.style.display = "grid";
+  container.style.gridTemplateColumns = "1fr";
   container.style.gap = "10px";
 
   partes.forEach((texto, index) => {
@@ -346,8 +291,9 @@ function abrirModalRelatorioDividido(partes) {
     btnCopiar.style.fontWeight = "bold";
 
     btnCopiar.onclick = () => {
-      navigator.clipboard.writeText(texto);
-      mostrarAviso(`Parte ${index + 1} copiada com sucesso!`);
+      navigator.clipboard.writeText(texto).then(() => {
+        mostrarAviso(`Parte ${index + 1} copiada!`);
+      });
     };
 
     container.appendChild(btnCopiar);

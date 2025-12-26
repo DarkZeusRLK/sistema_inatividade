@@ -12,6 +12,19 @@ module.exports = async (req, res) => {
     "Content-Type": "application/json",
   };
 
+  // Função auxiliar para buscar um membro específico se ele não estiver na lista geral
+  async function fetchMember(userId) {
+    try {
+      const r = await fetch(
+        `https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userId}`,
+        { headers }
+      );
+      return r.ok ? await r.json() : null;
+    } catch {
+      return null;
+    }
+  }
+
   try {
     if (req.method === "POST") {
       const { userId } = req.body;
@@ -22,27 +35,16 @@ module.exports = async (req, res) => {
       return res.status(200).json({ message: "Sucesso" });
     }
 
-    // 1. BUSCA DE TODOS OS MEMBROS (Para checar cargos)
-    const membersRes = await fetch(
-      `https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`,
-      { headers }
-    );
-    const members = await membersRes.json();
-
-    // 2. BUSCA DE MENSAGENS COM PAGINAÇÃO (Até 1000 mensagens)
+    // 1. Busca mensagens com paginação (Até 1000)
     let allMessages = [];
     let lastId = null;
-
     for (let i = 0; i < 10; i++) {
-      // 10 iterações de 100 = 1000 mensagens
       const url = `https://discord.com/api/v10/channels/${FERIAS_CHANNEL_ID}/messages?limit=100${
         lastId ? `&before=${lastId}` : ""
       }`;
       const r = await fetch(url, { headers });
       const batch = await r.json();
-
       if (!batch || batch.length === 0) break;
-
       allMessages = allMessages.concat(batch);
       lastId = batch[batch.length - 1].id;
     }
@@ -54,68 +56,69 @@ module.exports = async (req, res) => {
     let validosParaAntecipar = [];
     let processados = new Set();
 
-    // Regex específica baseada no seu print: "Fim das férias: DD/MM/AAAA"
-    const regexDataFim = /Fim das f[eé]rias:\s*(\d{2}\/\d{2}\/\d{4})/i;
+    // Regex ultra-flexível para capturar a data após "Fim das férias"
+    const regexDataFim = /Fim das f[eé]rias:.*?(\d{2}\/\d{2}\/\d{4})/i;
 
     for (const msg of allMessages) {
-      // Combina o conteúdo da mensagem e de todos os Embeds para análise
-      let textoParaAnalisar = msg.content || "";
-      if (msg.embeds && msg.embeds.length > 0) {
-        msg.embeds.forEach((embed) => {
-          textoParaAnalisar += ` ${embed.title || ""} ${
-            embed.description || ""
-          }`;
-          if (embed.fields) {
-            embed.fields.forEach(
-              (f) => (textoParaAnalisar += ` ${f.name} ${f.value}`)
-            );
-          }
+      let textoTotal = msg.content || "";
+      if (msg.embeds) {
+        msg.embeds.forEach((e) => {
+          textoTotal +=
+            ` ${e.title} ${e.description} ` +
+            (e.fields?.map((f) => `${f.name} ${f.value}`).join(" ") || "");
         });
       }
 
-      const matchId = textoParaAnalisar.match(/<@!?(\d+)>/);
-      const matchDataFim = textoParaAnalisar.match(regexDataFim);
+      const matchId = textoTotal.match(/<@!?(\d+)>/);
+      const matchData = textoTotal.match(regexDataFim);
 
-      if (matchId && matchDataFim) {
+      if (matchId && matchData) {
         const userId = matchId[1];
         if (processados.has(userId)) continue;
+        processados.add(userId);
 
-        const [d, m, a] = matchDataFim[1].split("/");
+        const [d, m, a] = matchData[1].split("/");
         const dataFim = new Date(a, m - 1, d);
 
-        const membro = members.find((u) => u.user.id === userId);
+        // Busca o membro (tenta direto se necessário)
+        const membro = await fetchMember(userId);
 
-        // --- FILTRO PCERJ (POLICE_ROLE_ID) ---
         if (membro && membro.roles.includes(POLICE_ROLE_ID)) {
-          processados.add(userId);
+          const temTagFerias = membro.roles.includes(FERIAS_ROLE_ID);
 
+          // CASO 1: DATA VENCIDA -> Adiciona no relatório de baixo
           if (hoje > dataFim) {
-            if (membro.roles.includes(FERIAS_ROLE_ID)) {
+            if (temTagFerias) {
               await fetch(
                 `https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userId}/roles/${FERIAS_ROLE_ID}`,
                 { method: "DELETE", headers }
               );
               logsRemocao.push(
-                `${membro.nick || membro.user.username} (Fim: ${
-                  matchDataFim[1]
+                `${membro.nick || membro.user.username} (Vencido em: ${
+                  matchData[1]
                 })`
               );
             }
-          } else if (membro.roles.includes(FERIAS_ROLE_ID)) {
+          }
+          // CASO 2: DATA FUTURA -> Adiciona na lista de antecipação
+          else if (temTagFerias) {
             validosParaAntecipar.push({
-              id: membro.user.id,
+              id: userId,
               nome: membro.nick || membro.user.username,
-              dataRetorno: matchDataFim[1],
+              dataRetorno: matchData[1],
             });
           }
         }
       }
     }
 
-    validosParaAntecipar.sort((a, b) => a.nome.localeCompare(b.nome));
-    res.status(200).json({ oficiais: validosParaAntecipar, logs: logsRemocao });
+    res.status(200).json({
+      oficiais: validosParaAntecipar.sort((a, b) =>
+        a.nome.localeCompare(b.nome)
+      ),
+      logs: logsRemocao,
+    });
   } catch (error) {
-    console.error("Erro Férias:", error);
     res.status(500).json({ error: "Erro interno" });
   }
 };

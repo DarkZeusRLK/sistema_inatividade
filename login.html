@@ -87,23 +87,6 @@
     // ==========================================
     // CONFIGURAÇÃO DOS CARGOS POR ORGANIZAÇÃO
     // ==========================================
-    const GUILD_ID = '1052430488205283449';
-
-    const ORG_CONFIG = {
-      '1053677888983023667': { id: 'PCERJ', tema: 'tema-pcerj' },
-      'ID_ROLE_PRF_AQUI': { id: 'PRF', tema: 'tema-prf' },
-      'ID_ROLE_PMERJ_AQUI': { id: 'PMERJ', tema: 'tema-pmerj' }
-    };
-
-    function iniciarLogin() {
-      const CLIENT_ID = '1453204169661087794';
-      const REDIRECT_URI = window.location.origin + '/login.html';
-      const scope = encodeURIComponent('identify guilds guilds.members.read');
-      const redirect = encodeURIComponent(REDIRECT_URI);
-      const url = `https://discord.com/api/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${redirect}&response_type=token&scope=${scope}`;
-      window.location.href = url;
-    }
-
     async function validarAcesso() {
       const hash = window.location.hash;
       if (hash.includes("access_token")) {
@@ -111,57 +94,31 @@
         const token = params.get("access_token");
 
         try {
-          // 1. Puxar Info do Usuário
-          const userRes = await fetch('https://discord.com/api/users/@me', {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          const userData = await userRes.json();
-
-          // 2. Verificar Membro no Servidor
-          const memberRes = await fetch(`https://discord.com/api/users/@me/guilds/${GUILD_ID}/member`, {
-            headers: { Authorization: `Bearer ${token}` }
+          // Envia o token para o SEU backend processar com o .env
+          const res = await fetch('/api/auth', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token })
           });
 
-          if (memberRes.ok) {
-            const memberData = await memberRes.json();
+          if (res.ok) {
+            const dadosSessao = await res.json();
 
-            // 3. Identificar qual Organização o usuário pertence (PRF, PMERJ ou PCERJ)
-            let orgEncontrada = null;
-            for (const roleId of memberData.roles) {
-              if (ORG_CONFIG[roleId]) {
-                orgEncontrada = ORG_CONFIG[roleId];
-                break; // Encontrou a primeira org válida, para o loop
-              }
-            }
+            const sessao = {
+              ...dadosSessao,
+              expira: Date.now() + (24 * 60 * 60 * 1000)
+            };
 
-            if (orgEncontrada) {
-              // SALVAR SESSÃO COM IDENTIFICAÇÃO DE ORGANIZAÇÃO
-              const sessao = {
-                id: userData.id,
-                nome: memberData.nick || userData.username,
-                avatar: `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png`,
-                org: orgEncontrada.id,     // Ex: 'PRF'
-                tema: orgEncontrada.tema, // Ex: 'tema-prf'
-                expira: Date.now() + (24 * 60 * 60 * 1000) // 24h
-              };
-
-              localStorage.setItem("pc_session", JSON.stringify(sessao));
-              window.location.href = "index.html";
-            } else {
-              alert("Acesso Negado: Você não possui cargo de administração de nenhuma força.");
-              window.location.hash = "";
-            }
+            localStorage.setItem("pc_session", JSON.stringify(sessao));
+            window.location.href = "index.html";
           } else {
-            alert("Você não faz parte do servidor oficial.");
+            alert("Acesso negado pela administração.");
           }
         } catch (error) {
-          console.error("Erro na validação:", error);
-          alert("Ocorreu um erro ao tentar validar seu acesso.");
+          alert("Erro ao conectar com o servidor de autenticação.");
         }
       }
     }
-
-    window.onload = validarAcesso;
   </script>
 </body>
 

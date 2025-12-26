@@ -23,7 +23,60 @@ window.fazerLogout = function () {
     window.location.href = "login.html"; // Redireciona para o login
   }
 };
+// =========================================================
+// 1.5 SISTEMA DE PERMISSÕES POR ORGANIZAÇÃO
+// =========================================================
 
+function aplicarRestricoes() {
+  const { org } = obterSessao();
+
+  // 1. Mapeamento de quem pode ver o quê
+  const permissoes = {
+    PCERJ: {
+      mostrar: ["nav-core", "nav-porte", "nav-admin"],
+      esconder: ["nav-grr", "nav-bope"],
+    },
+    PRF: {
+      mostrar: ["nav-grr"],
+      esconder: ["nav-core", "nav-bope", "nav-porte", "nav-admin"],
+    },
+    PMERJ: {
+      mostrar: ["nav-bope"],
+      esconder: ["nav-core", "nav-grr", "nav-porte", "nav-admin"],
+    },
+  };
+
+  const config = permissoes[org] || permissoes["PCERJ"];
+
+  // 2. Aplicar visibilidade na Sidebar
+  config.esconder.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "none";
+  });
+
+  config.mostrar.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "flex";
+  });
+
+  // 3. Segurança adicional: Impedir acesso via funções de clique
+  // Se um espertinho tentar digitar "abrirMetaCore()" no console sendo PRF
+  if (org !== "PCERJ") {
+    window.abrirMetaCore = () => mostrarAviso("Acesso negado à PCERJ", "error");
+  }
+  if (org !== "PRF") {
+    window.abrirMetaGRR = () => mostrarAviso("Acesso negado à PRF", "error");
+  }
+  if (org !== "PMERJ") {
+    window.abrirMetaBOPE = () => mostrarAviso("Acesso negado à PMERJ", "error");
+  }
+}
+
+// ATUALIZE seu DOMContentLoaded para chamar a função
+document.addEventListener("DOMContentLoaded", () => {
+  aplicarRestricoes(); // <-- Nova função aqui
+  window.abrirInatividade();
+});
 // =========================================================
 // 2. SISTEMA DE NAVEGAÇÃO E CONTROLE DE INTERFACE
 // =========================================================

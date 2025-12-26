@@ -229,8 +229,8 @@ window.carregarInatividade = async function () {
   }
 };
 
-// =========================================================
-// 5. BOTÃO DE COPIAR RELATÓRIO (FIX DEFINITIVO)
+/// =========================================================
+// 5. BOTÃO DE COPIAR RELATÓRIO (COMPATÍVEL COM IFRAME)
 // =========================================================
 
 window.copiarRelatorioDiscord = function () {
@@ -238,7 +238,6 @@ window.copiarRelatorioDiscord = function () {
   const label = getOrgLabel(org);
   const dataHoje = new Date().toLocaleDateString("pt-BR");
 
-  // Proteção: dados ainda não carregados
   if (!dadosInatividadeGlobal || dadosInatividadeGlobal.length === 0) {
     mostrarAviso(
       "Nenhum dado carregado. Clique em SINCRONIZAR DADOS primeiro.",
@@ -247,10 +246,7 @@ window.copiarRelatorioDiscord = function () {
     return;
   }
 
-  // Filtra oficiais que devem ser exonerados
-  const exonerados = dadosInatividadeGlobal.filter(
-    (m) => m.precisaExonerar === true
-  );
+  const exonerados = dadosInatividadeGlobal.filter((m) => m.precisaExonerar);
 
   if (exonerados.length === 0) {
     mostrarAviso(
@@ -260,94 +256,52 @@ window.copiarRelatorioDiscord = function () {
     return;
   }
 
-  const formatador = (lista) =>
-    lista
+  const texto =
+    `📋 **RELATÓRIO DE EXONERAÇÃO - ${label.nome}** 📋\n` +
+    `📅 DATA: ${dataHoje}\n` +
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+    exonerados
       .map(
         (m) =>
           `QRA: <@${m.id}>\nID: ${m.id}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────`
       )
       .join("\n");
 
-  const cabecalho =
-    `📋 **RELATÓRIO DE EXONERAÇÃO - ${label.nome}** 📋\n` +
-    `📅 DATA: ${dataHoje}\n` +
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-
-  const relatorioCompleto = cabecalho + formatador(exonerados);
-
-  // Cópia segura (clipboard + fallback)
-  if (relatorioCompleto.length <= 1900) {
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(relatorioCompleto);
-      } else {
-        const textarea = document.createElement("textarea");
-        textarea.value = relatorioCompleto;
-        textarea.style.position = "fixed";
-        textarea.style.opacity = "0";
-        document.body.appendChild(textarea);
-        textarea.focus();
-        textarea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textarea);
-      }
-
-      mostrarAviso("Relatório copiado para a área de transferência!");
-    } catch (e) {
-      mostrarAviso("Erro ao copiar relatório.", "error");
-    }
-  } else {
-    abrirModalDivisor(exonerados, dataHoje, cabecalho, formatador);
-  }
+  abrirModalTextoSelecionavel(texto);
 };
 
-function abrirModalDivisor(membros, data, header, formatador) {
+function abrirModalTextoSelecionavel(texto) {
+  let modal = document.getElementById("modal-relatorio");
+
+  if (!modal) return;
+
   const container = document.getElementById("container-botoes-partes");
   container.innerHTML = "";
-  const limit = 10; // 10 oficiais por parte
 
-  for (let i = 0; i < membros.length; i += limit) {
-    const bloco = membros.slice(i, i + limit);
-    const parte = Math.floor(i / limit) + 1;
+  const textarea = document.createElement("textarea");
+  textarea.value = texto;
+  textarea.style.width = "100%";
+  textarea.style.height = "300px";
+  textarea.style.background = "#000";
+  textarea.style.color = "#fff";
+  textarea.style.border = "1px solid #444";
+  textarea.style.padding = "10px";
+  textarea.style.resize = "none";
 
-    const btn = document.createElement("button");
-    btn.className = "btn-parte";
-    btn.innerHTML = `<i class="fa-solid fa-copy"></i> COPIAR PARTE ${parte}`;
+  container.appendChild(textarea);
 
-    btn.onclick = () => {
-      const textoParte = header + `(PARTE ${parte})\n\n` + formatador(bloco);
+  setTimeout(() => {
+    textarea.focus();
+    textarea.select();
+  }, 100);
 
-      try {
-        if (navigator.clipboard && window.isSecureContext) {
-          navigator.clipboard.writeText(textoParte);
-        } else {
-          const textarea = document.createElement("textarea");
-          textarea.value = textoParte;
-          textarea.style.position = "fixed";
-          textarea.style.opacity = "0";
-          document.body.appendChild(textarea);
-          textarea.focus();
-          textarea.select();
-          document.execCommand("copy");
-          document.body.removeChild(textarea);
-        }
-
-        mostrarAviso(`Parte ${parte} copiada!`);
-      } catch (e) {
-        mostrarAviso("Erro ao copiar parte do relatório.", "error");
-      }
-    };
-
-    container.appendChild(btn);
-  }
-
-  document.getElementById("modal-relatorio").style.display = "flex";
+  mostrarAviso("Texto selecionado. Pressione CTRL + C para copiar.");
+  modal.style.display = "flex";
 }
 
 window.fecharModalRelatorio = () => {
   document.getElementById("modal-relatorio").style.display = "none";
 };
-
 // =========================================================
 // 6. GESTÃO DE FÉRIAS (FILTRADO)
 // =========================================================

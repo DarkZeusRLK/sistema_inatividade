@@ -3,46 +3,25 @@
   --bg-dark: #16161a;
   --gold: #d4af37;
   --gold-dark: #aa8c2c;
-  --gold-alpha: rgba(
-    212,
-    175,
-    55,
-    0.1
-  ); /* Variável para fundos transparentes */
   --white: #ffffff;
   --gray: #a0a0a5;
   --danger: #ff4d4d;
   --success: #04d361;
   --border: rgba(212, 175, 55, 0.2);
 }
-
-/* =========================================================
-   TEMAS DINÂMICOS (Substituem as cores globais)
-   ========================================================= */
+/* Temas */
 body.tema-pcerj {
   --gold: #d4af37;
   --gold-dark: #aa8c2c;
-  --gold-alpha: rgba(212, 175, 55, 0.1);
-  --border: rgba(212, 175, 55, 0.2);
 }
-
 body.tema-prf {
-  --gold: #0059ff; /* Azul PRF mais vibrante */
-  --gold-dark: #003399;
-  --gold-alpha: rgba(0, 89, 255, 0.1);
-  --border: rgba(0, 89, 255, 0.2);
-}
-
+  --gold: #003399;
+  --gold-dark: #002266;
+} /* Azul PRF */
 body.tema-pmerj {
-  --gold: #2d5a27; /* Verde PMERJ */
+  --gold: #2d5a27;
   --gold-dark: #1e3d1a;
-  --gold-alpha: rgba(45, 90, 39, 0.1);
-  --border: rgba(45, 90, 39, 0.2);
-}
-
-/* =========================================================
-   GERAL E LAYOUT
-   ========================================================= */
+} /* Verde PMERJ */
 * {
   margin: 0;
   padding: 0;
@@ -54,7 +33,6 @@ body {
   background-color: var(--bg-black);
   color: var(--white);
   height: 100vh;
-  transition: background 0.3s; /* Transição suave ao trocar tema */
 }
 
 .app-container {
@@ -70,29 +48,29 @@ body {
   display: flex;
   flex-direction: column;
 }
-
 .sidebar-header {
   padding: 30px;
   text-align: center;
 }
-
 .sidebar-header img {
   width: 80px;
   margin-bottom: 15px;
-  filter: drop-shadow(0 0 8px var(--gold)); /* Sombra agora segue o tema */
+  filter: drop-shadow(0 0 5px var(--gold));
 }
-
 .sidebar-header h2 {
   color: var(--gold);
   font-size: 1.2rem;
   letter-spacing: 2px;
+}
+.sidebar-header p {
+  color: var(--gray);
+  font-size: 0.8rem;
 }
 
 .sidebar-nav {
   flex: 1;
   padding: 20px;
 }
-
 .nav-item {
   display: flex;
   align-items: center;
@@ -104,21 +82,19 @@ body {
   transition: 0.3s;
   margin-bottom: 10px;
 }
-
 .nav-item:hover,
 .nav-item.active {
-  background: var(--gold-alpha); /* Usa a cor transparente do tema */
+  background: rgba(212, 175, 55, 0.1);
   color: var(--gold);
 }
 
-/* CONTEÚDO PRINCIPAL */
+/* CONTEÚDO */
 .main-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
 }
-
 .top-bar {
   padding: 30px;
   background: var(--bg-dark);
@@ -127,16 +103,18 @@ body {
   align-items: center;
   border-bottom: 1px solid var(--border);
 }
-
 .page-title h1 {
   font-size: 1.5rem;
   color: var(--gold);
 }
+.page-title span {
+  color: var(--gray);
+  font-size: 0.9rem;
+}
 
-/* BOTÕES */
 .btn-gold {
   background: var(--gold);
-  color: #fff; /* Alterado para branco para melhor contraste em azul/verde */
+  color: #000;
   border: none;
   padding: 12px 25px;
   border-radius: 4px;
@@ -144,12 +122,100 @@ body {
   cursor: pointer;
   transition: 0.3s;
 }
-
 .btn-gold:hover {
-  filter: brightness(1.2);
+  background: var(--white);
   transform: translateY(-2px);
 }
 
+.content-body {
+  padding: 30px;
+}
+
+/* ALERT BANNER */
+.info-alert-gold {
+  background: rgba(212, 175, 55, 0.05);
+  border: 1px solid var(--gold);
+  padding: 20px;
+  border-radius: 8px;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  margin-bottom: 30px;
+}
+.alert-icon {
+  font-size: 2rem;
+  color: var(--gold);
+}
+.alert-text h3 {
+  color: var(--gold);
+  margin-bottom: 5px;
+}
+
+/* TABELA */
+.table-card {
+  background: var(--bg-dark);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.card-header {
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--border);
+}
+.card-header h3 {
+  color: var(--gold);
+  font-size: 1rem;
+}
+
+.audit-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.audit-table th {
+  text-align: left;
+  padding: 15px;
+  background: #1c1c21;
+  color: var(--gold);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+.audit-table td {
+  padding: 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* BADGES */
+.badge-danger {
+  background: rgba(255, 77, 77, 0.1);
+  color: var(--danger);
+  padding: 5px 12px;
+  border: 1px solid var(--danger);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+.badge-success {
+  background: rgba(4, 211, 97, 0.1);
+  color: var(--success);
+  padding: 5px 12px;
+  border: 1px solid var(--success);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.avatar-img {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  border: 1px solid var(--gold);
+}
 .btn-outline-gold {
   background: transparent;
   color: var(--gold);
@@ -162,82 +228,21 @@ body {
 }
 
 .btn-outline-gold:hover {
-  background: var(--gold-alpha);
+  background: rgba(212, 175, 55, 0.1);
   transform: translateY(-2px);
 }
-
-/* ALERTA / BANNER */
-.info-alert-gold {
-  background: var(--gold-alpha); /* Agora muda com o tema */
-  border: 1px solid var(--gold);
-  padding: 20px;
-  border-radius: 8px;
-  display: flex;
-  gap: 20px;
-  align-items: center;
-  margin-bottom: 30px;
+/* Alerta Personalizado PCERJ */
+#custom-alert-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
 }
 
-.alert-icon {
-  font-size: 2rem;
-  color: var(--gold);
-}
-
-/* TABELAS */
-.table-card {
-  background: var(--bg-dark);
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  overflow: hidden;
-}
-
-.card-header {
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.03);
-  border-bottom: 1px solid var(--border);
-}
-
-.audit-table th {
-  background: #1c1c21;
-  color: var(--gold);
-  padding: 15px;
-  text-align: left;
-  font-size: 0.8rem;
-  text-transform: uppercase;
-}
-
-/* MODAL E RELATÓRIOS */
-.modal-content {
-  background: #16161a;
-  border: 2px solid var(--gold); /* Seguindo o tema */
-  padding: 30px;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 500px;
-  text-align: center;
-}
-
-.btn-parte {
-  background: #1a1a1e;
-  color: var(--gold);
-  border: 1px solid var(--gold);
-  padding: 15px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: 0.3s;
-}
-
-.btn-parte:hover {
-  background: var(--gold);
-  color: #fff;
-}
-
-/* ALERTAS FLUTUANTES (Toast) */
 .pc-alert {
   background: #16161a;
   color: #fff;
-  border-left: 4px solid var(--gold); /* Seguindo o tema */
+  border-left: 4px solid #d4af37;
   padding: 15px 25px;
   margin-bottom: 10px;
   border-radius: 4px;
@@ -245,13 +250,107 @@ body {
   display: flex;
   align-items: center;
   gap: 15px;
+  animation: slideIn 0.5s ease forwards;
+  min-width: 300px;
 }
 
 .pc-alert i {
-  color: var(--gold);
+  color: #d4af37;
+  font-size: 1.2rem;
+}
+.pc-alert.error {
+  border-left-color: #ff4d4d;
+}
+.pc-alert.error i {
+  color: #ff4d4d;
 }
 
-/* PROGRESS BAR */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.pc-alert.fade-out {
+  animation: slideOut 0.5s ease forwards;
+}
+
+@keyframes slideOut {
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
 #progress-bar {
-  box-shadow: 0 0 10px var(--gold);
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+}
+
+/* Ajuste no alerta para não sobrepor a barra se necessário */
+#custom-alert-container {
+  top: 80px; /* Desce um pouco os alertas */
+}
+.modal-pcerj {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+.modal-content {
+  background: #16161a;
+  border: 1px solid #d4af37;
+  padding: 30px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  text-align: center;
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.modal-header h3 {
+  color: #d4af37;
+  margin: 0;
+}
+.btn-close {
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 24px;
+  cursor: pointer;
+}
+.grid-partes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 15px;
+  margin-top: 20px;
+}
+.btn-parte {
+  background: #1a1a1e;
+  color: #d4af37;
+  border: 1px solid #d4af37;
+  padding: 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: 0.3s;
+}
+.btn-parte:hover {
+  background: #d4af37;
+  color: #000;
+}
+.btn-parte.copiado {
+  border-color: #4752c4;
+  color: #4752c4;
+  opacity: 0.7;
 }

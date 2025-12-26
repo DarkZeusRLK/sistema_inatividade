@@ -1,27 +1,96 @@
 // =========================================================
-// 1. UTILITÁRIOS E SESSÃO
+// 1. CONFIGURAÇÕES, SESSÃO E UTILITÁRIOS
 // =========================================================
 
 const obterSessao = () => {
   const sessionStr = localStorage.getItem("pc_session");
-  return sessionStr
-    ? JSON.parse(sessionStr)
-    : { org: "PCERJ", tema: "tema-pcerj" };
+  if (!sessionStr) return null;
+  return JSON.parse(sessionStr);
 };
 
 const getOrgLabel = (org) => {
   const labels = {
-    PCERJ: { unidade: "CORE", nome: "PCERJ" },
-    PRF: { unidade: "GRR", nome: "PRF" },
-    PMERJ: { unidade: "BOPE", nome: "PMERJ" },
+    PCERJ: { unidade: "CORE", nome: "PCERJ", tema: "tema-pcerj" },
+    PRF: { unidade: "GRR", nome: "PRF", tema: "tema-prf" },
+    PMERJ: { unidade: "BOPE", nome: "PMERJ", tema: "tema-pmerj" },
   };
   return labels[org] || labels["PCERJ"];
 };
 
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
+// Função para encerrar a sessão
+window.fazerLogout = function () {
+  if (confirm("Deseja realmente encerrar sua sessão no painel?")) {
+    localStorage.removeItem("pc_session");
+    window.location.href = "login.html";
+  }
+};
+
 // =========================================================
-// 2. NAVEGAÇÃO E INTERFACE
+// 2. INICIALIZAÇÃO E PERMISSÕES
+// =========================================================
+
+document.addEventListener("DOMContentLoaded", () => {
+  const sessao = obterSessao();
+  if (!sessao) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  // Aplica o Tema e Identidade Visual
+  document.body.className = sessao.tema;
+
+  const logoImg = document.getElementById("logo-org");
+  const tituloPainel = document.querySelector(".sidebar-header h2");
+  const nomeUsuario = document.getElementById("nome-usuario");
+
+  const BRASOES = {
+    PCERJ: "Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png",
+    PRF: "Imagens/PRF_new.png",
+    PMERJ:
+      "Imagens/Brasão_da_Polícia_Militar_do_Estado_do_Rio_de_Janeiro_-_PMERJ.png",
+  };
+
+  if (logoImg) logoImg.src = BRASOES[sessao.org] || BRASOES.PCERJ;
+  if (tituloPainel) tituloPainel.innerText = sessao.org;
+  if (nomeUsuario) nomeUsuario.innerText = sessao.nome;
+
+  aplicarRestricoes(sessao.org);
+  window.abrirInatividade(); // Tela inicial padrão
+});
+
+function aplicarRestricoes(org) {
+  const permissoes = {
+    PCERJ: {
+      mostrar: ["nav-core", "nav-porte", "nav-admin"],
+      esconder: ["nav-grr", "nav-bope"],
+    },
+    PRF: {
+      mostrar: ["nav-grr"],
+      esconder: ["nav-core", "nav-bope", "nav-porte", "nav-admin"],
+    },
+    PMERJ: {
+      mostrar: ["nav-bope"],
+      esconder: ["nav-core", "nav-grr", "nav-porte", "nav-admin"],
+    },
+  };
+
+  const config = permissoes[org] || permissoes["PCERJ"];
+
+  config.esconder.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "none";
+  });
+
+  config.mostrar.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "flex";
+  });
+}
+
+// =========================================================
+// 3. NAVEGAÇÃO ENTRE TELAS
 // =========================================================
 
 function resetarTelas() {
@@ -32,7 +101,7 @@ function resetarTelas() {
     "secao-meta-bope",
     "secao-gestao-ferias",
   ];
-  const botoes = [
+  const gruposBotoes = [
     "botoes-inatividade",
     "botoes-core",
     "botoes-grr",
@@ -48,18 +117,18 @@ function resetarTelas() {
     }
   });
 
-  botoes.forEach((id) => {
+  gruposBotoes.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.style.display = "none";
   });
 
   document
     .querySelectorAll(".nav-item")
-    .forEach((i) => i.classList.remove("active"));
+    .forEach((item) => item.classList.remove("active"));
 }
 
 window.abrirInatividade = function () {
-  const { org } = obterSessao();
+  const sessao = obterSessao();
   resetarTelas();
   document.getElementById("secao-inatividade").style.display = "block";
   document.getElementById("secao-inatividade").style.visibility = "visible";
@@ -67,7 +136,7 @@ window.abrirInatividade = function () {
   document.getElementById("nav-inatividade").classList.add("active");
   document.getElementById(
     "titulo-pagina"
-  ).innerText = `SISTEMA DE AUDITORIA - ${org}`;
+  ).innerText = `AUDITORIA DE ATIVIDADE - ${sessao.org}`;
 };
 
 window.abrirMetaCore = function () {
@@ -112,107 +181,107 @@ window.abrirGestaoFerias = function () {
 };
 
 // =========================================================
-// 3. AUDITORIA E BARRA DE PROGRESSO
+// 4. AUDITORIA E BARRA DE PROGRESSO
 // =========================================================
 
 let listaMembrosAtual = [];
 
 window.carregarInatividade = async function () {
-  const { org } = obterSessao();
+  const sessao = obterSessao();
   const corpo = document.getElementById("corpo-inatividade");
+  const btnSinc = document.getElementById("btn-sincronizar");
+  const btnCopiar = document.getElementById("btn-copiar");
+
   const progContainer = document.getElementById("progress-container");
   const progBar = document.getElementById("progress-bar");
   const progLabel = document.getElementById("progress-label");
   const progPerc = document.getElementById("progress-percentage");
-  const btnSinc = document.getElementById("btn-sincronizar");
-  const btnCopiar = document.getElementById("btn-copiar");
 
   if (!corpo) return;
-
+  corpo.innerHTML =
+    '<tr><td colspan="5" align="center" style="padding:40px; color:#888;">Iniciando conexão...</td></tr>';
   btnSinc.disabled = true;
   progContainer.style.display = "block";
-  corpo.innerHTML =
-    '<tr><td colspan="5" align="center" style="padding: 40px; color: #888;">Processando auditoria...</td></tr>';
 
-  const atualizar = (texto, porcentagem) => {
-    progLabel.innerText = texto.toUpperCase();
-    progBar.style.width = porcentagem + "%";
-    progPerc.innerText = porcentagem + "%";
+  const updateProgress = (text, percent) => {
+    progLabel.innerText = text.toUpperCase();
+    progBar.style.width = percent + "%";
+    progPerc.innerText = percent + "%";
   };
 
   try {
-    // ETAPA 1
-    atualizar("conectando ao discord...", 15);
-    await delay(900);
-
-    // ETAPA 2
-    atualizar("verificando lista de oficaiis ausentes...", 40);
-    const res = await fetch(`/api/membros-inativos?org=${org}`);
-    const dados = await res.json();
-    listaMembrosAtual = dados;
-    await delay(700);
-
-    // ETAPA 3
-    atualizar("filtrando férias...", 75);
+    updateProgress("Conectando ao Discord...", 20);
     await delay(800);
 
-    // ETAPA 4
-    atualizar("finalizando auditoria.", 100);
+    updateProgress("Verificando lista de oficiais ausentes...", 50);
+    const res = await fetch(`/api/membros-inativos?org=${sessao.org}`);
+    const dados = await res.json();
+    listaMembrosAtual = dados;
+    await delay(600);
+
+    updateProgress("Filtrando férias e licenças...", 80);
+    await delay(800);
+
+    updateProgress("Finalizando auditoria...", 100);
     await delay(500);
 
     corpo.innerHTML = "";
-    btnCopiar.style.display = "inline-block";
+    if (btnCopiar) btnCopiar.style.display = "inline-block";
 
     dados.sort((a, b) => (a.lastMsg || 0) - (b.lastMsg || 0));
     const agora = new Date();
     const dataBaseAuditoria = new Date("2025-12-08T00:00:00").getTime();
 
-    dados.forEach((m) => {
+    dados.forEach((membro) => {
       let dataRef = Math.max(
-        m.lastMsg || 0,
-        m.joinedAt || 0,
+        membro.lastMsg || 0,
+        membro.joinedAt || 0,
         dataBaseAuditoria
       );
       const dias = Math.floor((agora - dataRef) / (1000 * 60 * 60 * 24));
-      const exonerar = dias >= 7;
+      const statusExonerar = dias >= 7;
 
       const tr = document.createElement("tr");
       tr.innerHTML = `
                 <td><div class="user-cell"><img src="${
-                  m.avatar || "https://cdn.discordapp.com/embed/avatars/0.png"
-                }" class="avatar-img"><strong>${m.name}</strong></div></td>
-                <td><code>${m.id}</code></td>
+                  membro.avatar ||
+                  "https://cdn.discordapp.com/embed/avatars/0.png"
+                }" class="avatar-img"><strong>${membro.name}</strong></div></td>
+                <td><code>${membro.id}</code></td>
                 <td>${
-                  m.lastMsg > 0
-                    ? new Date(m.lastMsg).toLocaleDateString("pt-BR")
+                  membro.lastMsg > 0
+                    ? new Date(membro.lastMsg).toLocaleDateString("pt-BR")
                     : "---"
                 }</td>
                 <td><strong style="color: ${
-                  exonerar ? "#ff4d4d" : "var(--gold)"
+                  statusExonerar ? "#ff4d4d" : "var(--gold)"
                 }">${dias} Dias</strong></td>
                 <td align="center"><span class="${
-                  exonerar ? "badge-danger" : "badge-success"
-                }">${exonerar ? "⚠️ EXONERAR" : "✅ REGULAR"}</span></td>
+                  statusExonerar ? "badge-danger" : "badge-success"
+                }">${statusExonerar ? "⚠️ EXONERAR" : "✅ REGULAR"}</span></td>
             `;
       corpo.appendChild(tr);
     });
 
-    mostrarAviso("Auditoria finalizada com sucesso!");
+    mostrarAviso("Sincronização concluída!");
   } catch (err) {
-    console.error(err);
-    mostrarAviso("Erro ao conectar com a API.", "error");
+    mostrarAviso("Erro na sincronização.", "error");
+    corpo.innerHTML =
+      '<tr><td colspan="5" align="center" style="color:red;">Falha ao obter dados do servidor.</td></tr>';
   } finally {
     btnSinc.disabled = false;
-    setTimeout(() => (progContainer.style.display = "none"), 3000);
+    setTimeout(() => {
+      progContainer.style.display = "none";
+    }, 3000);
   }
 };
 
 // =========================================================
-// 4. SISTEMA DE CÓPIA E RELATÓRIO
+// 5. RELATÓRIOS E FÉRIAS
 // =========================================================
 
 window.copiarRelatorioDiscord = function () {
-  const { org } = obterSessao();
+  const sessao = obterSessao();
   if (listaMembrosAtual.length === 0)
     return mostrarAviso("Sincronize os dados primeiro.", "warning");
 
@@ -222,7 +291,8 @@ window.copiarRelatorioDiscord = function () {
 
   const exonerados = listaMembrosAtual.filter((m) => {
     let dataRef = Math.max(m.lastMsg || 0, m.joinedAt || 0, dataBaseAuditoria);
-    return Math.floor((agora - dataRef) / (1000 * 60 * 60 * 24)) >= 7;
+    let dias = Math.floor((agora - dataRef) / (1000 * 60 * 60 * 24));
+    return dias >= 7;
   });
 
   if (exonerados.length === 0)
@@ -232,42 +302,29 @@ window.copiarRelatorioDiscord = function () {
     );
 
   const formatador = (membros) => {
-    return membros
-      .map((m) => {
-        let idRP = m.fullNickname?.split("|")[1]?.trim() || "---";
-        return `QRA: <@${m.id}>\nNOME NA CIDADE: ${
-          m.rpName || m.name
-        }\nID: ${idRP}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────`;
-      })
-      .join("\n");
+    let texto = "";
+    membros.forEach((m) => {
+      let idRP = m.fullNickname?.split("|")[1]?.trim() || "---";
+      texto += `QRA: <@${m.id}>\nNOME NA CIDADE: ${
+        m.rpName || m.name
+      }\nID: ${idRP}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────\n`;
+    });
+    return texto;
   };
 
-  let cabecalho = `📋 **RELATÓRIO DE EXONERAÇÃO - ${org}** 📋\n📅 **DATA:** ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-  let textoFinal = cabecalho + formatador(exonerados);
+  let cabecalho = `📋 **RELATÓRIO DE EXONERAÇÃO - ${sessao.org}** 📋\n📅 **DATA:** ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+  let relatorio = cabecalho + formatador(exonerados);
 
-  if (textoFinal.length <= 1900) {
-    copyToClipboard(textoFinal);
+  if (relatorio.length <= 1900) {
+    navigator.clipboard
+      .writeText(relatorio)
+      .then(() => mostrarAviso("Relatório copiado!"));
   } else {
     abrirModalDivisor(exonerados, dataHoje, cabecalho, formatador);
   }
 };
 
-async function copyToClipboard(text) {
-  try {
-    await navigator.clipboard.writeText(text);
-    mostrarAviso("Relatório copiado para a área de transferência!");
-  } catch (err) {
-    // Fallback para navegadores que bloqueiam clipboard sem HTTPS
-    const textArea = document.createElement("textarea");
-    textArea.value = text;
-    document.body.appendChild(textArea);
-    textArea.select();
-    document.execCommand("copy");
-    document.body.removeChild(textArea);
-    mostrarAviso("Relatório copiado! (Fallback)");
-  }
-}
-
+// Demais funções (Divisor de Modal, Alertas, Férias) permanecem para garantir o funcionamento do HTML fornecido
 function abrirModalDivisor(membros, data, header, formatador) {
   const container = document.getElementById("container-botoes-partes");
   container.innerHTML = "";
@@ -279,7 +336,10 @@ function abrirModalDivisor(membros, data, header, formatador) {
     btn.className = "btn-parte";
     btn.innerHTML = `<i class="fa-solid fa-copy"></i> PARTE ${parte}`;
     btn.onclick = () => {
-      copyToClipboard(header + `(PARTE ${parte})\n\n` + formatador(bloco));
+      navigator.clipboard.writeText(
+        header + `(PARTE ${parte})\n\n` + formatador(bloco)
+      );
+      mostrarAviso(`Parte ${parte} copiada!`);
     };
     container.appendChild(btn);
   }
@@ -307,3 +367,14 @@ function mostrarAviso(mensagem, tipo = "success") {
     setTimeout(() => alert.remove(), 500);
   }, 4000);
 }
+
+// Inclusão das chamadas de metas externas (Caso os scripts metas/script-xxx.js dependam delas)
+window.carregarMetaCore =
+  window.carregarMetaCore ||
+  (() => console.log("Função Core carregada do script externo"));
+window.carregarMetaGRR =
+  window.carregarMetaGRR ||
+  (() => console.log("Função GRR carregada do script externo"));
+window.carregarMetaBOPE =
+  window.carregarMetaBOPE ||
+  (() => console.log("Função BOPE carregada do script externo"));

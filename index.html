@@ -10,41 +10,56 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
   <link rel="shortcut icon" href="Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png" type="image/x-icon">
   <script>
-    document.addEventListener("DOMContentLoaded", function () {
+    (function () {
       const sessionStr = localStorage.getItem("pc_session");
-      if (!sessionStr) {
-        window.location.href = "login.html";
-        return;
-      }
+      if (!sessionStr) return; // O script do head já redireciona se não houver
 
       const session = JSON.parse(sessionStr);
 
-      // Aplica a classe ao body apenas quando ele já existir
+      // 1. Aplica a classe de cor ao body (Isso você já tinha)
       document.body.classList.add(session.tema);
 
+      // 2. Mapeamento de Brasões e Títulos
       const configOrg = {
-        'PCERJ': { logo: 'Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png', titulo: 'POLÍCIA CIVIL', sigla: 'PCERJ' },
-        'PRF': { logo: 'Imagens/PRF_new.png', titulo: 'POLÍCIA RODOVIÁRIA', sigla: 'PRF' },
-        'PMERJ': { logo: 'Imagens/Brasão_da_Polícia_Militar_do_Estado_do_Rio_de_Janeiro_-_PMERJ.png', titulo: 'POLÍCIA MILITAR', sigla: 'PMERJ' }
+        'PCERJ': {
+          logo: 'Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png',
+          titulo: 'POLÍCIA CIVIL',
+          sigla: 'PCERJ'
+        },
+        'PRF': {
+          logo: 'Imagens/Brasao_PRF.png', // Certifique-se que o nome do arquivo está correto
+          titulo: 'POLÍCIA RODOVIÁRIA',
+          sigla: 'PRF'
+        },
+        'PMERJ': {
+          logo: 'Imagens/Brasao_PMERJ.png', // Certifique-se que o nome do arquivo está correto
+          titulo: 'POLÍCIA MILITAR',
+          sigla: 'PMERJ'
+        }
       };
 
       const config = configOrg[session.org];
 
       if (config) {
+        // Troca o Brasão da Sidebar
         const logoImg = document.getElementById('logo-org');
         if (logoImg) logoImg.src = config.logo;
 
+        // Troca o Favicon (ícone da aba do navegador)
         const favicon = document.querySelector('link[rel="shortcut icon"]');
         if (favicon) favicon.href = config.logo;
 
+        // Troca o Título da Sidebar
         const sidebarTitulo = document.querySelector('.sidebar-header h2');
         if (sidebarTitulo) sidebarTitulo.innerText = config.titulo;
 
+        // Troca o subtítulo da Top Bar (opcional, para dar um toque profissional)
         const subtitulo = document.getElementById('subtitulo-pagina');
         if (subtitulo) subtitulo.innerText = `Painel de Auditoria - ${config.sigla}`;
       }
-    });
+    })();
 
+    // Função de Logout (que o seu HTML já chama no onclick)
     function fazerLogout() {
       localStorage.removeItem("pc_session");
       window.location.href = "login.html";

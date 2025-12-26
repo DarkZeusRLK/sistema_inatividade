@@ -5,6 +5,7 @@ let listaMetaCoreAtual = [];
 window.abrirMetaCore = function () {
   document.getElementById("secao-inatividade").style.display = "none";
   document.getElementById("secao-meta-core").style.display = "block";
+  document.getElementById("secao-gestao-ferias").style.display = "none";
   document.getElementById("botoes-inatividade").style.display = "none";
   document.getElementById("botoes-core").style.display = "block";
 
@@ -32,6 +33,7 @@ window.abrirMetaCore = function () {
 window.abrirInatividade = function () {
   document.getElementById("secao-inatividade").style.display = "block";
   document.getElementById("secao-meta-core").style.display = "none";
+  document.getElementById("secao-gestao-ferias").style.display = "none";
   document.getElementById("botoes-inatividade").style.display = "block";
   document.getElementById("botoes-core").style.display = "none";
 

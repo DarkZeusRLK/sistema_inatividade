@@ -1,35 +1,44 @@
 // =========================================================
-// 1. SISTEMA DE NAVEGAÇÃO (CORREÇÃO DE SOBREPOSIÇÃO)
+// 1. SISTEMA DE NAVEGAÇÃO (CORREÇÃO DEFINITIVA DE SOBREPOSIÇÃO)
 // =========================================================
 
 function resetarTelas() {
-  // Esconder todas as seções de conteúdo
+  // 1. Esconder absolutamente todas as seções de conteúdo principais
   const secoes = [
     "secao-inatividade",
     "secao-meta-core",
     "secao-gestao-ferias",
   ];
+
   secoes.forEach((id) => {
     const el = document.getElementById(id);
-    if (el) el.style.display = "none";
+    if (el) {
+      el.style.display = "none";
+      el.style.visibility = "hidden"; // Reforço para evitar vultos
+    }
   });
 
-  // Esconder todos os grupos de botões no topo
+  // 2. Esconder todos os grupos de botões dinâmicos da Top Bar
   const gruposBotoes = ["botoes-inatividade", "botoes-core", "botoes-ferias"];
   gruposBotoes.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.style.display = "none";
   });
 
-  // Remover classe ativa da sidebar
-  document
-    .querySelectorAll(".nav-item")
-    .forEach((item) => item.classList.remove("active"));
+  // 3. Limpar estados visuais da Sidebar
+  document.querySelectorAll(".nav-item").forEach((item) => {
+    item.classList.remove("active");
+  });
 }
 
+// Funções de ativação de aba
 window.abrirInatividade = function () {
   resetarTelas();
-  document.getElementById("secao-inatividade").style.display = "block";
+  const tela = document.getElementById("secao-inatividade");
+  if (tela) {
+    tela.style.display = "block";
+    tela.style.visibility = "visible";
+  }
   document.getElementById("botoes-inatividade").style.display = "block";
   document.getElementById("nav-inatividade").classList.add("active");
 
@@ -41,7 +50,11 @@ window.abrirInatividade = function () {
 
 window.abrirMetaCore = function () {
   resetarTelas();
-  document.getElementById("secao-meta-core").style.display = "block";
+  const tela = document.getElementById("secao-meta-core");
+  if (tela) {
+    tela.style.display = "block";
+    tela.style.visibility = "visible";
+  }
   document.getElementById("botoes-core").style.display = "block";
   document.getElementById("nav-core").classList.add("active");
 
@@ -53,7 +66,11 @@ window.abrirMetaCore = function () {
 
 window.abrirGestaoFerias = function () {
   resetarTelas();
-  document.getElementById("secao-gestao-ferias").style.display = "block";
+  const tela = document.getElementById("secao-gestao-ferias");
+  if (tela) {
+    tela.style.display = "block";
+    tela.style.visibility = "visible";
+  }
   document.getElementById("botoes-ferias").style.display = "block";
   document.getElementById("nav-ferias").classList.add("active");
 
@@ -64,6 +81,11 @@ window.abrirGestaoFerias = function () {
 
   if (window.atualizarListaFerias) window.atualizarListaFerias();
 };
+
+// Forçar abertura da tela inicial ao carregar a página
+document.addEventListener("DOMContentLoaded", () => {
+  window.abrirInatividade();
+});
 
 // =========================================================
 // 2. SISTEMA DE ALERTAS PERSONALIZADOS
@@ -90,17 +112,11 @@ function mostrarAviso(mensagem, tipo = "success") {
   }, 4000);
 }
 
-// 3. VARIÁVEIS GLOBAIS
+// =========================================================
+// 3. SINCRONIZAÇÃO E BARRA DE PROGRESSO (INATIVIDADE)
+// =========================================================
 let listaMembrosAtual = [];
 
-// 4. FUNÇÃO DE FECHAR MODAL
-window.fecharModalRelatorio = function () {
-  document.getElementById("modal-relatorio").style.display = "none";
-};
-
-// =========================================================
-// 5. SINCRONIZAÇÃO E BARRA DE PROGRESSO (INATIVIDADE)
-// =========================================================
 window.carregarInatividade = async function () {
   const corpo = document.getElementById("corpo-inatividade");
   const btn = document.getElementById("btn-sincronizar");
@@ -109,6 +125,8 @@ window.carregarInatividade = async function () {
   const progBar = document.getElementById("progress-bar");
   const progLabel = document.getElementById("progress-label");
   const progPercent = document.getElementById("progress-percentage");
+
+  if (!corpo) return;
 
   corpo.innerHTML = "";
   progContainer.style.display = "block";
@@ -125,15 +143,12 @@ window.carregarInatividade = async function () {
       width += Math.random() * 2;
       progBar.style.width = width + "%";
       progPercent.innerText = Math.floor(width) + "%";
-      if (width > 30) progLabel.innerText = "VASCULHANDO MENSAGENS RECENTES...";
-      if (width > 70) progLabel.innerText = "FILTRANDO OFICIAIS EM FÉRIAS...";
     }
   }, 200);
 
   try {
     const res = await fetch("/api/membros-inativos");
     const dados = await res.json();
-    if (!Array.isArray(dados)) throw new Error("Erro");
 
     clearInterval(interval);
     progBar.style.width = "100%";
@@ -145,7 +160,7 @@ window.carregarInatividade = async function () {
     const dataBaseAuditoria = new Date("2025-12-08T00:00:00").getTime();
     const msPorDia = 1000 * 60 * 60 * 24;
 
-    dados.sort((a, b) => a.lastMsg - b.lastMsg);
+    dados.sort((a, b) => (a.lastMsg || 0) - (b.lastMsg || 0));
 
     dados.forEach((membro) => {
       let dataReferenciaReal = Math.max(
@@ -155,15 +170,6 @@ window.carregarInatividade = async function () {
       );
       const dias = Math.floor((agora - dataReferenciaReal) / msPorDia);
       const statusExonerar = dias >= 7;
-
-      let textoAtividade = "";
-      if (membro.lastMsg > 0) {
-        textoAtividade = new Date(membro.lastMsg).toLocaleDateString("pt-BR");
-      } else if (membro.joinedAt > dataBaseAuditoria) {
-        textoAtividade = "RECRUTA (RECENTE)";
-      } else {
-        textoAtividade = "DESDE 08/12";
-      }
 
       const tr = document.createElement("tr");
       tr.innerHTML = `
@@ -177,7 +183,11 @@ window.carregarInatividade = async function () {
                     </div>
                 </td>
                 <td><code style="color:#888">${membro.id}</code></td>
-                <td>${textoAtividade}</td>
+                <td>${
+                  membro.lastMsg > 0
+                    ? new Date(membro.lastMsg).toLocaleDateString("pt-BR")
+                    : "---"
+                }</td>
                 <td><strong style="color: ${
                   statusExonerar ? "#ff4d4d" : "#d4af37"
                 }">${dias} Dias</strong></td>
@@ -193,10 +203,10 @@ window.carregarInatividade = async function () {
     });
 
     if (btnCopiar) btnCopiar.style.display = "inline-block";
-    mostrarAviso("Banco de dados sincronizado.");
+    mostrarAviso("Sincronização concluída.");
   } catch (err) {
     clearInterval(interval);
-    mostrarAviso("Erro ao buscar dados do servidor.", "error");
+    mostrarAviso("Erro ao buscar dados.", "error");
   } finally {
     btn.innerHTML = '<i class="fa-solid fa-rotate"></i> SINCRONIZAR DADOS';
     btn.disabled = false;
@@ -207,7 +217,7 @@ window.carregarInatividade = async function () {
 };
 
 // =========================================================
-// 6. LÓGICA DE RELATÓRIOS E FÉRIAS
+// 4. LÓGICA DE RELATÓRIOS E FÉRIAS
 // =========================================================
 
 window.copiarRelatorioDiscord = function () {
@@ -217,28 +227,18 @@ window.copiarRelatorioDiscord = function () {
   const dataBaseAuditoria = new Date("2025-12-08T00:00:00").getTime();
 
   const exonerados = listaMembrosAtual.filter((m) => {
-    let dataReferenciaReal = Math.max(
-      m.lastMsg || 0,
-      m.joinedAt || 0,
-      dataBaseAuditoria
-    );
-    let dias = Math.floor((agora - dataReferenciaReal) / (1000 * 60 * 60 * 24));
+    let dataRef = Math.max(m.lastMsg || 0, m.joinedAt || 0, dataBaseAuditoria);
+    let dias = Math.floor((agora - dataRef) / (1000 * 60 * 60 * 24));
     return dias >= 7;
   });
 
-  if (exonerados.length === 0) {
-    mostrarAviso("Nenhum oficial identificado.", "error");
-    return;
-  }
+  if (exonerados.length === 0)
+    return mostrarAviso("Nenhum oficial identificado.", "error");
 
-  let cabecalho = "📋 **RELATÓRIO DE EXONERAÇÃO - ADMINISTRAÇÃO PCERJ** 📋\n";
-  cabecalho += `📅 **DATA DO RELATÓRIO:** ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-
-  const gerarCorpoVertical = (membros) => {
+  const formatador = (membros) => {
     let texto = "";
     membros.forEach((m) => {
-      let partesNick = m.fullNickname.split("|");
-      let idRP = partesNick[1] ? partesNick[1].trim() : "---";
+      let idRP = m.fullNickname?.split("|")[1]?.trim() || "---";
       texto += `QRA: <@${m.id}>\nNOME NA CIDADE: ${
         m.rpName || m.name
       }\nID: ${idRP}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────\n`;
@@ -246,42 +246,37 @@ window.copiarRelatorioDiscord = function () {
     return texto;
   };
 
-  let relatorioCompleto = cabecalho + gerarCorpoVertical(exonerados);
-  relatorioCompleto +=
-    "\n⚠️ *Oficiais citados devem entrar em contato com a Administração.*";
+  let cabecalho =
+    "📋 **RELATÓRIO DE EXONERAÇÃO - ADMINISTRAÇÃO PCERJ** 📋\n📅 **DATA:** " +
+    dataHoje +
+    "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
+  let relatorio = cabecalho + formatador(exonerados);
 
-  if (relatorioCompleto.length <= 4000) {
-    navigator.clipboard.writeText(relatorioCompleto).then(() => {
-      mostrarAviso("Relatório copiado (Formato Nitro)");
-    });
+  if (relatorio.length <= 1900) {
+    navigator.clipboard
+      .writeText(relatorio)
+      .then(() => mostrarAviso("Relatório copiado!"));
   } else {
-    abrirModalDivisor(exonerados, dataHoje, cabecalho, gerarCorpoVertical);
+    abrirModalDivisor(exonerados, dataHoje, cabecalho, formatador);
   }
 };
 
-function abrirModalDivisor(exonerados, dataHoje, cabecalho, formatador) {
-  const tamanhoBloco = 12;
+function abrirModalDivisor(membros, data, header, formatador) {
   const container = document.getElementById("container-botoes-partes");
   container.innerHTML = "";
+  const limit = 10;
 
-  for (let i = 0; i < exonerados.length; i += tamanhoBloco) {
-    const bloco = exonerados.slice(i, i + tamanhoBloco);
-    let textoPart =
-      cabecalho +
-      `(PARTE ${Math.floor(i / tamanhoBloco) + 1})\n\n` +
-      formatador(bloco);
-
+  for (let i = 0; i < membros.length; i += limit) {
+    const bloco = membros.slice(i, i + limit);
+    const parte = Math.floor(i / limit) + 1;
     const btn = document.createElement("button");
     btn.className = "btn-parte";
-    btn.innerHTML = `<i class="fa-solid fa-copy"></i> PARTE ${
-      Math.floor(i / tamanhoBloco) + 1
-    }`;
+    btn.innerHTML = `<i class="fa-solid fa-copy"></i> PARTE ${parte}`;
     btn.onclick = () => {
-      navigator.clipboard.writeText(textoPart).then(() => {
-        mostrarAviso(`Parte ${Math.floor(i / tamanhoBloco) + 1} copiada!`);
-        btn.classList.add("copiado");
-        btn.innerHTML = `<i class="fa-solid fa-check"></i> COPIADA`;
-      });
+      navigator.clipboard.writeText(
+        header + `(PARTE ${parte})\n\n` + formatador(bloco)
+      );
+      mostrarAviso(`Parte ${parte} copiada!`);
     };
     container.appendChild(btn);
   }
@@ -291,6 +286,8 @@ function abrirModalDivisor(exonerados, dataHoje, cabecalho, formatador) {
 window.atualizarListaFerias = async function () {
   const select = document.getElementById("select-oficiais-ferias");
   const logContainer = document.getElementById("status-ferias-info");
+  if (!select) return;
+
   select.innerHTML = '<option value="">⏳ Sincronizando...</option>';
 
   try {
@@ -299,35 +296,29 @@ window.atualizarListaFerias = async function () {
     select.innerHTML = '<option value="">Selecione para antecipar...</option>';
 
     if (data.oficiais.length === 0) {
-      select.innerHTML =
-        '<option value="">Nenhum oficial em férias ativa.</option>';
+      select.innerHTML = '<option value="">Nenhum oficial em férias.</option>';
     } else {
       data.oficiais.forEach((oficial) => {
-        const option = document.createElement("option");
-        option.value = oficial.id;
-        option.textContent = `🌴 ${oficial.nome} (Até: ${oficial.dataRetorno})`;
-        select.appendChild(option);
+        const opt = document.createElement("option");
+        opt.value = oficial.id;
+        opt.textContent = `🌴 ${oficial.nome} (Até: ${oficial.dataRetorno})`;
+        select.appendChild(opt);
       });
     }
 
-    if (data.logs && data.logs.length > 0) {
+    if (data.logs?.length > 0) {
       logContainer.innerHTML =
-        "<strong>Remoções Automáticas:</strong><br>" +
-        data.logs.map((l) => `✅ Tag removida: ${l}`).join("<br>");
-    } else {
-      logContainer.innerHTML =
-        "Auditoria concluída: Nenhuma tag expirada no momento.";
+        "<strong>Remoções:</strong><br>" +
+        data.logs.map((l) => `✅ ${l}`).join("<br>");
     }
   } catch (e) {
-    mostrarAviso("Erro ao carregar dados de férias.", "error");
     select.innerHTML = '<option value="">Erro ao carregar.</option>';
   }
 };
 
 window.executarAntecipacao = async function () {
   const userId = document.getElementById("select-oficiais-ferias").value;
-  if (!userId)
-    return mostrarAviso("Por favor, selecione um oficial na lista.", "warning");
+  if (!userId) return mostrarAviso("Selecione um oficial.", "warning");
   if (!confirm("Confirmar retorno antecipado?")) return;
 
   try {
@@ -336,14 +327,14 @@ window.executarAntecipacao = async function () {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId }),
     });
-
     if (res.ok) {
-      mostrarAviso("Férias antecipadas com sucesso!");
+      mostrarAviso("Férias antecipadas!");
       atualizarListaFerias();
-    } else {
-      mostrarAviso("Erro ao processar solicitação.", "error");
     }
   } catch (e) {
-    mostrarAviso("Falha na comunicação com o servidor.", "error");
+    mostrarAviso("Falha na comunicação.", "error");
   }
 };
+
+window.fecharModalRelatorio = () =>
+  (document.getElementById("modal-relatorio").style.display = "none");

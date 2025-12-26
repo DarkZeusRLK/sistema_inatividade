@@ -1,15 +1,25 @@
 :root {
   --bg-black: #0d0d0f;
   --bg-dark: #16161a;
-  --gold: #d4af37;
-  --gold-dark: #aa8c2c;
   --white: #ffffff;
   --gray: #a0a0a5;
   --danger: #ff4d4d;
   --success: #04d361;
   --border: rgba(212, 175, 55, 0.2);
 }
-
+/* Temas */
+body.tema-pcerj {
+  --gold: #d4af37;
+  --gold-dark: #aa8c2c;
+}
+body.tema-prf {
+  --gold: #003399;
+  --gold-dark: #002266;
+} /* Azul PRF */
+body.tema-pmerj {
+  --gold: #2d5a27;
+  --gold-dark: #1e3d1a;
+} /* Verde PMERJ */
 * {
   margin: 0;
   padding: 0;

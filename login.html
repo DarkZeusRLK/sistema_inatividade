@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login - Polícia Civil</title>
+  <title>Login - Sistema Unificado de Auditoria</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="shortcut icon" href="Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png" type="image/x-icon">
@@ -74,9 +74,9 @@
 <body>
 
   <div class="login-card">
-    <img src="Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png" alt="PCERJ">
-    <h1>AUTENTICAÇÃO</h1>
-    <p>Acesso restrito a oficiais da Polícia Civil</p>
+    <img src="Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png" id="img-login" alt="Logo">
+    <h1 id="titulo-login">AUTENTICAÇÃO</h1>
+    <p>Acesso restrito à Administração das Forças</p>
 
     <button onclick="iniciarLogin()" class="btn-discord">
       <i class="fa-brands fa-discord"></i> ENTRAR COM DISCORD
@@ -84,17 +84,23 @@
   </div>
 
   <script>
+    // ==========================================
+    // CONFIGURAÇÃO DOS CARGOS POR ORGANIZAÇÃO
+    // ==========================================
+    const GUILD_ID = '1052430488205283449';
+
+    const ORG_CONFIG = {
+      '1053677888983023667': { id: 'PCERJ', tema: 'tema-pcerj' },
+      'ID_ROLE_PRF_AQUI': { id: 'PRF', tema: 'tema-prf' },
+      'ID_ROLE_PMERJ_AQUI': { id: 'PMERJ', tema: 'tema-pmerj' }
+    };
+
     function iniciarLogin() {
       const CLIENT_ID = '1453204169661087794';
       const REDIRECT_URI = window.location.origin + '/login.html';
-
-      // Scopes necessários para ler o perfil e o cargo do usuário
       const scope = encodeURIComponent('identify guilds guilds.members.read');
       const redirect = encodeURIComponent(REDIRECT_URI);
-
       const url = `https://discord.com/api/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${redirect}&response_type=token&scope=${scope}`;
-
-      console.log("Tentando logar com o ID:", CLIENT_ID);
       window.location.href = url;
     }
 
@@ -104,38 +110,53 @@
         const params = new URLSearchParams(hash.replace("#", "?"));
         const token = params.get("access_token");
 
-        // 1. Puxar Info do Usuário
-        const userRes = await fetch('https://discord.com/api/users/@me', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const userData = await userRes.json();
+        try {
+          // 1. Puxar Info do Usuário
+          const userRes = await fetch('https://discord.com/api/users/@me', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const userData = await userRes.json();
 
-        // 2. Verificar se está no servidor e tem o cargo (Ajuste o Guild ID)
-        const GUILD_ID = '1052430488205283449';
-        const ROLE_ID = '1053677888983023667';
+          // 2. Verificar Membro no Servidor
+          const memberRes = await fetch(`https://discord.com/api/users/@me/guilds/${GUILD_ID}/member`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
 
-        const memberRes = await fetch(`https://discord.com/api/users/@me/guilds/${GUILD_ID}/member`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+          if (memberRes.ok) {
+            const memberData = await memberRes.json();
 
-        if (memberRes.ok) {
-          const memberData = await memberRes.json();
-          if (memberData.roles.includes(ROLE_ID)) {
-            // SALVAR SESSÃO
-            const sessao = {
-              id: userData.id,
-              nome: memberData.nick || userData.username,
-              avatar: `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png`,
-              expira: Date.now() + (24 * 60 * 60 * 1000) // 24h
-            };
-            localStorage.setItem("pc_session", JSON.stringify(sessao));
-            window.location.href = "index.html";
+            // 3. Identificar qual Organização o usuário pertence (PRF, PMERJ ou PCERJ)
+            let orgEncontrada = null;
+            for (const roleId of memberData.roles) {
+              if (ORG_CONFIG[roleId]) {
+                orgEncontrada = ORG_CONFIG[roleId];
+                break; // Encontrou a primeira org válida, para o loop
+              }
+            }
+
+            if (orgEncontrada) {
+              // SALVAR SESSÃO COM IDENTIFICAÇÃO DE ORGANIZAÇÃO
+              const sessao = {
+                id: userData.id,
+                nome: memberData.nick || userData.username,
+                avatar: `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png`,
+                org: orgEncontrada.id,     // Ex: 'PRF'
+                tema: orgEncontrada.tema, // Ex: 'tema-prf'
+                expira: Date.now() + (24 * 60 * 60 * 1000) // 24h
+              };
+
+              localStorage.setItem("pc_session", JSON.stringify(sessao));
+              window.location.href = "index.html";
+            } else {
+              alert("Acesso Negado: Você não possui cargo de administração de nenhuma força.");
+              window.location.hash = "";
+            }
           } else {
-            alert("Acesso Negado: Você não possui o cargo de Oficial.");
-            window.location.hash = "";
+            alert("Você não faz parte do servidor oficial.");
           }
-        } else {
-          alert("Você não faz parte do servidor oficial da Polícia Civil.");
+        } catch (error) {
+          console.error("Erro na validação:", error);
+          alert("Ocorreu um erro ao tentar validar seu acesso.");
         }
       }
     }

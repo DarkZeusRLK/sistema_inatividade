@@ -1,5 +1,25 @@
 // =========================================================
-// 1. SISTEMA DE NAVEGAÇÃO E CONTROLE DE INTERFACE
+// 1. UTILITÁRIOS E SESSÃO
+// =========================================================
+
+// Recupera a sessão e a organização logada
+const obterSessao = () => {
+  const sessionStr = localStorage.getItem("pc_session");
+  if (!sessionStr) return { org: "PCERJ" }; // Fallback
+  return JSON.parse(sessionStr);
+};
+
+const getOrgLabel = (org) => {
+  const labels = {
+    PCERJ: { unidade: "CORE", nome: "PCERJ" },
+    PRF: { unidade: "GRR", nome: "PRF" },
+    PMERJ: { unidade: "BOPE", nome: "PMERJ" },
+  };
+  return labels[org] || labels["PCERJ"];
+};
+
+// =========================================================
+// 2. SISTEMA DE NAVEGAÇÃO E CONTROLE DE INTERFACE
 // =========================================================
 
 function resetarTelas() {
@@ -28,6 +48,9 @@ function resetarTelas() {
 }
 
 window.abrirInatividade = function () {
+  const { org } = obterSessao();
+  const label = getOrgLabel(org);
+
   resetarTelas();
   const tela = document.getElementById("secao-inatividade");
   if (tela) {
@@ -36,13 +59,18 @@ window.abrirInatividade = function () {
   }
   document.getElementById("botoes-inatividade").style.display = "block";
   document.getElementById("nav-inatividade").classList.add("active");
-  document.getElementById("titulo-pagina").innerText =
-    "SISTEMA DE AUDITORIA DE ATIVIDADE";
+
+  document.getElementById(
+    "titulo-pagina"
+  ).innerText = `SISTEMA DE AUDITORIA - ${label.nome}`;
   document.getElementById("subtitulo-pagina").innerText =
     "Controle de Presença em Canais Oficiais";
 };
 
 window.abrirMetaCore = function () {
+  const { org } = obterSessao();
+  const label = getOrgLabel(org);
+
   resetarTelas();
   const tela = document.getElementById("secao-meta-core");
   if (tela) {
@@ -51,10 +79,16 @@ window.abrirMetaCore = function () {
   }
   document.getElementById("botoes-core").style.display = "block";
   document.getElementById("nav-core").classList.add("active");
-  document.getElementById("titulo-pagina").innerText =
-    "RELATÓRIO OPERACIONAL - CORE";
+
+  document.getElementById(
+    "titulo-pagina"
+  ).innerText = `RELATÓRIO OPERACIONAL - ${label.unidade}`;
   document.getElementById("subtitulo-pagina").innerText =
     "Contabilização de Metas e Produtividade";
+
+  // Ajusta o label da coluna na tabela se existir
+  const colLabel = document.getElementById("label-coluna-unidade");
+  if (colLabel) colLabel.innerText = label.unidade;
 };
 
 window.abrirGestaoFerias = function () {
@@ -79,7 +113,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // =========================================================
-// 2. ALERTAS PERSONALIZADOS
+// 3. ALERTAS PERSONALIZADOS
 // =========================================================
 
 function mostrarAviso(mensagem, tipo = "success") {
@@ -102,14 +136,15 @@ function mostrarAviso(mensagem, tipo = "success") {
 }
 
 // =========================================================
-// 3. LOGICA DE INATIVIDADE (COM ANIMAÇÃO E EXIBIÇÃO DO BOTÃO)
+// 4. LOGICA DE INATIVIDADE (Múltiplas Orgs)
 // =========================================================
 let listaMembrosAtual = [];
 
 window.carregarInatividade = async function () {
+  const { org } = obterSessao();
   const corpo = document.getElementById("corpo-inatividade");
   const btnSinc = document.getElementById("btn-sincronizar");
-  const btnCopiar = document.getElementById("btn-copiar"); // Referência ao seu botão de copiar
+  const btnCopiar = document.getElementById("btn-copiar");
   const progContainer = document.getElementById("progress-container");
   const progBar = document.getElementById("progress-bar");
   const progPercent = document.getElementById("progress-percentage");
@@ -117,9 +152,8 @@ window.carregarInatividade = async function () {
 
   if (!corpo) return;
 
-  // Reset visual
   corpo.innerHTML = "";
-  if (btnCopiar) btnCopiar.style.display = "none"; // Esconde o copiar enquanto carrega novo
+  if (btnCopiar) btnCopiar.style.display = "none";
   progContainer.style.display = "block";
   progBar.style.width = "0%";
   progPercent.innerText = "0%";
@@ -130,27 +164,16 @@ window.carregarInatividade = async function () {
     '<i class="fa-solid fa-spinner fa-spin"></i> SINCRONIZANDO...';
   btnSinc.disabled = true;
 
-  // Animação de progresso fluida
-  let width = 0;
-  const interval = setInterval(() => {
-    if (width < 90) {
-      width += Math.random() * 2;
-      progBar.style.width = width + "%";
-      progPercent.innerText = Math.floor(width) + "%";
-    }
-  }, 150);
-
   try {
-    const res = await fetch("/api/membros-inativos");
+    // Adicionado ?org= para o backend filtrar o cargo correto
+    const res = await fetch(`/api/membros-inativos?org=${org}`);
     const dados = await res.json();
     listaMembrosAtual = dados;
 
-    clearInterval(interval);
     progBar.style.width = "100%";
     progPercent.innerText = "100%";
     progLabel.innerText = "AUDITORIA FINALIZADA!";
 
-    // Exibe o botão de copiar após carregar os dados
     if (btnCopiar) btnCopiar.style.display = "inline-block";
 
     dados.sort((a, b) => (a.lastMsg || 0) - (b.lastMsg || 0));
@@ -188,7 +211,6 @@ window.carregarInatividade = async function () {
     });
     mostrarAviso("Dados atualizados.");
   } catch (err) {
-    clearInterval(interval);
     mostrarAviso("Erro na sincronização.", "error");
   } finally {
     btnSinc.innerHTML = originalTexto;
@@ -200,10 +222,13 @@ window.carregarInatividade = async function () {
 };
 
 // =========================================================
-// 4. LÓGICA DE RELATÓRIO (FORMATO VERTICAL)
+// 5. LÓGICA DE RELATÓRIO (Dinâmico por Org)
 // =========================================================
 
 window.copiarRelatorioDiscord = function () {
+  const { org } = obterSessao();
+  const label = getOrgLabel(org);
+
   if (listaMembrosAtual.length === 0)
     return mostrarAviso("Sincronize os dados primeiro.", "warning");
 
@@ -220,7 +245,6 @@ window.copiarRelatorioDiscord = function () {
   if (exonerados.length === 0)
     return mostrarAviso("Nenhum oficial identificado.", "error");
 
-  // FORMATO VERTICAL
   const formatador = (membros) => {
     let texto = "";
     membros.forEach((m) => {
@@ -235,16 +259,13 @@ window.copiarRelatorioDiscord = function () {
     return texto;
   };
 
-  let cabecalho =
-    "📋 **RELATÓRIO DE EXONERAÇÃO - ADMINISTRAÇÃO PCERJ** 📋\n📅 **DATA:** " +
-    dataHoje +
-    "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
+  let cabecalho = `📋 **RELATÓRIO DE EXONERAÇÃO - ADMINISTRAÇÃO ${label.nome}** 📋\n📅 **DATA:** ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
   let relatorio = cabecalho + formatador(exonerados);
 
   if (relatorio.length <= 1900) {
     navigator.clipboard
       .writeText(relatorio)
-      .then(() => mostrarAviso("Relatório copiado (Modelo Vertical)!"));
+      .then(() => mostrarAviso("Relatório copiado!"));
   } else {
     abrirModalDivisor(exonerados, dataHoje, cabecalho, formatador);
   }
@@ -253,7 +274,7 @@ window.copiarRelatorioDiscord = function () {
 function abrirModalDivisor(membros, data, header, formatador) {
   const container = document.getElementById("container-botoes-partes");
   container.innerHTML = "";
-  const limit = 8; // Limite menor para mensagens verticais
+  const limit = 8;
 
   for (let i = 0; i < membros.length; i += limit) {
     const bloco = membros.slice(i, i + limit);
@@ -276,10 +297,11 @@ window.fecharModalRelatorio = () =>
   (document.getElementById("modal-relatorio").style.display = "none");
 
 // =========================================================
-// 5. GESTÃO DE FÉRIAS
+// 6. GESTÃO DE FÉRIAS (Múltiplas Orgs)
 // =========================================================
 
 window.atualizarListaFerias = async function () {
+  const { org } = obterSessao();
   const select = document.getElementById("select-oficiais-ferias");
   const logContainer = document.getElementById("status-ferias-info");
   if (!select) return;
@@ -289,7 +311,8 @@ window.atualizarListaFerias = async function () {
   select.innerHTML = '<option value="">⏳ Sincronizando...</option>';
 
   try {
-    const res = await fetch("/api/verificar-ferias");
+    // Passa a organização para o backend filtrar apenas os membros daquela força
+    const res = await fetch(`/api/verificar-ferias?org=${org}`);
     const data = await res.json();
     select.innerHTML = '<option value="">Selecione para antecipar...</option>';
 

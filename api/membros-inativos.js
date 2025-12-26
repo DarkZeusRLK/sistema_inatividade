@@ -1,47 +1,70 @@
 module.exports = async (req, res) => {
+  const { org } = req.query; // Recebe 'PRF', 'PMERJ' ou 'PCERJ'
   const {
     Discord_Bot_Token,
     GUILD_ID,
-    POLICE_ROLE_ID,
     FERIAS_ROLE_ID,
+    // IDs PCERJ
+    POLICE_ROLE_ID,
     ADMISSAO_CHANNEL_ID,
+    // IDs PRF
+    PRF_ROLE_ID,
+    PRF_ADMISSAO_CH,
+    // IDs PMERJ
+    PMERJ_ROLE_ID,
+    PMERJ_ADMISSAO_CH,
   } = process.env;
+
+  // 1. Definição dinâmica de alvos baseada na organização logada
+  const TARGET_ROLE_ID =
+    org === "PRF"
+      ? PRF_ROLE_ID
+      : org === "PMERJ"
+      ? PMERJ_ROLE_ID
+      : POLICE_ROLE_ID;
+
+  const TARGET_ADMISSAO_CH =
+    org === "PRF"
+      ? PRF_ADMISSAO_CH
+      : org === "PMERJ"
+      ? PMERJ_ADMISSAO_CH
+      : ADMISSAO_CHANNEL_ID;
 
   try {
     const headers = { Authorization: `Bot ${Discord_Bot_Token}` };
 
-    // 1. Busca Banco de Dados de Admissão (Histórico de 500 mensagens)
+    // 2. Busca Banco de Dados de Admissão Específico da Org
     let nomesRP = {};
     let ultimoIdMsg = null;
 
-    for (let i = 0; i < 5; i++) {
-      let url = `https://discord.com/api/v10/channels/${ADMISSAO_CHANNEL_ID}/messages?limit=100`;
-      if (ultimoIdMsg) url += `&before=${ultimoIdMsg}`;
+    // Busca até 500 mensagens no canal/tópico de admissão da força selecionada
+    if (TARGET_ADMISSAO_CH) {
+      for (let i = 0; i < 5; i++) {
+        let url = `https://discord.com/api/v10/channels/${TARGET_ADMISSAO_CH}/messages?limit=100`;
+        if (ultimoIdMsg) url += `&before=${ultimoIdMsg}`;
 
-      const admissaoRes = await fetch(url, { headers });
-      if (!admissaoRes.ok) break;
+        const admissaoRes = await fetch(url, { headers });
+        if (!admissaoRes.ok) break;
 
-      const msgsAdmissao = await admissaoRes.json();
-      if (msgsAdmissao.length === 0) break;
+        const msgsAdmissao = await admissaoRes.json();
+        if (msgsAdmissao.length === 0) break;
 
-      msgsAdmissao.forEach((msg) => {
-        const conteudoLimpo = msg.content.replace(/\*/g, "");
-        const mencao = conteudoLimpo.match(/<@!?(\d+)>/);
-        const nomeMatch = conteudoLimpo.match(/NOME\s*DO\s*RP:\s*(.*)/i);
+        msgsAdmissao.forEach((msg) => {
+          const conteudoLimpo = msg.content.replace(/\*/g, "");
+          const mencao = conteudoLimpo.match(/<@!?(\d+)>/);
+          const nomeMatch = conteudoLimpo.match(/NOME\s*DO\s*RP:\s*(.*)/i);
 
-        if (mencao && nomeMatch) {
-          const userId = mencao[1];
-          const nomeExtraido = nomeMatch[1].split("\n")[0].trim();
-          if (!nomesRP[userId]) {
-            nomesRP[userId] = nomeExtraido;
+          if (mencao && nomeMatch) {
+            const userId = mencao[1];
+            const nomeExtraido = nomeMatch[1].split("\n")[0].trim();
+            if (!nomesRP[userId]) nomesRP[userId] = nomeExtraido;
           }
-        }
-      });
-
-      ultimoIdMsg = msgsAdmissao[msgsAdmissao.length - 1].id;
+        });
+        ultimoIdMsg = msgsAdmissao[msgsAdmissao.length - 1].id;
+      }
     }
 
-    // 2. Busca Canais e Membros
+    // 3. Busca Canais e Membros do Servidor
     const channelsRes = await fetch(
       `https://discord.com/api/v10/guilds/${GUILD_ID}/channels`,
       { headers }
@@ -56,21 +79,21 @@ module.exports = async (req, res) => {
     );
     const members = await membersRes.json();
 
-    const police = members.filter((m) => {
+    // Filtra apenas membros da organização logada que NÃO estão de férias
+    const oficiaisDaForca = members.filter((m) => {
       return (
-        m.roles.includes(POLICE_ROLE_ID) &&
+        m.roles.includes(TARGET_ROLE_ID) &&
         (!FERIAS_ROLE_ID || !m.roles.includes(FERIAS_ROLE_ID))
       );
     });
 
     let activityMap = {};
-    police.forEach((p) => {
+    oficiaisDaForca.forEach((p) => {
       activityMap[p.user.id] = {
         id: p.user.id,
         name: p.nick || p.user.username,
         rpName: nomesRP[p.user.id] || p.nick || p.user.username,
         lastMsg: 0,
-        // CORREÇÃO: Adicionado o momento em que o membro entrou no servidor
         joinedAt: new Date(p.joined_at).getTime(),
         avatar: p.user.avatar
           ? `https://cdn.discordapp.com/avatars/${p.user.id}/${p.user.avatar}.png`
@@ -79,7 +102,7 @@ module.exports = async (req, res) => {
       };
     });
 
-    // 3. Varredura de Atividade (Mensagens)
+    // 4. Varredura de Atividade em Canais de Texto e Tópicos
     for (const channel of textChannels) {
       try {
         const msgRes = await fetch(
@@ -97,7 +120,7 @@ module.exports = async (req, res) => {
             }
           });
         }
-        await new Promise((r) => setTimeout(r, 40));
+        await new Promise((r) => setTimeout(r, 30)); // Delay para evitar rate limit
       } catch (e) {
         continue;
       }

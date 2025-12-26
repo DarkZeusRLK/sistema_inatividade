@@ -2,17 +2,29 @@ module.exports = async (req, res) => {
   const {
     Discord_Bot_Token,
     GUILD_ID,
-    POLICE_ROLE_ID,
-    FERIAS_ROLE_ID,
-    FERIAS_CHANNEL_ID,
+    FERIAS_ROLE_ID, // Global (Igual para todos)
+    FERIAS_CHANNEL_ID, // Global (Igual para todos)
+    POLICE_ROLE_ID, // PCERJ
+    PRF_ROLE_ID, // PRF
+    PMERJ_ROLE_ID, // PMERJ
   } = process.env;
+
+  const { org } = req.query; // Recebe 'PCERJ', 'PRF' ou 'PMERJ'
 
   const headers = {
     Authorization: `Bot ${Discord_Bot_Token}`,
     "Content-Type": "application/json",
   };
 
-  // Função auxiliar para buscar um membro específico se ele não estiver na lista geral
+  // Define qual cargo de "Oficial/Membro" filtrar baseado na organização logada
+  const OFFICER_ROLE_TO_CHECK =
+    org === "PRF"
+      ? PRF_ROLE_ID
+      : org === "PMERJ"
+      ? PMERJ_ROLE_ID
+      : POLICE_ROLE_ID;
+
+  // Função auxiliar para buscar um membro específico
   async function fetchMember(userId) {
     try {
       const r = await fetch(
@@ -26,6 +38,7 @@ module.exports = async (req, res) => {
   }
 
   try {
+    // MÉTODO POST: Executa a antecipação (Remoção manual da tag)
     if (req.method === "POST") {
       const { userId } = req.body;
       await fetch(
@@ -35,7 +48,7 @@ module.exports = async (req, res) => {
       return res.status(200).json({ message: "Sucesso" });
     }
 
-    // 1. Busca mensagens com paginação (Até 1000)
+    // 1. Busca mensagens com paginação no canal ÚNICO de férias
     let allMessages = [];
     let lastId = null;
     for (let i = 0; i < 10; i++) {
@@ -56,7 +69,7 @@ module.exports = async (req, res) => {
     let validosParaAntecipar = [];
     let processados = new Set();
 
-    // Regex ultra-flexível para capturar a data após "Fim das férias"
+    // Regex para capturar a data após "Fim das férias"
     const regexDataFim = /Fim das f[eé]rias:.*?(\d{2}\/\d{2}\/\d{4})/i;
 
     for (const msg of allMessages) {
@@ -80,13 +93,15 @@ module.exports = async (req, res) => {
         const [d, m, a] = matchData[1].split("/");
         const dataFim = new Date(a, m - 1, d);
 
-        // Busca o membro (tenta direto se necessário)
+        // Busca o membro para validar a organização e a tag
         const membro = await fetchMember(userId);
 
-        if (membro && membro.roles.includes(POLICE_ROLE_ID)) {
+        // VALIDAÇÃO CRUCIAL:
+        // Verifica se o membro pertence à organização que está auditando agora
+        if (membro && membro.roles.includes(OFFICER_ROLE_TO_CHECK)) {
           const temTagFerias = membro.roles.includes(FERIAS_ROLE_ID);
 
-          // CASO 1: DATA VENCIDA -> Adiciona no relatório de baixo
+          // CASO 1: DATA VENCIDA -> Remove a tag automaticamente
           if (hoje > dataFim) {
             if (temTagFerias) {
               await fetch(
@@ -100,7 +115,7 @@ module.exports = async (req, res) => {
               );
             }
           }
-          // CASO 2: DATA FUTURA -> Adiciona na lista de antecipação
+          // CASO 2: DATA FUTURA -> Adiciona na lista de antecipação do select
           else if (temTagFerias) {
             validosParaAntecipar.push({
               id: userId,
@@ -119,6 +134,7 @@ module.exports = async (req, res) => {
       logs: logsRemocao,
     });
   } catch (error) {
-    res.status(500).json({ error: "Erro interno" });
+    console.error("Erro no verificar-ferias:", error);
+    res.status(500).json({ error: "Erro interno no servidor" });
   }
 };

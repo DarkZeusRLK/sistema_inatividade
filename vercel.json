@@ -7,7 +7,10 @@
     }
   ],
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/server.js" },
-    { "source": "/(.*)", "destination": "/public/$1" }
+    { "source": "/api/auth", "destination": "/api/auth.js" },
+    {
+      "source": "/api/verificar-ferias",
+      "destination": "/api/verificar-ferias.js"
+    }
   ]
 }

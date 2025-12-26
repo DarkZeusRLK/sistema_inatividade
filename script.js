@@ -47,7 +47,28 @@ const getOrgLabel = (org) => {
     }
   );
 };
+function atualizarIdentidadeVisual(org) {
+  const logos = {
+    PRF: "Imagens/PRF_new.png",
+    PMERJ:
+      "Imagens/Brasão_da_Polícia_Militar_do_Estado_do_Rio_de_Janeiro_-_PMERJ.png",
+    POLICE: "Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png",
+  };
 
+  const logoUrl = logos[org];
+
+  // Muda a logo da barra lateral
+  document.getElementById("logo-sidebar").src = logoUrl;
+
+  // Muda o favicon (ícone da aba)
+  let favicon = document.querySelector("link[rel~='icon']");
+  if (!favicon) {
+    favicon = document.createElement("link");
+    favicon.rel = "icon";
+    document.getElementsByTagName("head")[0].appendChild(favicon);
+  }
+  favicon.href = logoUrl;
+}
 // =========================================================
 // 2. FUNÇÕES DO COMANDO GERAL
 // =========================================================

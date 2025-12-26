@@ -10,21 +10,18 @@ module.exports = async (req, res) => {
     PRF_ADMISSAO_CH,
     PMERJ_ROLE_ID,
     PMERJ_ADMISSAO_CH,
-    CHAT_ID_BUSCAR, // IDs permitidos separados por vírgula no .env
+    CHAT_ID_BUSCAR,
   } = process.env;
 
-  // Transforma a string do .env em um Array de IDs limpos
   const canaisPermitidos = CHAT_ID_BUSCAR
     ? CHAT_ID_BUSCAR.split(",").map((id) => id.trim())
     : [];
-
   const TARGET_ROLE_ID =
     org === "PRF"
       ? PRF_ROLE_ID
       : org === "PMERJ"
       ? PMERJ_ROLE_ID
       : POLICE_ROLE_ID;
-
   const TARGET_ADMISSAO_CH =
     org === "PRF"
       ? PRF_ADMISSAO_CH
@@ -37,26 +34,27 @@ module.exports = async (req, res) => {
 
     // 1. Busca Banco de Dados de Admissão
     let dadosRP = {};
-    let ultimoIdMsg = null;
+    let ultimoIdAdmissao = null;
     if (TARGET_ADMISSAO_CH) {
       for (let i = 0; i < 10; i++) {
         let url = `https://discord.com/api/v10/channels/${TARGET_ADMISSAO_CH}/messages?limit=100`;
-        if (ultimoIdMsg) url += `&before=${ultimoIdMsg}`;
-        const admissaoRes = await fetch(url, { headers });
-        if (!admissaoRes.ok) break;
-        const msgsAdmissao = await admissaoRes.json();
-        if (msgsAdmissao.length === 0) break;
+        if (ultimoIdAdmissao) url += `&before=${ultimoIdAdmissao}`;
+        const resAdm = await fetch(url, { headers });
+        if (!resAdm.ok) break;
+        const msgs = await resAdm.json();
+        if (msgs.length === 0) break;
 
-        msgsAdmissao.forEach((msg) => {
-          const conteudoLimpo = msg.content.replace(/\*/g, "");
-          const mencao = conteudoLimpo.match(/<@!?(\d+)>/);
-          const nomeMatch = conteudoLimpo.match(/NOME\s*(?:DO\s*RP)?:\s*(.*)/i);
-          const idMatch = conteudoLimpo.match(
-            /ID(?:\s*DA\s*CIDADE)?:\s*(\d+)/i
-          );
+        msgs.forEach((msg) => {
+          const mencao = msg.content.match(/<@!?(\d+)>/);
           if (mencao) {
             const userId = mencao[1];
             if (!dadosRP[userId]) {
+              const nomeMatch = msg.content
+                .replace(/\*/g, "")
+                .match(/NOME\s*(?:DO\s*RP)?:\s*(.*)/i);
+              const idMatch = msg.content.match(
+                /ID(?:\s*DA\s*CIDADE)?:\s*(\d+)/i
+              );
               dadosRP[userId] = {
                 nome: nomeMatch ? nomeMatch[1].split("\n")[0].trim() : null,
                 cidadeId: idMatch ? idMatch[1].trim() : null,
@@ -64,7 +62,7 @@ module.exports = async (req, res) => {
             }
           }
         });
-        ultimoIdMsg = msgsAdmissao[msgsAdmissao.length - 1].id;
+        ultimoIdAdmissao = msgs[msgs.length - 1].id;
       }
     }
 
@@ -84,16 +82,13 @@ module.exports = async (req, res) => {
     let activityMap = {};
     oficiaisDaForca.forEach((p) => {
       const infoRP = dadosRP[p.user.id];
-      const nicknameDiscord = p.nick || p.user.username;
-      let idFinal =
-        nicknameDiscord.match(/\|\s*(\d+)/)?.[1] || infoRP?.cidadeId || "---";
-
+      const nick = p.nick || p.user.username;
       activityMap[p.user.id] = {
         id: p.user.id,
-        name: nicknameDiscord,
+        name: nick,
         rpName: infoRP?.nome || "Não consta em admissão",
-        cidadeId: idFinal,
-        lastMsg: 0,
+        cidadeId: nick.match(/\|\s*(\d+)/)?.[1] || infoRP?.cidadeId || "---",
+        lastMsg: 0, // Inicializa em 0
         joinedAt: new Date(p.joined_at).getTime(),
         avatar: p.user.avatar
           ? `https://cdn.discordapp.com/avatars/${p.user.id}/${p.user.avatar}.png`
@@ -101,41 +96,50 @@ module.exports = async (req, res) => {
       };
     });
 
-    // 4. Varredura APENAS nos canais definidos no CHAT_ID_BUSCAR
-    // Isso ignora canais de hierarquia, logs automáticos e chats gerais inúteis.
+    // 4. Varredura PROFUNDA nos canais permitidos (PAGINAÇÃO)
     for (const channelId of canaisPermitidos) {
-      try {
-        const msgRes = await fetch(
-          `https://discord.com/api/v10/channels/${channelId}/messages?limit=100`,
-          { headers }
-        );
-        if (!msgRes.ok) continue;
+      let ultimoIdMensagemBusca = null;
 
-        const msgs = await msgRes.json();
-        msgs.forEach((msg) => {
-          const ts = new Date(msg.timestamp).getTime();
+      // Busca até 500 mensagens por canal (5 páginas de 100) para garantir encontrar a data
+      for (let p = 0; p < 5; p++) {
+        try {
+          let url = `https://discord.com/api/v10/channels/${channelId}/messages?limit=100`;
+          if (ultimoIdMensagemBusca) url += `&before=${ultimoIdMensagemBusca}`;
 
-          // Checa se o AUTOR da mensagem é um oficial monitorado
-          if (activityMap[msg.author.id]) {
-            if (ts > activityMap[msg.author.id].lastMsg) {
+          const msgRes = await fetch(url, { headers });
+          if (!msgRes.ok) break;
+
+          const msgs = await msgRes.json();
+          if (msgs.length === 0) break;
+
+          msgs.forEach((msg) => {
+            const ts = new Date(msg.timestamp).getTime();
+
+            // A: Autor da mensagem
+            if (
+              activityMap[msg.author.id] &&
+              ts > activityMap[msg.author.id].lastMsg
+            ) {
               activityMap[msg.author.id].lastMsg = ts;
             }
-          }
 
-          // Checa se oficiais monitorados foram MENCIONADOS (ex: Relatórios de Patrulha)
-          if (msg.mentions && msg.mentions.length > 0) {
-            msg.mentions.forEach((mencionado) => {
-              if (activityMap[mencionado.id]) {
-                if (ts > activityMap[mencionado.id].lastMsg) {
+            // B: Menções diretas
+            if (msg.mentions && msg.mentions.length > 0) {
+              msg.mentions.forEach((mencionado) => {
+                if (
+                  activityMap[mencionado.id] &&
+                  ts > activityMap[mencionado.id].lastMsg
+                ) {
                   activityMap[mencionado.id].lastMsg = ts;
                 }
-              }
-            });
-          }
-        });
-      } catch (e) {
-        console.error(`Erro ao ler canal ${channelId}:`, e.message);
-        continue;
+              });
+            }
+          });
+
+          ultimoIdMensagemBusca = msgs[msgs.length - 1].id;
+        } catch (e) {
+          break;
+        }
       }
     }
 

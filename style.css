@@ -32,14 +32,14 @@ body.tema-prf {
   --bg-hover: rgba(255, 204, 0, 0.1);
 }
 
-/* TEMA PMERJ (Verde Operacional) */
+/* Tema Oficial PMERJ (Azul Marinho e Prata) */
 body.tema-pmerj {
-  --gold: #2d5a27;
-  --gold-dark: #1e3d1a;
-  --border: rgba(45, 90, 39, 0.2);
-  --bg-hover: rgba(45, 90, 39, 0.1);
+  --gold: #1b365d; /* Azul Marinho PMERJ */
+  --gold-dark: #0f213a; /* Azul Marinho Profundo */
+  --border: rgba(27, 54, 93, 0.4);
+  --bg-hover: rgba(27, 54, 93, 0.15);
+  --text-accent: #cbd5e0; /* Tom de cinza claro/prateado para detalhes */
 }
-
 /* =========================================================
    2. RESET E ESTILOS GERAIS
    ========================================================= */

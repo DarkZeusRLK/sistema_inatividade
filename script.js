@@ -325,7 +325,7 @@ window.carregarInatividade = async function () {
         <td>${
           m.lastMsg > 0
             ? new Date(m.lastMsg).toLocaleDateString("pt-BR")
-            : "---"
+            : '<span style="color: #ffb400; font-size: 0.85em; font-weight: bold;">⚠️ SEM REGISTROS</span>'
         }</td>
         <td><strong style="color: ${
           m.precisaExonerar ? "#ff4d4d" : "#d4af37"

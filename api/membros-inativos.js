@@ -18,6 +18,7 @@ module.exports = async (req, res) => {
       : org === "PMERJ"
       ? PMERJ_ROLE_ID
       : POLICE_ROLE_ID;
+
   const TARGET_ADMISSAO_CH =
     org === "PRF"
       ? PRF_ADMISSAO_CH
@@ -28,12 +29,13 @@ module.exports = async (req, res) => {
   try {
     const headers = { Authorization: `Bot ${Discord_Bot_Token}` };
 
-    // 2. Busca Banco de Dados de Admissão (Capturando Nome e ID da Cidade)
-    let dadosRP = {}; // Agora guardará { nome: '...', cidadeId: '...' }
+    // 1. Busca Banco de Dados de Admissão (Melhorado)
+    let dadosRP = {};
     let ultimoIdMsg = null;
 
     if (TARGET_ADMISSAO_CH) {
-      for (let i = 0; i < 5; i++) {
+      // Aumentei para 10 loops (1000 mensagens) para garantir que pegue admissões mais antigas
+      for (let i = 0; i < 10; i++) {
         let url = `https://discord.com/api/v10/channels/${TARGET_ADMISSAO_CH}/messages?limit=100`;
         if (ultimoIdMsg) url += `&before=${ultimoIdMsg}`;
 
@@ -44,25 +46,33 @@ module.exports = async (req, res) => {
         if (msgsAdmissao.length === 0) break;
 
         msgsAdmissao.forEach((msg) => {
-          const conteudoLimpo = msg.content.replace(/\*/g, "");
+          const conteudoLimpo = msg.content.replace(/\*/g, ""); // Remove negritos e itálicos
           const mencao = conteudoLimpo.match(/<@!?(\d+)>/);
-          const nomeMatch = conteudoLimpo.match(/NOME\s*DO\s*RP:\s*(.*)/i);
-          const idMatch = conteudoLimpo.match(/ID:\s*(\d+)/i); // Captura o ID da Cidade
+
+          // Regex mais flexíveis para pegar NOME e ID
+          const nomeMatch = conteudoLimpo.match(/NOME\s*(?:DO\s*RP)?:\s*(.*)/i);
+          const idMatch = conteudoLimpo.match(
+            /ID(?:\s*DA\s*CIDADE)?:\s*(\d+)/i
+          );
 
           if (mencao) {
             const userId = mencao[1];
-            if (!dadosRP[userId])
-              dadosRP[userId] = { nome: "Não encontrado", cidadeId: "N/A" };
-
-            if (nomeMatch)
-              dadosRP[userId].nome = nomeMatch[1].split("\n")[0].trim();
-            if (idMatch) dadosRP[userId].cidadeId = idMatch[1].trim();
+            // Só preenche se ainda não existir (garante que pega a admissão mais recente)
+            if (!dadosRP[userId]) {
+              dadosRP[userId] = {
+                nome: nomeMatch
+                  ? nomeMatch[1].split("\n")[0].trim()
+                  : "NOME NÃO CADASTRADO",
+                cidadeId: idMatch ? idMatch[1].trim() : "ID NÃO ENCONTRADO",
+              };
+            }
           }
         });
         ultimoIdMsg = msgsAdmissao[msgsAdmissao.length - 1].id;
       }
     }
 
+    // 2. Busca Canais e Membros
     const channelsRes = await fetch(
       `https://discord.com/api/v10/guilds/${GUILD_ID}/channels`,
       { headers }
@@ -84,17 +94,16 @@ module.exports = async (req, res) => {
       );
     });
 
+    // 3. Montagem do Mapa de Atividade
     let activityMap = {};
     oficiaisDaForca.forEach((p) => {
-      const infoRP = dadosRP[p.user.id] || {
-        nome: p.nick || p.user.username,
-        cidadeId: "Não Identificado",
-      };
+      const infoRP = dadosRP[p.user.id];
+
       activityMap[p.user.id] = {
-        id: p.user.id,
-        name: p.nick || p.user.username,
-        rpName: infoRP.nome,
-        cidadeId: infoRP.cidadeId, // Campo novo enviado para o frontend
+        id: p.user.id, // ID do Discord (para a tabela e menção <@id>)
+        name: p.nick || p.user.username, // Apelido do Discord (para a tabela)
+        rpName: infoRP ? infoRP.nome : "DOC. ADMISSÃO NÃO ENCONTRADO", // Nome da Admissão
+        cidadeId: infoRP ? infoRP.cidadeId : "0000", // ID da Admissão
         lastMsg: 0,
         joinedAt: new Date(p.joined_at).getTime(),
         avatar: p.user.avatar
@@ -103,6 +112,7 @@ module.exports = async (req, res) => {
       };
     });
 
+    // 4. Varredura de Mensagens (Verificação de Inatividade)
     for (const channel of textChannels) {
       try {
         const msgRes = await fetch(
@@ -119,7 +129,7 @@ module.exports = async (req, res) => {
             }
           });
         }
-        await new Promise((r) => setTimeout(r, 30));
+        await new Promise((r) => setTimeout(r, 20)); // Rate limit preventivo
       } catch (e) {
         continue;
       }

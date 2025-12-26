@@ -23,7 +23,7 @@ app.post("*", async (req, res) => {
     }
 
     const ORG_MAP = {
-      [process.env.PCERJ_ROLE_ID?.trim()]: { id: "PCERJ", tema: "tema-pcerj" },
+      [process.env.POLICE_ROLE_ID?.trim()]: { id: "PCERJ", tema: "tema-pcerj" },
       [process.env.PRF_ROLE_ID?.trim()]: { id: "PRF", tema: "tema-prf" },
       [process.env.PMERJ_ROLE_ID?.trim()]: { id: "PMERJ", tema: "tema-pmerj" },
     };

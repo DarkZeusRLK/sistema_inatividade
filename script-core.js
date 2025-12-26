@@ -8,6 +8,7 @@ window.abrirMetaCore = function () {
   document.getElementById("secao-gestao-ferias").style.display = "none";
   document.getElementById("botoes-inatividade").style.display = "none";
   document.getElementById("botoes-core").style.display = "block";
+  document.getElementById("botoes-ferias").style.display = "none";
 
   document.getElementById("titulo-pagina").innerText =
     "CONTROLE DE METAS - CORE";
@@ -36,6 +37,7 @@ window.abrirInatividade = function () {
   document.getElementById("secao-gestao-ferias").style.display = "none";
   document.getElementById("botoes-inatividade").style.display = "block";
   document.getElementById("botoes-core").style.display = "none";
+  document.getElementById("botoes-ferias").style.display = "none";
 
   document.getElementById("titulo-pagina").innerText =
     "SISTEMA DE AUDITORIA DE ATIVIDADE";

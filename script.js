@@ -3,6 +3,7 @@
 // =========================================================
 
 function resetarTelas() {
+  // 1. Esconder todas as seções
   const secoes = [
     "secao-inatividade",
     "secao-meta-core",
@@ -10,13 +11,23 @@ function resetarTelas() {
   ];
   secoes.forEach((id) => {
     const el = document.getElementById(id);
+    if (el) {
+      el.style.display = "none";
+      el.style.visibility = "hidden";
+    }
+  });
+
+  // 2. Esconder todos os grupos de botões do topo
+  const gruposBotoes = ["botoes-inatividade", "botoes-core", "botoes-ferias"];
+  gruposBotoes.forEach((id) => {
+    const el = document.getElementById(id);
     if (el) el.style.display = "none";
   });
 
-  const botoes = ["botoes-inatividade", "botoes-core", "botoes-ferias"];
-  botoes.forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = "none";
+  // 3. LIMPEZA TOTAL DA NAVBAR (CORREÇÃO DO PROBLEMA VISUAL)
+  // Removemos a classe 'active' de TODOS os itens, sem exceção
+  document.querySelectorAll(".nav-item").forEach((item) => {
+    item.classList.remove("active");
   });
 }
 
@@ -54,13 +65,12 @@ window.abrirMetaCore = function () {
 };
 
 window.abrirGestaoFerias = function () {
-  resetarTelas();
-  const tela = document.getElementById("secao-gestao-ferias");
-  if (tela) {
-    tela.style.display = "block";
-    tela.style.visibility = "visible";
-  }
+  resetarTelas(); // Limpa tudo, inclusive o dourado dos outros
+  document.getElementById("secao-gestao-ferias").style.display = "block";
+  document.getElementById("secao-gestao-ferias").style.visibility = "visible";
   document.getElementById("botoes-ferias").style.display = "block";
+
+  // Marca o item atual como ativo
   document.getElementById("nav-ferias").classList.add("active");
 
   document.getElementById("titulo-pagina").innerText =

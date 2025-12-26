@@ -3,18 +3,18 @@ let listaMetaCoreAtual = [];
 
 // 1. NAVEGAÇÃO - ABRIR ABA CORE
 window.abrirMetaCore = function () {
-  // Chama a função global de reset que está no script.js
+  // 1. Chama o reset global (que agora limpa todos os dourados da navbar)
   if (typeof resetarTelas === "function") {
     resetarTelas();
-  } else {
-    // Backup caso o resetarTelas falhe
-    document.getElementById("secao-inatividade").style.display = "none";
-    document.getElementById("secao-gestao-ferias").style.display = "none";
   }
 
-  // Agora mostra a parte do CORE
+  // 2. Mostra o conteúdo do CORE
   document.getElementById("secao-meta-core").style.display = "block";
+  document.getElementById("secao-meta-core").style.visibility = "visible";
   document.getElementById("botoes-core").style.display = "block";
+
+  // 3. Ativa o botão correto na sidebar
+  document.getElementById("nav-core").classList.add("active");
 
   document.getElementById("titulo-pagina").innerText =
     "CONTROLE DE METAS - CORE";

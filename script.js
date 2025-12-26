@@ -16,13 +16,14 @@ const getOrgLabel = (org) => {
   };
   return labels[org] || labels["PCERJ"];
 };
-// Função para encerrar a sessão
+
 window.fazerLogout = function () {
   if (confirm("Deseja realmente encerrar sua sessão no painel?")) {
-    localStorage.removeItem("pc_session"); // Remove os dados de login
-    window.location.href = "login.html"; // Redireciona para o login
+    localStorage.removeItem("pc_session");
+    window.location.href = "login.html";
   }
 };
+
 // =========================================================
 // 1.5 SISTEMA DE PERMISSÕES POR ORGANIZAÇÃO
 // =========================================================
@@ -30,7 +31,6 @@ window.fazerLogout = function () {
 function aplicarRestricoes() {
   const { org } = obterSessao();
 
-  // 1. Mapeamento de quem pode ver o quê
   const permissoes = {
     PCERJ: {
       mostrar: ["nav-core", "nav-porte", "nav-admin"],
@@ -48,7 +48,6 @@ function aplicarRestricoes() {
 
   const config = permissoes[org] || permissoes["PCERJ"];
 
-  // 2. Aplicar visibilidade na Sidebar
   config.esconder.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.style.display = "none";
@@ -59,8 +58,6 @@ function aplicarRestricoes() {
     if (el) el.style.display = "flex";
   });
 
-  // 3. Segurança adicional: Impedir acesso via funções de clique
-  // Se um espertinho tentar digitar "abrirMetaCore()" no console sendo PRF
   if (org !== "PCERJ") {
     window.abrirMetaCore = () => mostrarAviso("Acesso negado à PCERJ", "error");
   }
@@ -72,13 +69,8 @@ function aplicarRestricoes() {
   }
 }
 
-// ATUALIZE seu DOMContentLoaded para chamar a função
 document.addEventListener("DOMContentLoaded", () => {
-  aplicarRestricoes(); // <-- Nova função aqui
-  window.abrirInatividade();
-});
-document.addEventListener("DOMContentLoaded", () => {
-  // 1. Pega os dados do login
+  aplicarRestricoes();
   const sessao = JSON.parse(localStorage.getItem("pc_session"));
 
   if (!sessao) {
@@ -86,19 +78,16 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  // 2. Aplica o Tema ao Body (muda as cores do CSS)
   document.body.className = sessao.tema;
 
-  // 3. Troca o Brasão e os Textos
-  const logoImg = document.getElementById("logo-org"); // ID da imagem da logo
+  const logoImg = document.getElementById("logo-org");
   const tituloPainel = document.querySelector(".sidebar-header h2");
 
-  // Mapeamento de Brasões (Verifique se os nomes dos arquivos estão corretos)
   const BRASOES = {
     PCERJ: "Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png",
-    PRF: "Imagens/PRF_new.png", // Certifique-se que este arquivo existe
+    PRF: "Imagens/PRF_new.png",
     PMERJ:
-      "Imagens/Brasão_da_Polícia_Militar_do_Estado_do_Rio_de_Janeiro_-_PMERJ.png", // Certifique-se que este arquivo existe
+      "Imagens/Brasão_da_Polícia_Militar_do_Estado_do_Rio_de_Janeiro_-_PMERJ.png",
   };
 
   if (logoImg && BRASOES[sessao.org]) {
@@ -106,19 +95,20 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   if (tituloPainel) {
-    tituloPainel.innerText = sessao.org; // Escreve PRF, PCERJ ou PMERJ
+    tituloPainel.innerText = sessao.org;
   }
 
-  // 4. Exibe o nome do usuário logado
   const nomeUsuario = document.getElementById("nome-usuario");
   if (nomeUsuario) nomeUsuario.innerText = sessao.nome;
+
+  window.abrirInatividade();
 });
+
 // =========================================================
 // 2. SISTEMA DE NAVEGAÇÃO E CONTROLE DE INTERFACE
 // =========================================================
 
 function resetarTelas() {
-  // Lista de todas as seções criadas no HTML
   const secoes = [
     "secao-inatividade",
     "secao-meta-core",
@@ -135,7 +125,6 @@ function resetarTelas() {
     }
   });
 
-  // Lista de todos os grupos de botões no topo
   const gruposBotoes = [
     "botoes-inatividade",
     "botoes-core",
@@ -153,7 +142,6 @@ function resetarTelas() {
   });
 }
 
-// Funções de abertura de abas
 window.abrirInatividade = function () {
   const { org } = obterSessao();
   const label = getOrgLabel(org);
@@ -216,12 +204,8 @@ window.abrirGestaoFerias = function () {
   if (window.atualizarListaFerias) window.atualizarListaFerias();
 };
 
-document.addEventListener("DOMContentLoaded", () => {
-  window.abrirInatividade();
-});
-
 // =========================================================
-// 3. ALERTAS E INATIVIDADE (MANTIDOS SEU CÓDIGO ORIGINAL)
+// 3. ALERTAS E INATIVIDADE
 // =========================================================
 
 function mostrarAviso(mensagem, tipo = "success") {
@@ -318,8 +302,38 @@ window.carregarInatividade = async function () {
 };
 
 // =========================================================
-// 5. LÓGICA DE RELATÓRIO E FÉRIAS (MANTIDOS SEU CÓDIGO)
+// 4. LÓGICA DE COPIAR RELATÓRIO (CORRIGIDA)
 // =========================================================
+
+// Função auxiliar para garantir a cópia mesmo em navegadores antigos ou sem HTTPS
+async function executarCopia(texto) {
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(texto);
+      return true;
+    } catch (err) {
+      console.error("Erro na Clipboard API", err);
+    }
+  }
+
+  // Fallback: Método clássico de criar um textarea invisível
+  const textArea = document.createElement("textarea");
+  textArea.value = texto;
+  textArea.style.position = "fixed";
+  textArea.style.left = "-9999px";
+  textArea.style.top = "0";
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+  try {
+    const bemSucedido = document.execCommand("copy");
+    document.body.removeChild(textArea);
+    return bemSucedido;
+  } catch (err) {
+    document.body.removeChild(textArea);
+    return false;
+  }
+}
 
 window.copiarRelatorioDiscord = function () {
   const { org } = obterSessao();
@@ -341,23 +355,24 @@ window.copiarRelatorioDiscord = function () {
     return mostrarAviso("Nenhum oficial identificado.", "error");
 
   const formatador = (membros) => {
-    let texto = "";
-    membros.forEach((m) => {
-      let idRP = m.fullNickname?.split("|")[1]?.trim() || "---";
-      texto += `QRA: <@${m.id}>\nNOME NA CIDADE: ${
-        m.rpName || m.name
-      }\nID: ${idRP}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────\n`;
-    });
-    return texto;
+    return membros
+      .map((m) => {
+        let idRP = m.fullNickname?.split("|")[1]?.trim() || "---";
+        return `QRA: <@${m.id}>\nNOME NA CIDADE: ${
+          m.rpName || m.name
+        }\nID: ${idRP}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────`;
+      })
+      .join("\n");
   };
 
   let cabecalho = `📋 **RELATÓRIO DE EXONERAÇÃO - ADMINISTRAÇÃO ${label.nome}** 📋\n📅 **DATA:** ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
   let relatorio = cabecalho + formatador(exonerados);
 
   if (relatorio.length <= 1900) {
-    navigator.clipboard
-      .writeText(relatorio)
-      .then(() => mostrarAviso("Relatório copiado!"));
+    executarCopia(relatorio).then((sucesso) => {
+      if (sucesso) mostrarAviso("Relatório copiado!");
+      else mostrarAviso("Erro ao copiar.", "error");
+    });
   } else {
     abrirModalDivisor(exonerados, dataHoje, cabecalho, formatador);
   }
@@ -374,10 +389,11 @@ function abrirModalDivisor(membros, data, header, formatador) {
     btn.className = "btn-parte";
     btn.innerHTML = `<i class="fa-solid fa-copy"></i> PARTE ${parte}`;
     btn.onclick = () => {
-      navigator.clipboard.writeText(
-        header + `(PARTE ${parte})\n\n` + formatador(bloco)
+      executarCopia(header + `(PARTE ${parte})\n\n` + formatador(bloco)).then(
+        (sucesso) => {
+          if (sucesso) mostrarAviso(`Parte ${parte} copiada!`);
+        }
       );
-      mostrarAviso(`Parte ${parte} copiada!`);
     };
     container.appendChild(btn);
   }
@@ -386,6 +402,31 @@ function abrirModalDivisor(membros, data, header, formatador) {
 
 window.fecharModalRelatorio = () =>
   (document.getElementById("modal-relatorio").style.display = "none");
+
+// =========================================================
+// 5. FILTRAR METAS GRR (CORRIGIDA/ADICIONADA)
+// =========================================================
+
+window.filtrarMetaGRR = function () {
+  const dataInicio = document.getElementById("data-inicio-grr").value;
+  const dataFim = document.getElementById("data-fim-grr").value;
+
+  if (!dataInicio || !dataFim) {
+    return mostrarAviso("Selecione o período completo.", "warning");
+  }
+
+  // Chama a função global que deve estar no meta-grr.js para recarregar com as datas
+  if (typeof window.carregarMetaGRR === "function") {
+    window.carregarMetaGRR(dataInicio, dataFim);
+    mostrarAviso("Filtro aplicado.");
+  } else {
+    mostrarAviso("Função de carga não encontrada.", "error");
+  }
+};
+
+// =========================================================
+// 6. FÉRIAS E ANTECIPAÇÃO (MANTIDOS IGUAL)
+// =========================================================
 
 window.atualizarListaFerias = async function () {
   const { org } = obterSessao();

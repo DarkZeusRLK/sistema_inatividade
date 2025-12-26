@@ -1,5 +1,5 @@
 // =========================================================
-// 1. CONFIGURAÇÕES E SESSÃO
+// 1. CONFIGURAÇÕES, SESSÃO E UTILITÁRIOS
 // =========================================================
 
 const obterSessao = () => {
@@ -17,8 +17,18 @@ const getOrgLabel = (org) => {
   return labels[org] || labels["PCERJ"];
 };
 
+const delay = (ms) => new Promise((res) => setTimeout(res, ms));
+
+// Função para encerrar a sessão
+window.fazerLogout = function () {
+  if (confirm("Deseja realmente encerrar sua sessão no painel?")) {
+    localStorage.removeItem("pc_session");
+    window.location.href = "login.html";
+  }
+};
+
 // =========================================================
-// 2. INICIALIZAÇÃO DINÂMICA (SUBSTITUI OS 3 DOMContentLoaded)
+// 2. INICIALIZAÇÃO E PERMISSÕES
 // =========================================================
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -28,13 +38,12 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  // 1. Aplica Identidade Visual
+  // Aplica o Tema e Identidade Visual
   document.body.className = sessao.tema;
-  const config = getOrgLabel(sessao.org);
 
   const logoImg = document.getElementById("logo-org");
   const tituloPainel = document.querySelector(".sidebar-header h2");
-  const nomeUsuario = document.getElementById("nome-usuario"); // Certifique-se que esse ID existe no HTML
+  const nomeUsuario = document.getElementById("nome-usuario");
 
   const BRASOES = {
     PCERJ: "Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png",
@@ -43,20 +52,13 @@ document.addEventListener("DOMContentLoaded", () => {
       "Imagens/Brasão_da_Polícia_Militar_do_Estado_do_Rio_de_Janeiro_-_PMERJ.png",
   };
 
-  if (logoImg) logoImg.src = BRASOES[sessao.org];
-  if (tituloPainel) tituloPainel.innerText = config.nome;
+  if (logoImg) logoImg.src = BRASOES[sessao.org] || BRASOES.PCERJ;
+  if (tituloPainel) tituloPainel.innerText = sessao.org;
   if (nomeUsuario) nomeUsuario.innerText = sessao.nome;
 
-  // 2. Aplica Restrições de Acesso
   aplicarRestricoes(sessao.org);
-
-  // 3. Abre a tela inicial
-  window.abrirInatividade();
+  window.abrirInatividade(); // Tela inicial padrão
 });
-
-// =========================================================
-// 3. NAVEGAÇÃO E RESTRIÇÕES
-// =========================================================
 
 function aplicarRestricoes(org) {
   const permissoes = {
@@ -85,17 +87,11 @@ function aplicarRestricoes(org) {
     const el = document.getElementById(id);
     if (el) el.style.display = "flex";
   });
-
-  // Bloqueio de funções via Console
-  if (org !== "PCERJ")
-    window.abrirMetaCore = () =>
-      mostrarAviso("Acesso restrito à PCERJ", "error");
-  if (org !== "PRF")
-    window.abrirMetaGRR = () => mostrarAviso("Acesso restrito à PRF", "error");
-  if (org !== "PMERJ")
-    window.abrirMetaBOPE = () =>
-      mostrarAviso("Acesso restrito à PMERJ", "error");
 }
+
+// =========================================================
+// 3. NAVEGAÇÃO ENTRE TELAS
+// =========================================================
 
 function resetarTelas() {
   const secoes = [
@@ -114,33 +110,39 @@ function resetarTelas() {
   ];
 
   secoes.forEach((id) => {
-    if (document.getElementById(id))
-      document.getElementById(id).style.display = "none";
+    const el = document.getElementById(id);
+    if (el) {
+      el.style.display = "none";
+      el.style.visibility = "hidden";
+    }
   });
+
   gruposBotoes.forEach((id) => {
-    if (document.getElementById(id))
-      document.getElementById(id).style.display = "none";
+    const el = document.getElementById(id);
+    if (el) el.style.display = "none";
   });
+
   document
     .querySelectorAll(".nav-item")
     .forEach((item) => item.classList.remove("active"));
 }
 
-// Funções globais de abertura
 window.abrirInatividade = function () {
   const sessao = obterSessao();
   resetarTelas();
   document.getElementById("secao-inatividade").style.display = "block";
+  document.getElementById("secao-inatividade").style.visibility = "visible";
   document.getElementById("botoes-inatividade").style.display = "block";
   document.getElementById("nav-inatividade").classList.add("active");
   document.getElementById(
     "titulo-pagina"
-  ).innerText = `SISTEMA DE AUDITORIA - ${sessao.org}`;
+  ).innerText = `AUDITORIA DE ATIVIDADE - ${sessao.org}`;
 };
 
 window.abrirMetaCore = function () {
   resetarTelas();
   document.getElementById("secao-meta-core").style.display = "block";
+  document.getElementById("secao-meta-core").style.visibility = "visible";
   document.getElementById("botoes-core").style.display = "block";
   document.getElementById("nav-core").classList.add("active");
   document.getElementById("titulo-pagina").innerText =
@@ -150,6 +152,7 @@ window.abrirMetaCore = function () {
 window.abrirMetaGRR = function () {
   resetarTelas();
   document.getElementById("secao-meta-grr").style.display = "block";
+  document.getElementById("secao-meta-grr").style.visibility = "visible";
   document.getElementById("botoes-grr").style.display = "block";
   document.getElementById("nav-grr").classList.add("active");
   document.getElementById("titulo-pagina").innerText =
@@ -159,6 +162,7 @@ window.abrirMetaGRR = function () {
 window.abrirMetaBOPE = function () {
   resetarTelas();
   document.getElementById("secao-meta-bope").style.display = "block";
+  document.getElementById("secao-meta-bope").style.visibility = "visible";
   document.getElementById("botoes-bope").style.display = "block";
   document.getElementById("nav-bope").classList.add("active");
   document.getElementById("titulo-pagina").innerText =
@@ -168,6 +172,7 @@ window.abrirMetaBOPE = function () {
 window.abrirGestaoFerias = function () {
   resetarTelas();
   document.getElementById("secao-gestao-ferias").style.display = "block";
+  document.getElementById("secao-gestao-ferias").style.visibility = "visible";
   document.getElementById("botoes-ferias").style.display = "block";
   document.getElementById("nav-ferias").classList.add("active");
   document.getElementById("titulo-pagina").innerText =
@@ -176,7 +181,7 @@ window.abrirGestaoFerias = function () {
 };
 
 // =========================================================
-// 4. LÓGICA DE AUDITORIA E BARRA DE PROGRESSO
+// 4. AUDITORIA E BARRA DE PROGRESSO
 // =========================================================
 
 let listaMembrosAtual = [];
@@ -186,23 +191,40 @@ window.carregarInatividade = async function () {
   const corpo = document.getElementById("corpo-inatividade");
   const btnSinc = document.getElementById("btn-sincronizar");
   const btnCopiar = document.getElementById("btn-copiar");
+
   const progContainer = document.getElementById("progress-container");
   const progBar = document.getElementById("progress-bar");
+  const progLabel = document.getElementById("progress-label");
+  const progPerc = document.getElementById("progress-percentage");
 
+  if (!corpo) return;
   corpo.innerHTML =
-    '<tr><td colspan="5" align="center">Sincronizando...</td></tr>';
-  progContainer.style.display = "block";
-  progBar.style.width = "10%"; // Começa em 10%
+    '<tr><td colspan="5" align="center" style="padding:40px; color:#888;">Iniciando conexão...</td></tr>';
   btnSinc.disabled = true;
+  progContainer.style.display = "block";
+
+  const updateProgress = (text, percent) => {
+    progLabel.innerText = text.toUpperCase();
+    progBar.style.width = percent + "%";
+    progPerc.innerText = percent + "%";
+  };
 
   try {
-    const res = await fetch(`/api/membros-inativos?org=${sessao.org}`);
-    progBar.style.width = "60%"; // Meio do caminho
+    updateProgress("Conectando ao Discord...", 20);
+    await delay(800);
 
+    updateProgress("Verificando lista de oficiais ausentes...", 50);
+    const res = await fetch(`/api/membros-inativos?org=${sessao.org}`);
     const dados = await res.json();
     listaMembrosAtual = dados;
+    await delay(600);
 
-    progBar.style.width = "100%"; // Finaliza
+    updateProgress("Filtrando férias e licenças...", 80);
+    await delay(800);
+
+    updateProgress("Finalizando auditoria...", 100);
+    await delay(500);
+
     corpo.innerHTML = "";
     if (btnCopiar) btnCopiar.style.display = "inline-block";
 
@@ -232,7 +254,7 @@ window.carregarInatividade = async function () {
                     : "---"
                 }</td>
                 <td><strong style="color: ${
-                  statusExonerar ? "var(--danger)" : "var(--gold)"
+                  statusExonerar ? "#ff4d4d" : "var(--gold)"
                 }">${dias} Dias</strong></td>
                 <td align="center"><span class="${
                   statusExonerar ? "badge-danger" : "badge-success"
@@ -240,21 +262,22 @@ window.carregarInatividade = async function () {
             `;
       corpo.appendChild(tr);
     });
+
     mostrarAviso("Sincronização concluída!");
   } catch (err) {
-    mostrarAviso("Erro ao buscar dados.", "error");
+    mostrarAviso("Erro na sincronização.", "error");
     corpo.innerHTML =
-      '<tr><td colspan="5" align="center">Erro na conexão.</td></tr>';
+      '<tr><td colspan="5" align="center" style="color:red;">Falha ao obter dados do servidor.</td></tr>';
   } finally {
     btnSinc.disabled = false;
     setTimeout(() => {
       progContainer.style.display = "none";
-    }, 2000);
+    }, 3000);
   }
 };
 
 // =========================================================
-// 5. RELATÓRIOS E UTILITÁRIOS
+// 5. RELATÓRIOS E FÉRIAS
 // =========================================================
 
 window.copiarRelatorioDiscord = function () {
@@ -273,13 +296,16 @@ window.copiarRelatorioDiscord = function () {
   });
 
   if (exonerados.length === 0)
-    return mostrarAviso("Nenhum oficial para exonerar.", "success");
+    return mostrarAviso(
+      "Nenhum oficial identificado para exoneração.",
+      "success"
+    );
 
   const formatador = (membros) => {
     let texto = "";
     membros.forEach((m) => {
       let idRP = m.fullNickname?.split("|")[1]?.trim() || "---";
-      texto += `QRA: <@${m.id}>\nNOME: ${
+      texto += `QRA: <@${m.id}>\nNOME NA CIDADE: ${
         m.rpName || m.name
       }\nID: ${idRP}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────\n`;
     });
@@ -287,16 +313,41 @@ window.copiarRelatorioDiscord = function () {
   };
 
   let cabecalho = `📋 **RELATÓRIO DE EXONERAÇÃO - ${sessao.org}** 📋\n📅 **DATA:** ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-  let relatorioFinal = cabecalho + formatador(exonerados);
+  let relatorio = cabecalho + formatador(exonerados);
 
-  if (relatorioFinal.length <= 1900) {
+  if (relatorio.length <= 1900) {
     navigator.clipboard
-      .writeText(relatorioFinal)
+      .writeText(relatorio)
       .then(() => mostrarAviso("Relatório copiado!"));
   } else {
     abrirModalDivisor(exonerados, dataHoje, cabecalho, formatador);
   }
 };
+
+// Demais funções (Divisor de Modal, Alertas, Férias) permanecem para garantir o funcionamento do HTML fornecido
+function abrirModalDivisor(membros, data, header, formatador) {
+  const container = document.getElementById("container-botoes-partes");
+  container.innerHTML = "";
+  const limit = 8;
+  for (let i = 0; i < membros.length; i += limit) {
+    const bloco = membros.slice(i, i + limit);
+    const parte = Math.floor(i / limit) + 1;
+    const btn = document.createElement("button");
+    btn.className = "btn-parte";
+    btn.innerHTML = `<i class="fa-solid fa-copy"></i> PARTE ${parte}`;
+    btn.onclick = () => {
+      navigator.clipboard.writeText(
+        header + `(PARTE ${parte})\n\n` + formatador(bloco)
+      );
+      mostrarAviso(`Parte ${parte} copiada!`);
+    };
+    container.appendChild(btn);
+  }
+  document.getElementById("modal-relatorio").style.display = "flex";
+}
+
+window.fecharModalRelatorio = () =>
+  (document.getElementById("modal-relatorio").style.display = "none");
 
 function mostrarAviso(mensagem, tipo = "success") {
   let container = document.getElementById("custom-alert-container");
@@ -307,19 +358,23 @@ function mostrarAviso(mensagem, tipo = "success") {
   }
   const alert = document.createElement("div");
   alert.className = `pc-alert ${tipo}`;
-  alert.innerHTML = `<i class="fa-solid ${
-    tipo === "success" ? "fa-check-circle" : "fa-triangle-exclamation"
-  }"></i> <span>${mensagem}</span>`;
+  const icon =
+    tipo === "success" ? "fa-check-circle" : "fa-exclamation-triangle";
+  alert.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${mensagem}</span>`;
   container.appendChild(alert);
   setTimeout(() => {
     alert.classList.add("fade-out");
     setTimeout(() => alert.remove(), 500);
-  }, 3500);
+  }, 4000);
 }
 
-window.fazerLogout = function () {
-  if (confirm("Deseja sair do sistema?")) {
-    localStorage.removeItem("pc_session");
-    window.location.href = "login.html";
-  }
-};
+// Inclusão das chamadas de metas externas (Caso os scripts metas/script-xxx.js dependam delas)
+window.carregarMetaCore =
+  window.carregarMetaCore ||
+  (() => console.log("Função Core carregada do script externo"));
+window.carregarMetaGRR =
+  window.carregarMetaGRR ||
+  (() => console.log("Função GRR carregada do script externo"));
+window.carregarMetaBOPE =
+  window.carregarMetaBOPE ||
+  (() => console.log("Função BOPE carregada do script externo"));

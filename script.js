@@ -265,7 +265,8 @@ window.carregarInatividade = async function () {
 
   try {
     const res = await fetch(`/api/membros-inativos?org=${org}`);
-    const dados = await res.json();
+    const data = await res.json();
+    dadosInatividadeGlobal = data.dados;
     listaMembrosAtual = dados;
 
     // Para a simulação e completa a barra
@@ -358,40 +359,33 @@ async function executarCopia(texto) {
   }
 }
 
-window.copiarRelatorioDiscord = () => {
+window.copiarRelatorioDiscord = function() {
   if (!dadosInatividadeGlobal || dadosInatividadeGlobal.length === 0) {
-    return mostrarAviso(
-      "Não há dados para copiar. Sincronize primeiro.",
-      "error"
-    );
+    return mostrarAviso("Não há dados sincronizados para copiar.", "error");
   }
 
   const { org } = obterSessao();
-  const config = getOrgLabel(org);
-  const dataRef = new Date().toLocaleDateString("pt-BR");
+  let relatorio = `**⚠️ RELATÓRIO DE INATIVIDADE - ${org}**\n`;
+  relatorio += `📅 Data: ${new Date().toLocaleDateString('pt-BR')}\n`;
+  relatorio += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
-  // Cabeçalho do Relatório
-  let relatorioTexto = `**AUDITORIA DE PRESENÇA - ${config.nome}**\n`;
-  relatorioTexto += `📅 Data: ${dataRef}\n`;
-  relatorioTexto += `⚠️ *Oficiais com mais de 7 dias de ausência sem justificativa.*\n\n`;
-
-  // Filtra e formata apenas os que estão em situação crítica (Exemplo: > 7 dias)
-  const inativos = dadosInatividadeGlobal.filter((o) => o.diasAusente >= 7);
+  // Filtra quem está há mais de 7 dias
+  const inativos = dadosInatividadeGlobal.filter(o => o.diasAusente >= 7);
 
   if (inativos.length === 0) {
-    relatorioTexto += "✅ Nenhum oficial em situação de inatividade crítica.";
+    relatorio += "✅ Nenhum oficial em situação crítica de inatividade.";
   } else {
-    inativos.forEach((oficial) => {
-      const status =
-        oficial.diasAusente >= 10 ? "❌ [EXONERAÇÃO]" : "⚠️ [ADVERTÊNCIA]";
-      relatorioTexto += `${status} **${oficial.rpName}** (${oficial.id})\n`;
-      relatorioTexto += `└ *Última atividade: ${oficial.ultimaMsg} (${oficial.diasAusente} dias)*\n\n`;
+    inativos.forEach(o => {
+      const alerta = o.diasAusente >= 10 ? "❌ [EXONERAÇÃO]" : "⚠️ [ADVERTÊNCIA]";
+      relatorio += `${alerta} **${o.rpName}** (${o.id})\n`;
+      relatorio += `└ *Ausente há ${o.diasAusente} dias* (Última: ${o.ultimaMsg})\n\n`;
     });
   }
 
-  // Utiliza a função de dividir relatório que você já tem para enviar ao modal
-  dividirRelatorio(relatorioTexto, (bloco) => bloco);
-};
+  relatorio += `\n━━━━━━━━━━━━━━━━━━━━━━\n*Gerado via Painel Administrativo*`;
+
+  // Usa o seu sistema de divisão para não quebrar o limite do Discord
+  dividirRelatorio(relatorio, (bloco) => bloco);
 
 function abrirModalDivisor(membros, data, header, formatador) {
   const modal = document.getElementById("modal-relatorio");

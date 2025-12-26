@@ -2,7 +2,7 @@ module.exports = async (req, res) => {
   const {
     Discord_Bot_Token,
     GUILD_ID,
-    POLICE_ROLE_ID, // ID Único da PCERJ
+    POLICE_ROLE_ID, // ID exclusivo da PCERJ
     FERIAS_ROLE_ID,
     FERIAS_CHANNEL_ID,
   } = process.env;
@@ -22,7 +22,6 @@ module.exports = async (req, res) => {
       return res.status(200).json({ message: "Sucesso" });
     }
 
-    // 1. Puxa membros e mensagens simultaneamente
     const [membersRes, msgRes] = await Promise.all([
       fetch(
         `https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`,
@@ -42,57 +41,57 @@ module.exports = async (req, res) => {
 
     let logsRemocao = [];
     let validosParaAntecipar = [];
-    let processados = new Set(); // Evita duplicados se o bot mandou 2 msgs
+    let processados = new Set();
 
-    // 2. Analisa as mensagens do canal (onde o outro bot postou)
+    // REGEX MELHORADA: Procura especificamente o texto "Fim das férias:" antes da data
+    const regexDataFim = /Fim das férias:\s*(\d{2}\/\d{2}\/\d{4})/i;
+
     for (const msg of messages) {
       const matchId = msg.content.match(/<@!?(\d+)>/);
-      const matchData = msg.content.match(/(\d{2}\/\d{2}\/\d{4})/);
+      const matchDataFim = msg.content.match(regexDataFim); // Pega apenas a data de FIM
 
-      if (matchId && matchData) {
+      if (matchId && matchDataFim) {
         const userId = matchId[1];
         if (processados.has(userId)) continue;
 
-        const [d, m, a] = matchData[1].split("/");
+        const [d, m, a] = matchDataFim[1].split("/");
         const dataFim = new Date(a, m - 1, d);
 
-        // Localiza o membro no servidor para checar os cargos
         const membro = members.find((u) => u.user.id === userId);
 
-        // SEGURANÇA: Só processa se o membro existir e tiver o Cargo da PCERJ
+        // --- FILTRO DE SEGURANÇA MÁXIMA ---
+        // Só entra aqui se o membro existir E tiver o cargo de PCERJ (POLICE_ROLE_ID)
         if (membro && membro.roles.includes(POLICE_ROLE_ID)) {
           processados.add(userId);
 
-          // CASO A: Data Venceu -> Remove cargo automaticamente
           if (hoje > dataFim) {
+            // Se venceu e ele ainda tem a tag, remove
             if (membro.roles.includes(FERIAS_ROLE_ID)) {
               await fetch(
                 `https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userId}/roles/${FERIAS_ROLE_ID}`,
                 { method: "DELETE", headers }
               );
               logsRemocao.push(
-                `${membro.nick || membro.user.username} (Retorno Automático)`
+                `${membro.nick || membro.user.username} (Prazo Vencido em ${
+                  matchDataFim[1]
+                })`
               );
             }
-          }
-          // CASO B: Data Futura -> Adiciona na lista de antecipação (se tiver a tag de férias)
-          else if (membro.roles.includes(FERIAS_ROLE_ID)) {
+          } else if (membro.roles.includes(FERIAS_ROLE_ID)) {
+            // Se NÃO venceu e tem a tag, vai para a lista de antecipação
             validosParaAntecipar.push({
               id: membro.user.id,
               nome: membro.nick || membro.user.username,
-              dataRetorno: matchData[1],
+              dataRetorno: matchDataFim[1],
             });
           }
         }
       }
     }
 
-    // Ordena a lista por nome
     validosParaAntecipar.sort((a, b) => a.nome.localeCompare(b.nome));
-
     res.status(200).json({ oficiais: validosParaAntecipar, logs: logsRemocao });
   } catch (error) {
-    console.error("Erro Férias:", error);
-    res.status(500).json({ error: "Erro interno no servidor" });
+    res.status(500).json({ error: "Erro interno" });
   }
 };

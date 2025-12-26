@@ -29,13 +29,13 @@ module.exports = async (req, res) => {
   try {
     const headers = { Authorization: `Bot ${Discord_Bot_Token}` };
 
-    // 1. Busca Banco de Dados de Admissão (Melhorado)
+    // 1. Busca Banco de Dados de Admissão
     let dadosRP = {};
     let ultimoIdMsg = null;
 
     if (TARGET_ADMISSAO_CH) {
-      // Aumentei para 10 loops (1000 mensagens) para garantir que pegue admissões mais antigas
       for (let i = 0; i < 10; i++) {
+        // Varredura de 1000 mensagens
         let url = `https://discord.com/api/v10/channels/${TARGET_ADMISSAO_CH}/messages?limit=100`;
         if (ultimoIdMsg) url += `&before=${ultimoIdMsg}`;
 
@@ -46,10 +46,8 @@ module.exports = async (req, res) => {
         if (msgsAdmissao.length === 0) break;
 
         msgsAdmissao.forEach((msg) => {
-          const conteudoLimpo = msg.content.replace(/\*/g, ""); // Remove negritos e itálicos
+          const conteudoLimpo = msg.content.replace(/\*/g, "");
           const mencao = conteudoLimpo.match(/<@!?(\d+)>/);
-
-          // Regex mais flexíveis para pegar NOME e ID
           const nomeMatch = conteudoLimpo.match(/NOME\s*(?:DO\s*RP)?:\s*(.*)/i);
           const idMatch = conteudoLimpo.match(
             /ID(?:\s*DA\s*CIDADE)?:\s*(\d+)/i
@@ -57,13 +55,10 @@ module.exports = async (req, res) => {
 
           if (mencao) {
             const userId = mencao[1];
-            // Só preenche se ainda não existir (garante que pega a admissão mais recente)
             if (!dadosRP[userId]) {
               dadosRP[userId] = {
-                nome: nomeMatch
-                  ? nomeMatch[1].split("\n")[0].trim()
-                  : "NOME NÃO CADASTRADO",
-                cidadeId: idMatch ? idMatch[1].trim() : "ID NÃO ENCONTRADO",
+                nome: nomeMatch ? nomeMatch[1].split("\n")[0].trim() : null,
+                cidadeId: idMatch ? idMatch[1].trim() : null,
               };
             }
           }
@@ -72,15 +67,7 @@ module.exports = async (req, res) => {
       }
     }
 
-    // 2. Busca Canais e Membros
-    const channelsRes = await fetch(
-      `https://discord.com/api/v10/guilds/${GUILD_ID}/channels`,
-      { headers }
-    );
-    const textChannels = (await channelsRes.json()).filter((c) =>
-      [0, 5, 11, 12].includes(c.type)
-    );
-
+    // 2. Busca Membros
     const membersRes = await fetch(
       `https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`,
       { headers }
@@ -94,16 +81,32 @@ module.exports = async (req, res) => {
       );
     });
 
-    // 3. Montagem do Mapa de Atividade
+    // 3. Montagem do Mapa com Lógica de Fallback para ID e Nome
     let activityMap = {};
     oficiaisDaForca.forEach((p) => {
       const infoRP = dadosRP[p.user.id];
+      const nicknameDiscord = p.nick || p.user.username;
+
+      // Lógica para o ID: Admissão -> Senão tenta extrair do apelido "[SD] Aguia | 3936"
+      let idFinal = "Não Identificado";
+      if (infoRP && infoRP.cidadeId) {
+        idFinal = infoRP.cidadeId;
+      } else {
+        const extrairIdDoNick = nicknameDiscord.match(/\|\s*(\d+)/);
+        if (extrairIdDoNick) idFinal = extrairIdDoNick[1];
+      }
+
+      // Lógica para o Nome: Admissão -> Senão coloca "Não consta em admissão"
+      let nomeFinal = "Não consta em admissão";
+      if (infoRP && infoRP.nome) {
+        nomeFinal = infoRP.nome;
+      }
 
       activityMap[p.user.id] = {
-        id: p.user.id, // ID do Discord (para a tabela e menção <@id>)
-        name: p.nick || p.user.username, // Apelido do Discord (para a tabela)
-        rpName: infoRP ? infoRP.nome : "DOC. ADMISSÃO NÃO ENCONTRADO", // Nome da Admissão
-        cidadeId: infoRP ? infoRP.cidadeId : "0000", // ID da Admissão
+        id: p.user.id,
+        name: nicknameDiscord,
+        rpName: nomeFinal,
+        cidadeId: idFinal,
         lastMsg: 0,
         joinedAt: new Date(p.joined_at).getTime(),
         avatar: p.user.avatar
@@ -112,7 +115,15 @@ module.exports = async (req, res) => {
       };
     });
 
-    // 4. Varredura de Mensagens (Verificação de Inatividade)
+    // 4. Varredura de Canais (Atividade)
+    const channelsRes = await fetch(
+      `https://discord.com/api/v10/guilds/${GUILD_ID}/channels`,
+      { headers }
+    );
+    const textChannels = (await channelsRes.json()).filter((c) =>
+      [0, 5, 11, 12].includes(c.type)
+    );
+
     for (const channel of textChannels) {
       try {
         const msgRes = await fetch(
@@ -129,7 +140,6 @@ module.exports = async (req, res) => {
             }
           });
         }
-        await new Promise((r) => setTimeout(r, 20)); // Rate limit preventivo
       } catch (e) {
         continue;
       }

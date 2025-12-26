@@ -250,7 +250,7 @@ window.copiarRelatorioDiscord = function () {
   let textoAtual = `📋 **RELATÓRIO DE EXONERAÇÃO - ${label.nome}** 📋\n📅 DATA: ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
   exonerados.forEach((m) => {
-    // AQUI USAMOS OS DADOS DA CIDADE (ADMISSÃO) E A MENÇÃO POR ID
+    // Aqui m.cidadeId e m.rpName já vêm tratados pelo backend
     const item = `QRA: <@${m.discordId}>\nID: ${m.cidadeId}\nNome na cidade: ${m.rpName}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────\n`;
 
     if ((textoAtual + item).length > 2000) {

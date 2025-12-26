@@ -230,7 +230,7 @@ window.carregarInatividade = async function () {
 };
 
 // =========================================================
-// 5. BOTÃO DE COPIAR RELATÓRIO (FIX)
+// 5. BOTÃO DE COPIAR RELATÓRIO (FIX DEFINITIVO)
 // =========================================================
 
 window.copiarRelatorioDiscord = function () {
@@ -238,35 +238,64 @@ window.copiarRelatorioDiscord = function () {
   const label = getOrgLabel(org);
   const dataHoje = new Date().toLocaleDateString("pt-BR");
 
-  // Filtramos quem deve ser exonerado usando os dados já calculados
-  const exonerados = dadosInatividadeGlobal.filter((m) => m.precisaExonerar);
+  // Proteção: dados ainda não carregados
+  if (!dadosInatividadeGlobal || dadosInatividadeGlobal.length === 0) {
+    mostrarAviso(
+      "Nenhum dado carregado. Clique em SINCRONIZAR DADOS primeiro.",
+      "warning"
+    );
+    return;
+  }
+
+  // Filtra oficiais que devem ser exonerados
+  const exonerados = dadosInatividadeGlobal.filter(
+    (m) => m.precisaExonerar === true
+  );
 
   if (exonerados.length === 0) {
-    return mostrarAviso(
+    mostrarAviso(
       "Nenhum oficial identificado para exoneração (7+ dias).",
       "warning"
     );
+    return;
   }
 
-  const formatador = (lista) => {
-    return lista
+  const formatador = (lista) =>
+    lista
       .map(
         (m) =>
           `QRA: <@${m.id}>\nID: ${m.id}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────`
       )
       .join("\n");
-  };
 
-  const cabecalho = `📋 **RELATÓRIO DE EXONERAÇÃO - ${label.nome}** 📋\n📅 DATA: ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+  const cabecalho =
+    `📋 **RELATÓRIO DE EXONERAÇÃO - ${label.nome}** 📋\n` +
+    `📅 DATA: ${dataHoje}\n` +
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+
   const relatorioCompleto = cabecalho + formatador(exonerados);
 
-  // Se passar de 1900 caracteres, abre o modal divisor (para o Discord não cortar)
+  // Cópia segura (clipboard + fallback)
   if (relatorioCompleto.length <= 1900) {
-    navigator.clipboard
-      .writeText(relatorioCompleto)
-      .then(() =>
-        mostrarAviso("Relatório copiado para a área de transferência!")
-      );
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(relatorioCompleto);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = relatorioCompleto;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+
+      mostrarAviso("Relatório copiado para a área de transferência!");
+    } catch (e) {
+      mostrarAviso("Erro ao copiar relatório.", "error");
+    }
   } else {
     abrirModalDivisor(exonerados, dataHoje, cabecalho, formatador);
   }
@@ -280,22 +309,44 @@ function abrirModalDivisor(membros, data, header, formatador) {
   for (let i = 0; i < membros.length; i += limit) {
     const bloco = membros.slice(i, i + limit);
     const parte = Math.floor(i / limit) + 1;
+
     const btn = document.createElement("button");
     btn.className = "btn-parte";
     btn.innerHTML = `<i class="fa-solid fa-copy"></i> COPIAR PARTE ${parte}`;
+
     btn.onclick = () => {
-      navigator.clipboard.writeText(
-        header + `(PARTE ${parte})\n\n` + formatador(bloco)
-      );
-      mostrarAviso(`Parte ${parte} copiada!`);
+      const textoParte = header + `(PARTE ${parte})\n\n` + formatador(bloco);
+
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(textoParte);
+        } else {
+          const textarea = document.createElement("textarea");
+          textarea.value = textoParte;
+          textarea.style.position = "fixed";
+          textarea.style.opacity = "0";
+          document.body.appendChild(textarea);
+          textarea.focus();
+          textarea.select();
+          document.execCommand("copy");
+          document.body.removeChild(textarea);
+        }
+
+        mostrarAviso(`Parte ${parte} copiada!`);
+      } catch (e) {
+        mostrarAviso("Erro ao copiar parte do relatório.", "error");
+      }
     };
+
     container.appendChild(btn);
   }
+
   document.getElementById("modal-relatorio").style.display = "flex";
 }
 
-window.fecharModalRelatorio = () =>
-  (document.getElementById("modal-relatorio").style.display = "none");
+window.fecharModalRelatorio = () => {
+  document.getElementById("modal-relatorio").style.display = "none";
+};
 
 // =========================================================
 // 6. GESTÃO DE FÉRIAS (FILTRADO)

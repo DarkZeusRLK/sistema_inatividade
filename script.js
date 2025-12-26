@@ -1,6 +1,7 @@
 // =========================================================
 // 1. UTILITÁRIOS E SESSÃO
 // =========================================================
+let dadosInatividadeGlobal = [];
 
 const obterSessao = () => {
   const sessionStr = localStorage.getItem("pc_session");
@@ -357,58 +358,39 @@ async function executarCopia(texto) {
   }
 }
 
-window.copiarRelatorioDiscord = function () {
-  console.log("Botão de cópia clicado.");
+window.copiarRelatorioDiscord = () => {
+  if (!dadosInatividadeGlobal || dadosInatividadeGlobal.length === 0) {
+    return mostrarAviso(
+      "Não há dados para copiar. Sincronize primeiro.",
+      "error"
+    );
+  }
+
   const { org } = obterSessao();
-  const label = getOrgLabel(org);
+  const config = getOrgLabel(org);
+  const dataRef = new Date().toLocaleDateString("pt-BR");
 
-  if (!listaMembrosAtual || listaMembrosAtual.length === 0) {
-    console.warn("Lista de membros vazia.");
-    return mostrarAviso("Sincronize os dados primeiro!", "warning");
-  }
+  // Cabeçalho do Relatório
+  let relatorioTexto = `**AUDITORIA DE PRESENÇA - ${config.nome}**\n`;
+  relatorioTexto += `📅 Data: ${dataRef}\n`;
+  relatorioTexto += `⚠️ *Oficiais com mais de 7 dias de ausência sem justificativa.*\n\n`;
 
-  const agora = new Date();
-  const dataHoje = agora.toLocaleDateString("pt-BR");
-  const dataBaseAuditoria = new Date("2025-12-08T00:00:00").getTime();
+  // Filtra e formata apenas os que estão em situação crítica (Exemplo: > 7 dias)
+  const inativos = dadosInatividadeGlobal.filter((o) => o.diasAusente >= 7);
 
-  // Filtra inativos (7 dias+)
-  const exonerados = listaMembrosAtual.filter((m) => {
-    let dataRef = Math.max(m.lastMsg || 0, m.joinedAt || 0, dataBaseAuditoria);
-    let dias = Math.floor((agora - dataRef) / (1000 * 60 * 60 * 24));
-    return dias >= 7;
-  });
-
-  if (exonerados.length === 0) {
-    return mostrarAviso("Nenhum membro inativo encontrado.", "info");
-  }
-
-  // Formatador padrão PCERJ/PRF
-  const formatador = (membros) => {
-    return membros
-      .map((m) => {
-        // Separa o Nickname (Ex: João Silva | 12345)
-        const partes = m.fullNickname ? m.fullNickname.split("|") : [];
-        const idRP = partes[1] ? partes[1].trim() : "---";
-        const nomeCidade = partes[0] ? partes[0].trim() : m.rpName || m.name;
-
-        return `QRA: <@${m.id}>\nNOME NA CIDADE: ${nomeCidade}\nID: ${idRP}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────`;
-      })
-      .join("\n");
-  };
-
-  let cabecalho = `📋 **RELATÓRIO DE EXONERAÇÃO - ${label.unidade} (${label.nome})** 📋\n📅 **DATA:** ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-  let relatorioCompleto = cabecalho + formatador(exonerados);
-
-  // Se o relatório for pequeno (Discord aceita até 2000), copia direto
-  if (relatorioCompleto.length <= 1900) {
-    executarCopia(relatorioCompleto).then((sucesso) => {
-      if (sucesso) mostrarAviso("Relatório copiado!");
-      else mostrarAviso("Erro ao copiar.", "error");
-    });
+  if (inativos.length === 0) {
+    relatorioTexto += "✅ Nenhum oficial em situação de inatividade crítica.";
   } else {
-    // Se for grande, abre o modal divisor
-    abrirModalDivisor(exonerados, dataHoje, cabecalho, formatador);
+    inativos.forEach((oficial) => {
+      const status =
+        oficial.diasAusente >= 10 ? "❌ [EXONERAÇÃO]" : "⚠️ [ADVERTÊNCIA]";
+      relatorioTexto += `${status} **${oficial.rpName}** (${oficial.id})\n`;
+      relatorioTexto += `└ *Última atividade: ${oficial.ultimaMsg} (${oficial.diasAusente} dias)*\n\n`;
+    });
   }
+
+  // Utiliza a função de dividir relatório que você já tem para enviar ao modal
+  dividirRelatorio(relatorioTexto, (bloco) => bloco);
 };
 
 function abrirModalDivisor(membros, data, header, formatador) {

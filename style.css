@@ -404,3 +404,48 @@ body {
   height: 100%;
   transition: width 0.5s ease;
 }
+/* Estilo específico para Metas BOPE */
+.tema-pmerj .card-meta {
+  background: #0a0a0c;
+  border-left: 4px solid #333; /* Cinza Chumbo */
+  border-radius: 8px;
+  padding: 20px;
+  display: grid;
+  grid-template-columns: 1fr 2fr; /* Foto | Dados */
+  gap: 20px;
+  align-items: center;
+  transition: transform 0.2s;
+}
+
+.tema-pmerj .card-meta:hover {
+  transform: translateX(5px);
+  border-left-color: var(--gold); /* Azul Marinho ou Prata */
+}
+
+.meta-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.stat-box {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 10px;
+  border-radius: 4px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.stat-box label {
+  display: block;
+  font-size: 0.65rem;
+  color: #888;
+  text-transform: uppercase;
+}
+
+.stat-box span {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--gold);
+}

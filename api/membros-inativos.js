@@ -35,7 +35,6 @@ module.exports = async (req, res) => {
 
     if (TARGET_ADMISSAO_CH) {
       for (let i = 0; i < 10; i++) {
-        // Varredura de 1000 mensagens
         let url = `https://discord.com/api/v10/channels/${TARGET_ADMISSAO_CH}/messages?limit=100`;
         if (ultimoIdMsg) url += `&before=${ultimoIdMsg}`;
 
@@ -67,7 +66,7 @@ module.exports = async (req, res) => {
       }
     }
 
-    // 2. Busca Membros
+    // 2. Busca Membros do Servidor
     const membersRes = await fetch(
       `https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`,
       { headers }
@@ -81,13 +80,12 @@ module.exports = async (req, res) => {
       );
     });
 
-    // 3. Montagem do Mapa com Lógica de Fallback para ID e Nome
+    // 3. Montagem do Mapa de Atividade
     let activityMap = {};
     oficiaisDaForca.forEach((p) => {
       const infoRP = dadosRP[p.user.id];
       const nicknameDiscord = p.nick || p.user.username;
 
-      // Lógica para o ID: Admissão -> Senão tenta extrair do apelido "[SD] Aguia | 3936"
       let idFinal = "Não Identificado";
       if (infoRP && infoRP.cidadeId) {
         idFinal = infoRP.cidadeId;
@@ -96,7 +94,6 @@ module.exports = async (req, res) => {
         if (extrairIdDoNick) idFinal = extrairIdDoNick[1];
       }
 
-      // Lógica para o Nome: Admissão -> Senão coloca "Não consta em admissão"
       let nomeFinal = "Não consta em admissão";
       if (infoRP && infoRP.nome) {
         nomeFinal = infoRP.nome;
@@ -115,7 +112,7 @@ module.exports = async (req, res) => {
       };
     });
 
-    // 4. Varredura de Canais (Atividade)
+    // 4. Varredura de Canais (Atividade baseada em MENÇÕES)
     const channelsRes = await fetch(
       `https://discord.com/api/v10/guilds/${GUILD_ID}/channels`,
       { headers }
@@ -133,10 +130,17 @@ module.exports = async (req, res) => {
         if (msgRes.ok) {
           const msgs = await msgRes.json();
           msgs.forEach((msg) => {
-            if (activityMap[msg.author.id]) {
-              const ts = new Date(msg.timestamp).getTime();
-              if (ts > activityMap[msg.author.id].lastMsg)
-                activityMap[msg.author.id].lastMsg = ts;
+            // LÓGICA ALTERADA: Verifica se alguém do nosso mapa foi MENCIONADO na mensagem
+            if (msg.mentions && msg.mentions.length > 0) {
+              msg.mentions.forEach((mencionado) => {
+                if (activityMap[mencionado.id]) {
+                  const ts = new Date(msg.timestamp).getTime();
+                  // Só atualiza se a menção encontrada for mais recente que a já salva
+                  if (ts > activityMap[mencionado.id].lastMsg) {
+                    activityMap[mencionado.id].lastMsg = ts;
+                  }
+                }
+              });
             }
           });
         }

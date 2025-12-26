@@ -354,3 +354,29 @@ body {
   color: #4752c4;
   opacity: 0.7;
 }
+/* Estilo específico para o botão de Logout */
+.sidebar-footer {
+  padding: 15px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.logout-item {
+  margin-bottom: 0 !important;
+  color: var(--danger) !important; /* Cor vermelha definida no :root */
+}
+
+.logout-item:hover {
+  background: rgba(255, 77, 77, 0.1) !important;
+  color: #ff6666 !important;
+}
+
+.sidebar-footer small {
+  display: block;
+  text-align: center;
+  color: var(--gray);
+  font-size: 0.7rem;
+  margin-bottom: 5px;
+}

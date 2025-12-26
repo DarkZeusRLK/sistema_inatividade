@@ -16,6 +16,13 @@ const getOrgLabel = (org) => {
   };
   return labels[org] || labels["PCERJ"];
 };
+// Função para encerrar a sessão
+window.fazerLogout = function () {
+  if (confirm("Deseja realmente encerrar sua sessão no painel?")) {
+    localStorage.removeItem("pc_session"); // Remove os dados de login
+    window.location.href = "login.html"; // Redireciona para o login
+  }
+};
 
 // =========================================================
 // 2. SISTEMA DE NAVEGAÇÃO E CONTROLE DE INTERFACE

@@ -278,15 +278,23 @@ window.carregarInatividade = async function () {
     progPercent.innerText = "100%";
     progLabel.innerText = "VARREDURA COMPLETA!";
 
-    const agora = Date.now();
-
     dadosInatividadeGlobal = dados.map((m) => {
-      let dataRef = Math.max(
-        m.lastMsg || 0,
-        m.joinedAt || 0,
-        DATA_BASE_AUDITORIA
-      );
+      const agora = Date.now();
+
+      // 1. Prioridade total para a última mensagem encontrada pelo bot
+      // 2. Se não houver mensagem, usamos a data de entrada ou a data da auditoria (o que for mais recente)
+      let dataRef;
+
+      if (m.lastMsg > 0) {
+        // Se o bot achou mensagem, a contagem de inatividade é baseada nela!
+        dataRef = m.lastMsg;
+      } else {
+        // Se não achou mensagem, conta a partir da auditoria ou da entrada dele
+        dataRef = Math.max(m.joinedAt || 0, DATA_BASE_AUDITORIA);
+      }
+
       let dias = Math.floor((agora - dataRef) / (1000 * 60 * 60 * 24));
+      if (dias < 0) dias = 0; // Evita dias negativos caso a auditoria seja no futuro
 
       return {
         ...m,
@@ -296,6 +304,7 @@ window.carregarInatividade = async function () {
         discordId: m.id,
         rpName: m.rpName,
         cidadeId: m.cidadeId,
+        lastMsg: m.lastMsg, // Mantemos o valor original para exibir na tabela
       };
     });
 

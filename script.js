@@ -3,7 +3,6 @@
 // =========================================================
 
 function resetarTelas() {
-  // Esconder todas as seções e forçar invisibilidade
   const secoes = [
     "secao-inatividade",
     "secao-meta-core",
@@ -17,14 +16,12 @@ function resetarTelas() {
     }
   });
 
-  // Esconder todos os grupos de botões do topo
   const gruposBotoes = ["botoes-inatividade", "botoes-core", "botoes-ferias"];
   gruposBotoes.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.style.display = "none";
   });
 
-  // Limpeza da Navbar (Remove o destaque dourado)
   document.querySelectorAll(".nav-item").forEach((item) => {
     item.classList.remove("active");
   });
@@ -105,13 +102,14 @@ function mostrarAviso(mensagem, tipo = "success") {
 }
 
 // =========================================================
-// 3. LOGICA DE INATIVIDADE (COM ANIMAÇÃO DE PROGRESSO)
+// 3. LOGICA DE INATIVIDADE (COM ANIMAÇÃO E EXIBIÇÃO DO BOTÃO)
 // =========================================================
 let listaMembrosAtual = [];
 
 window.carregarInatividade = async function () {
   const corpo = document.getElementById("corpo-inatividade");
-  const btn = document.getElementById("btn-sincronizar");
+  const btnSinc = document.getElementById("btn-sincronizar");
+  const btnCopiar = document.getElementById("btn-copiar"); // Referência ao seu botão de copiar
   const progContainer = document.getElementById("progress-container");
   const progBar = document.getElementById("progress-bar");
   const progPercent = document.getElementById("progress-percentage");
@@ -119,19 +117,20 @@ window.carregarInatividade = async function () {
 
   if (!corpo) return;
 
-  // Preparação Visual
+  // Reset visual
   corpo.innerHTML = "";
+  if (btnCopiar) btnCopiar.style.display = "none"; // Esconde o copiar enquanto carrega novo
   progContainer.style.display = "block";
   progBar.style.width = "0%";
   progPercent.innerText = "0%";
   progLabel.innerText = "CONECTANDO AO DISCORD...";
 
-  const originalTexto = btn.innerHTML;
-  btn.innerHTML =
+  const originalTexto = btnSinc.innerHTML;
+  btnSinc.innerHTML =
     '<i class="fa-solid fa-spinner fa-spin"></i> SINCRONIZANDO...';
-  btn.disabled = true;
+  btnSinc.disabled = true;
 
-  // Simulação de Progresso Fluido enquanto a API não responde
+  // Animação de progresso fluida
   let width = 0;
   const interval = setInterval(() => {
     if (width < 90) {
@@ -146,11 +145,13 @@ window.carregarInatividade = async function () {
     const dados = await res.json();
     listaMembrosAtual = dados;
 
-    // Finalização do Progresso
     clearInterval(interval);
     progBar.style.width = "100%";
     progPercent.innerText = "100%";
     progLabel.innerText = "AUDITORIA FINALIZADA!";
+
+    // Exibe o botão de copiar após carregar os dados
+    if (btnCopiar) btnCopiar.style.display = "inline-block";
 
     dados.sort((a, b) => (a.lastMsg || 0) - (b.lastMsg || 0));
     const agora = new Date();
@@ -190,8 +191,8 @@ window.carregarInatividade = async function () {
     clearInterval(interval);
     mostrarAviso("Erro na sincronização.", "error");
   } finally {
-    btn.innerHTML = originalTexto;
-    btn.disabled = false;
+    btnSinc.innerHTML = originalTexto;
+    btnSinc.disabled = false;
     setTimeout(() => {
       progContainer.style.display = "none";
     }, 3000);
@@ -199,7 +200,7 @@ window.carregarInatividade = async function () {
 };
 
 // =========================================================
-// 4. LÓGICA DE RELATÓRIOS (COPIAR DISCORD)
+// 4. LÓGICA DE RELATÓRIO (FORMATO VERTICAL)
 // =========================================================
 
 window.copiarRelatorioDiscord = function () {
@@ -219,13 +220,17 @@ window.copiarRelatorioDiscord = function () {
   if (exonerados.length === 0)
     return mostrarAviso("Nenhum oficial identificado.", "error");
 
+  // FORMATO VERTICAL
   const formatador = (membros) => {
     let texto = "";
     membros.forEach((m) => {
       let idRP = m.fullNickname?.split("|")[1]?.trim() || "---";
-      texto += `QRA: <@${m.id}>\nNOME NA CIDADE: ${
-        m.rpName || m.name
-      }\nID: ${idRP}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────\n`;
+      texto += `QRA: <@${m.id}>\n`;
+      texto += `NOME NA CIDADE: ${m.rpName || m.name}\n`;
+      texto += `ID: ${idRP}\n`;
+      texto += `DATA: ${dataHoje}\n`;
+      texto += `MOTIVO: INATIVIDADE\n`;
+      texto += `────────────────────────────────\n`;
     });
     return texto;
   };
@@ -239,7 +244,7 @@ window.copiarRelatorioDiscord = function () {
   if (relatorio.length <= 1900) {
     navigator.clipboard
       .writeText(relatorio)
-      .then(() => mostrarAviso("Relatório copiado!"));
+      .then(() => mostrarAviso("Relatório copiado (Modelo Vertical)!"));
   } else {
     abrirModalDivisor(exonerados, dataHoje, cabecalho, formatador);
   }
@@ -248,7 +253,7 @@ window.copiarRelatorioDiscord = function () {
 function abrirModalDivisor(membros, data, header, formatador) {
   const container = document.getElementById("container-botoes-partes");
   container.innerHTML = "";
-  const limit = 10;
+  const limit = 8; // Limite menor para mensagens verticais
 
   for (let i = 0; i < membros.length; i += limit) {
     const bloco = membros.slice(i, i + limit);
@@ -279,7 +284,6 @@ window.atualizarListaFerias = async function () {
   const logContainer = document.getElementById("status-ferias-info");
   if (!select) return;
 
-  // Feedback visual de carregamento nos Logs
   logContainer.innerHTML =
     '<i class="fa-solid fa-spinner fa-spin"></i> Sincronizando dados de férias...';
   select.innerHTML = '<option value="">⏳ Sincronizando...</option>';

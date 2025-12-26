@@ -232,3 +232,68 @@ function abrirModalDivisor(exonerados, dataHoje, cabecalho, formatador) {
 
   document.getElementById("modal-relatorio").style.display = "flex";
 }
+// 1. CARREGAR LISTA DE OFICIAIS E RODAR VERIFICAÇÃO AUTOMÁTICA
+window.atualizarListaFerias = async function () {
+  const select = document.getElementById("select-oficiais-ferias");
+  const logContainer = document.getElementById("status-ferias-info");
+
+  try {
+    const res = await fetch("/api/verificar-ferias");
+    const data = await res.json();
+
+    select.innerHTML = '<option value="">Selecione um Oficial...</option>';
+
+    data.oficiais.forEach((oficial) => {
+      const option = document.createElement("option");
+      option.value = oficial.id;
+      // Destaca quem já está com a tag de férias
+      const status = oficial.emFerias ? "🌴 [EM FÉRIAS] " : "";
+      option.textContent = `${status}${oficial.nome}`;
+      select.appendChild(option);
+    });
+
+    if (data.logs && data.logs.length > 0) {
+      logContainer.innerHTML = data.logs
+        .map((l) => `<div>✅ ${l}</div>`)
+        .join("");
+    } else {
+      logContainer.innerHTML =
+        "<div>Auditória de datas concluída: Nenhuma pendência encontrada.</div>";
+    }
+  } catch (e) {
+    mostrarAviso("Erro ao sincronizar dados de férias.", "error");
+  }
+};
+
+// 2. FUNÇÃO DO BOTÃO ANTECIPAR
+window.executarAntecipacao = async function () {
+  const userId = document.getElementById("select-oficiais-ferias").value;
+
+  if (!userId) {
+    return mostrarAviso("Por favor, selecione um oficial na lista.", "warning");
+  }
+
+  if (
+    !confirm(
+      "Confirmar retorno antecipado? A tag de férias será removida imediatamente."
+    )
+  )
+    return;
+
+  try {
+    const res = await fetch("/api/verificar-ferias", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+
+    if (res.ok) {
+      mostrarAviso("Férias antecipadas com sucesso! Tag removida.");
+      atualizarListaFerias(); // Recarrega a lista para atualizar os status
+    } else {
+      mostrarAviso("Erro ao processar solicitação.", "error");
+    }
+  } catch (e) {
+    mostrarAviso("Falha na comunicação com o servidor.", "error");
+  }
+};

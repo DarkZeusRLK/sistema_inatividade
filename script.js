@@ -54,7 +54,6 @@ function aplicarRestricoes() {
   const logoElemento = document.getElementById("logo-sidebar");
   if (logoElemento) logoElemento.src = configOrg.logo;
 
-  // TROCA O FAVICON DO SITE
   let linkFavicon = document.querySelector("link[rel*='icon']");
   if (!linkFavicon) {
     linkFavicon = document.createElement("link");
@@ -243,7 +242,7 @@ window.carregarInatividade = async function () {
 };
 
 // =========================================================
-// 5. FUNÇÕES DE CÓPIA (MODELO ATUALIZADO)
+// 5. FUNÇÕES DE CÓPIA (MODELO COMPACTO)
 // =========================================================
 
 window.copiarRelatorioDiscord = function () {
@@ -266,7 +265,6 @@ window.copiarRelatorioDiscord = function () {
   let textoAtual = `📋 **RELATÓRIO DE EXONERAÇÃO - ${label.nome}** 📋\n📅 DATA: ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
   exonerados.forEach((m) => {
-    // MODELO SOLICITADO APLICADO AQUI
     const item = `QRA: <@${m.id}>\nID: ${m.cidadeId}\nNome na cidade: ${m.rpName}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────\n`;
 
     if ((textoAtual + item).length > 2500) {
@@ -282,8 +280,6 @@ window.copiarRelatorioDiscord = function () {
 
   abrirModalRelatorioDividido(partes);
 };
-
-// --- NOVAS FUNÇÕES PARA CORE, GRR E BOPE COM ALERTA ---
 
 window.copiarRelatorioCore = () =>
   copiarMetasGenerico("CORE (PCERJ)", "corpo-meta-core");
@@ -308,7 +304,6 @@ function copiarMetasGenerico(titulo, containerId) {
   let textoAtual = `📊 **RELATÓRIO DE METAS - ${titulo}** 📊\n📅 DATA: ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
   const itens = container.querySelectorAll("tr, .card-meta");
-
   itens.forEach((el) => {
     const info = el.innerText.replace(/\s+/g, " ").trim();
     const item = `${info}\n────────────────────────────────\n`;
@@ -323,12 +318,11 @@ function copiarMetasGenerico(titulo, containerId) {
   });
   partes.push(textoAtual);
 
-  // ALERTA DE SUCESSO AO GERAR METAS
-  mostrarAviso("Relatório copiado com sucesso!");
+  mostrarAviso("Relatório gerado!");
   abrirModalRelatorioDividido(partes);
 }
 
-// --- MODAL DE COPIA INTELIGENTE COM ALERTA ---
+// --- MODAL DE COPIA APENAS COM BOTÕES (COMPACTO) ---
 
 function abrirModalRelatorioDividido(partes) {
   let modal = document.getElementById("modal-relatorio");
@@ -336,47 +330,27 @@ function abrirModalRelatorioDividido(partes) {
 
   const container = document.getElementById("container-botoes-partes");
   container.innerHTML = "";
+  container.style.display = "flex";
+  container.style.flexDirection = "column";
+  container.style.gap = "10px";
 
   partes.forEach((texto, index) => {
-    const divParte = document.createElement("div");
-    divParte.className = "bloco-copia";
-    divParte.style.marginBottom = "20px";
-
-    const label = document.createElement("strong");
-    label.innerText = `PARTE ${index + 1} (${texto.length} caracteres)`;
-    label.style.display = "block";
-    label.style.marginBottom = "5px";
-
-    const textarea = document.createElement("textarea");
-    textarea.value = texto;
-    textarea.style.width = "100%";
-    textarea.style.height = "150px";
-    textarea.style.background = "#000";
-    textarea.style.color = "#04d361";
-    textarea.style.border = "1px solid #333";
-    textarea.style.padding = "10px";
-    textarea.style.fontSize = "12px";
-    textarea.style.resize = "none";
-    textarea.readOnly = true;
-
     const btnCopiar = document.createElement("button");
     btnCopiar.innerHTML = `<i class="fa-solid fa-copy"></i> COPIAR PARTE ${
       index + 1
     }`;
     btnCopiar.className = "btn-gold";
     btnCopiar.style.width = "100%";
-    btnCopiar.style.marginTop = "5px";
+    btnCopiar.style.padding = "15px";
+    btnCopiar.style.fontSize = "14px";
+    btnCopiar.style.fontWeight = "bold";
+
     btnCopiar.onclick = () => {
-      textarea.select();
       navigator.clipboard.writeText(texto);
-      // ALERTA DE SUCESSO AO CLICAR NO BOTÃO DO MODAL
-      mostrarAviso("Relatório copiado com sucesso!");
+      mostrarAviso(`Parte ${index + 1} copiada com sucesso!`);
     };
 
-    divParte.appendChild(label);
-    divParte.appendChild(textarea);
-    divParte.appendChild(btnCopiar);
-    container.appendChild(divParte);
+    container.appendChild(btnCopiar);
   });
 
   modal.style.display = "flex";

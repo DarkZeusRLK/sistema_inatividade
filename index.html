@@ -228,32 +228,6 @@
 
   <script src="script.js"></script>
   <script src="script-core.js"></script>
-
-  <script>
-    // Função para alternar para a aba de Férias
-    function abrirGestaoFerias() {
-      // Esconder todas as seções
-      document.getElementById("secao-inatividade").style.display = "none";
-      document.getElementById("secao-meta-core").style.display = "none";
-      document.getElementById("secao-gestao-ferias").style.display = "block";
-
-      // Alternar botões da Top Bar
-      document.getElementById("botoes-inatividade").style.display = "none";
-      document.getElementById("botoes-core").style.display = "none";
-      document.getElementById("botoes-ferias").style.display = "block";
-
-      // Atualizar Textos
-      document.getElementById("titulo-pagina").innerText = "GESTÃO DE FÉRIAS - COMANDO";
-      document.getElementById("subtitulo-pagina").innerText = "Auditoria de Prazos e Retornos Antecipados";
-
-      // Sidebar Active
-      document.querySelector(".nav-item.active")?.classList.remove("active");
-      document.getElementById("nav-ferias").classList.add("active");
-
-      // Carregar os dados
-      if (window.atualizarListaFerias) window.atualizarListaFerias();
-    }
-  </script>
 </body>
 
 </html>

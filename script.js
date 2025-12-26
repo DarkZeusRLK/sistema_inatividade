@@ -234,34 +234,53 @@ function abrirModalDivisor(exonerados, dataHoje, cabecalho, formatador) {
 }
 // 1. CARREGAR LISTA DE OFICIAIS E RODAR VERIFICAÇÃO AUTOMÁTICA
 window.atualizarListaFerias = async function () {
+  console.log("Botão 'Atualizar Lista' clicado."); // Verifique no F12 se isso aparece
   const select = document.getElementById("select-oficiais-ferias");
   const logContainer = document.getElementById("status-ferias-info");
 
+  // Feedback visual de carregando
+  select.innerHTML =
+    '<option value="">⏳ Carregando oficiais em férias...</option>';
+  logContainer.innerHTML = "Sincronizando com o Discord...";
+
   try {
     const res = await fetch("/api/verificar-ferias");
+    if (!res.ok) throw new Error("Falha na resposta da API");
+
     const data = await res.json();
+    console.log("Dados recebidos:", data);
 
-    select.innerHTML = '<option value="">Selecione um Oficial...</option>';
+    // Limpa e preenche o select
+    select.innerHTML =
+      '<option value="">Selecione o Oficial para antecipar...</option>';
 
-    data.oficiais.forEach((oficial) => {
-      const option = document.createElement("option");
-      option.value = oficial.id;
-      // Destaca quem já está com a tag de férias
-      const status = oficial.emFerias ? "🌴 [EM FÉRIAS] " : "";
-      option.textContent = `${status}${oficial.nome}`;
-      select.appendChild(option);
-    });
+    if (data.oficiais.length === 0) {
+      select.innerHTML =
+        '<option value="">Nenhum oficial em férias no momento</option>';
+    } else {
+      data.oficiais.forEach((oficial) => {
+        const opt = document.createElement("option");
+        opt.value = oficial.id;
+        opt.textContent = `🌴 ${oficial.nome}`;
+        select.appendChild(opt);
+      });
+    }
 
+    // Mostra logs de quem foi removido automaticamente agora
     if (data.logs && data.logs.length > 0) {
-      logContainer.innerHTML = data.logs
-        .map((l) => `<div>✅ ${l}</div>`)
-        .join("");
+      logContainer.innerHTML =
+        "<strong>Remoções Automáticas (Data Vencida):</strong><br>" +
+        data.logs.map((l) => `✅ ${l}`).join("<br>");
     } else {
       logContainer.innerHTML =
-        "<div>Auditória de datas concluída: Nenhuma pendência encontrada.</div>";
+        "Auditoria concluída: Nenhuma data expirada encontrada.";
     }
-  } catch (e) {
-    mostrarAviso("Erro ao sincronizar dados de férias.", "error");
+
+    mostrarAviso("Lista de oficiais em férias atualizada!");
+  } catch (error) {
+    console.error("Erro ao atualizar:", error);
+    select.innerHTML = '<option value="">Erro ao carregar lista</option>';
+    mostrarAviso("Erro ao conectar com o servidor.", "error");
   }
 };
 

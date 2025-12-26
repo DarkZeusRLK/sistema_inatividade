@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "crons": [
+    {
+      "path": "/api/verificar-ferias",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}

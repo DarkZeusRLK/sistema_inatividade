@@ -44,15 +44,25 @@ function mostrarAviso(msg, tipo = "success") {
 }
 
 // =========================================================
-// 2. SISTEMA DE PERMISSÕES E INTERFACE
+// 2. SISTEMA DE PERMISSÕES E INTERFACE (COM TROCA DE ÍCONE)
 // =========================================================
 
 function aplicarRestricoes() {
   const { org } = obterSessao();
   const configOrg = getOrgLabel(org);
 
+  // Troca a logo da sidebar
   const logoElemento = document.getElementById("logo-sidebar");
   if (logoElemento) logoElemento.src = configOrg.logo;
+
+  // TROCA O FAVICON DO SITE CONFORME O LOGIN (PRF, PMERJ, PCERJ)
+  let linkFavicon = document.querySelector("link[rel*='icon']");
+  if (!linkFavicon) {
+    linkFavicon = document.createElement("link");
+    linkFavicon.rel = "shortcut icon";
+    document.getElementsByTagName("head")[0].appendChild(linkFavicon);
+  }
+  linkFavicon.href = configOrg.logo;
 
   const permissoes = {
     PCERJ: {
@@ -126,17 +136,8 @@ window.abrirInatividade = function () {
   ).innerText = `AUDITORIA - ${label.nome}`;
 };
 
-window.abrirGestaoFerias = function () {
-  resetarTelas();
-  document.getElementById("secao-gestao-ferias").style.display = "block";
-  document.getElementById("secao-gestao-ferias").style.visibility = "visible";
-  document.getElementById("botoes-ferias").style.display = "block";
-  document.getElementById("nav-ferias").classList.add("active");
-  if (window.atualizarListaFerias) window.atualizarListaFerias();
-};
-
 // =========================================================
-// 4. LÓGICA DE AUDITORIA E BARRA DE PROGRESSO
+// 3. LÓGICA DE AUDITORIA (CAPTURA NOME E ID DA CIDADE)
 // =========================================================
 
 window.carregarInatividade = async function () {
@@ -183,7 +184,13 @@ window.carregarInatividade = async function () {
         DATA_BASE_AUDITORIA
       );
       let dias = Math.floor((agora - dataRef) / (1000 * 60 * 60 * 24));
-      return { ...m, diasInatividade: dias, precisaExonerar: dias >= 7 };
+      return {
+        ...m,
+        diasInatividade: dias,
+        precisaExonerar: dias >= 7,
+        rpName: m.rpName || m.name, // Nome vindo da admissão
+        cidadeId: m.cidadeId || "N/A", // ID da Cidade vindo da admissão
+      };
     });
 
     if (dadosInatividadeGlobal.length > 0)
@@ -198,8 +205,8 @@ window.carregarInatividade = async function () {
       tr.innerHTML = `
         <td><div class="user-cell"><img src="${
           m.avatar || "https://cdn.discordapp.com/embed/avatars/0.png"
-        }" class="avatar-img"><strong>${m.name}</strong></div></td>
-        <td><code>${m.id}</code></td>
+        }" class="avatar-img"><strong>${m.rpName}</strong></div></td>
+        <td><code>${m.cidadeId}</code></td>
         <td>${
           m.lastMsg > 0
             ? new Date(m.lastMsg).toLocaleDateString("pt-BR")
@@ -215,7 +222,7 @@ window.carregarInatividade = async function () {
       corpo.appendChild(tr);
     });
 
-    mostrarAviso("Dados sincronizados.");
+    mostrarAviso("Dados sincronizados com sucesso.");
   } catch (err) {
     clearInterval(interval);
     mostrarAviso("Erro ao buscar dados.", "error");
@@ -228,7 +235,7 @@ window.carregarInatividade = async function () {
 };
 
 // =========================================================
-// 5. FUNÇÕES DE CÓPIA COM LIMITE DE 4000 CARACTERES
+// 4. FUNÇÕES DE CÓPIA (RELATÓRIO DE INATIVIDADE CORRIGIDO)
 // =========================================================
 
 window.copiarRelatorioDiscord = function () {
@@ -251,9 +258,9 @@ window.copiarRelatorioDiscord = function () {
   let textoAtual = `📋 **RELATÓRIO DE EXONERAÇÃO - ${label.nome}** 📋\n📅 DATA: ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
   exonerados.forEach((m) => {
-    const item = `QRA: <@${m.id}>\nID: ${m.id}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────\n`;
+    // FORMATO CORRIGIDO: QRA, NOME (CIDADE) e ID (CIDADE)
+    const item = `QRA: <@${m.id}>\nNOME: ${m.rpName}\nID: ${m.cidadeId}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────\n`;
 
-    // Se adicionar este item ultrapassar 4000, fecha a parte atual e começa uma nova
     if ((textoAtual + item).length > 2500) {
       partes.push(textoAtual);
       textoAtual =
@@ -268,7 +275,7 @@ window.copiarRelatorioDiscord = function () {
   abrirModalRelatorioDividido(partes);
 };
 
-// --- NOVAS FUNÇÕES PARA CORE, GRR E BOPE ---
+// --- FUNÇÕES PARA CORE, GRR E BOPE COM ALERTA DE SUCESSO ---
 
 window.copiarRelatorioCore = () =>
   copiarMetasGenerico("CORE (PCERJ)", "corpo-meta-core");
@@ -292,9 +299,7 @@ function copiarMetasGenerico(titulo, containerId) {
   const partes = [];
   let textoAtual = `📊 **RELATÓRIO DE METAS - ${titulo}** 📊\n📅 DATA: ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
-  // Tenta pegar todas as linhas da tabela ou cards
   const itens = container.querySelectorAll("tr, .card-meta");
-
   itens.forEach((el) => {
     const info = el.innerText.replace(/\s+/g, " ").trim();
     const item = `${info}\n────────────────────────────────\n`;
@@ -308,17 +313,20 @@ function copiarMetasGenerico(titulo, containerId) {
     }
   });
   partes.push(textoAtual);
+
+  // Alerta solicitado: Relatório copiado com sucesso
+  mostrarAviso("Relatório copiado com sucesso!", "success");
   abrirModalRelatorioDividido(partes);
 }
 
-// --- MODAL DE COPIA INTELIGENTE ---
+// --- MODAL DE COPIA COM ALERTA NO CLIQUE ---
 
 function abrirModalRelatorioDividido(partes) {
   let modal = document.getElementById("modal-relatorio");
   if (!modal) return;
 
   const container = document.getElementById("container-botoes-partes");
-  container.innerHTML = ""; // Limpa anterior
+  container.innerHTML = "";
 
   partes.forEach((texto, index) => {
     const divParte = document.createElement("div");
@@ -326,21 +334,8 @@ function abrirModalRelatorioDividido(partes) {
     divParte.style.marginBottom = "20px";
 
     const label = document.createElement("strong");
-    label.innerText = `PARTE ${index + 1} (${texto.length} caracteres)`;
+    label.innerText = `PARTE ${index + 1}`;
     label.style.display = "block";
-    label.style.marginBottom = "5px";
-
-    const textarea = document.createElement("textarea");
-    textarea.value = texto;
-    textarea.style.width = "100%";
-    textarea.style.height = "150px";
-    textarea.style.background = "#000";
-    textarea.style.color = "#04d361"; // Verde para facilitar leitura
-    textarea.style.border = "1px solid #333";
-    textarea.style.padding = "10px";
-    textarea.style.fontSize = "12px";
-    textarea.style.resize = "none";
-    textarea.readOnly = true;
 
     const btnCopiar = document.createElement("button");
     btnCopiar.innerHTML = `<i class="fa-solid fa-copy"></i> COPIAR PARTE ${
@@ -348,15 +343,12 @@ function abrirModalRelatorioDividido(partes) {
     }`;
     btnCopiar.className = "btn-gold";
     btnCopiar.style.width = "100%";
-    btnCopiar.style.marginTop = "5px";
     btnCopiar.onclick = () => {
-      textarea.select();
       navigator.clipboard.writeText(texto);
-      mostrarAviso(`Parte ${index + 1} copiada!`);
+      mostrarAviso("Relatório copiado com sucesso!"); // Alerta de sucesso ao copiar
     };
 
     divParte.appendChild(label);
-    divParte.appendChild(textarea);
     divParte.appendChild(btnCopiar);
     container.appendChild(divParte);
   });
@@ -369,39 +361,16 @@ window.fecharModalRelatorio = () => {
 };
 
 // =========================================================
-// 6. GESTÃO DE FÉRIAS E OUTRAS FUNÇÕES
+// 5. OUTRAS FUNÇÕES (Geral)
 // =========================================================
 
-window.atualizarListaFerias = async function () {
-  const { org } = obterSessao();
-  const select = document.getElementById("select-oficiais-ferias");
-  const logContainer = document.getElementById("status-ferias-info");
-
-  if (!select) return;
-  select.innerHTML = '<option value="">Sincronizando...</option>';
-
-  try {
-    const res = await fetch(`/api/verificar-ferias?org=${org}`);
-    const data = await res.json();
-
-    select.innerHTML = '<option value="">Selecione para antecipar...</option>';
-    if (data.oficiais && data.oficiais.length > 0) {
-      data.oficiais.forEach((oficial) => {
-        const opt = document.createElement("option");
-        opt.value = oficial.id;
-        opt.textContent = `🌴 ${oficial.nome} (Até: ${oficial.dataRetorno})`;
-        select.appendChild(opt);
-      });
-    } else {
-      select.innerHTML = '<option value="">Nenhum oficial em férias.</option>';
-    }
-    logContainer.innerHTML =
-      data.logs?.length > 0
-        ? data.logs.join("<br>")
-        : "Sem retornos pendentes.";
-  } catch (e) {
-    mostrarAviso("Erro ao carregar férias.", "error");
-  }
+window.abrirGestaoFerias = function () {
+  resetarTelas();
+  document.getElementById("secao-gestao-ferias").style.display = "block";
+  document.getElementById("secao-gestao-ferias").style.visibility = "visible";
+  document.getElementById("botoes-ferias").style.display = "block";
+  document.getElementById("nav-ferias").classList.add("active");
+  if (window.atualizarListaFerias) window.atualizarListaFerias();
 };
 
 window.abrirMetaCore = function () {

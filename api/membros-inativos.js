@@ -1,28 +1,23 @@
 module.exports = async (req, res) => {
-  const { org } = req.query; // Recebe 'PRF', 'PMERJ' ou 'PCERJ'
+  const { org } = req.query;
   const {
     Discord_Bot_Token,
     GUILD_ID,
     FERIAS_ROLE_ID,
-    // IDs PCERJ
     POLICE_ROLE_ID,
     ADMISSAO_CHANNEL_ID,
-    // IDs PRF
     PRF_ROLE_ID,
     PRF_ADMISSAO_CH,
-    // IDs PMERJ
     PMERJ_ROLE_ID,
     PMERJ_ADMISSAO_CH,
   } = process.env;
 
-  // 1. Definição dinâmica de alvos baseada na organização logada
   const TARGET_ROLE_ID =
     org === "PRF"
       ? PRF_ROLE_ID
       : org === "PMERJ"
       ? PMERJ_ROLE_ID
       : POLICE_ROLE_ID;
-
   const TARGET_ADMISSAO_CH =
     org === "PRF"
       ? PRF_ADMISSAO_CH
@@ -33,11 +28,10 @@ module.exports = async (req, res) => {
   try {
     const headers = { Authorization: `Bot ${Discord_Bot_Token}` };
 
-    // 2. Busca Banco de Dados de Admissão Específico da Org
-    let nomesRP = {};
+    // 2. Busca Banco de Dados de Admissão (Capturando Nome e ID da Cidade)
+    let dadosRP = {}; // Agora guardará { nome: '...', cidadeId: '...' }
     let ultimoIdMsg = null;
 
-    // Busca até 500 mensagens no canal/tópico de admissão da força selecionada
     if (TARGET_ADMISSAO_CH) {
       for (let i = 0; i < 5; i++) {
         let url = `https://discord.com/api/v10/channels/${TARGET_ADMISSAO_CH}/messages?limit=100`;
@@ -53,18 +47,22 @@ module.exports = async (req, res) => {
           const conteudoLimpo = msg.content.replace(/\*/g, "");
           const mencao = conteudoLimpo.match(/<@!?(\d+)>/);
           const nomeMatch = conteudoLimpo.match(/NOME\s*DO\s*RP:\s*(.*)/i);
+          const idMatch = conteudoLimpo.match(/ID:\s*(\d+)/i); // Captura o ID da Cidade
 
-          if (mencao && nomeMatch) {
+          if (mencao) {
             const userId = mencao[1];
-            const nomeExtraido = nomeMatch[1].split("\n")[0].trim();
-            if (!nomesRP[userId]) nomesRP[userId] = nomeExtraido;
+            if (!dadosRP[userId])
+              dadosRP[userId] = { nome: "Não encontrado", cidadeId: "N/A" };
+
+            if (nomeMatch)
+              dadosRP[userId].nome = nomeMatch[1].split("\n")[0].trim();
+            if (idMatch) dadosRP[userId].cidadeId = idMatch[1].trim();
           }
         });
         ultimoIdMsg = msgsAdmissao[msgsAdmissao.length - 1].id;
       }
     }
 
-    // 3. Busca Canais e Membros do Servidor
     const channelsRes = await fetch(
       `https://discord.com/api/v10/guilds/${GUILD_ID}/channels`,
       { headers }
@@ -79,7 +77,6 @@ module.exports = async (req, res) => {
     );
     const members = await membersRes.json();
 
-    // Filtra apenas membros da organização logada que NÃO estão de férias
     const oficiaisDaForca = members.filter((m) => {
       return (
         m.roles.includes(TARGET_ROLE_ID) &&
@@ -89,20 +86,23 @@ module.exports = async (req, res) => {
 
     let activityMap = {};
     oficiaisDaForca.forEach((p) => {
+      const infoRP = dadosRP[p.user.id] || {
+        nome: p.nick || p.user.username,
+        cidadeId: "Não Identificado",
+      };
       activityMap[p.user.id] = {
         id: p.user.id,
         name: p.nick || p.user.username,
-        rpName: nomesRP[p.user.id] || p.nick || p.user.username,
+        rpName: infoRP.nome,
+        cidadeId: infoRP.cidadeId, // Campo novo enviado para o frontend
         lastMsg: 0,
         joinedAt: new Date(p.joined_at).getTime(),
         avatar: p.user.avatar
           ? `https://cdn.discordapp.com/avatars/${p.user.id}/${p.user.avatar}.png`
           : null,
-        fullNickname: p.nick || p.user.username,
       };
     });
 
-    // 4. Varredura de Atividade em Canais de Texto e Tópicos
     for (const channel of textChannels) {
       try {
         const msgRes = await fetch(
@@ -114,13 +114,12 @@ module.exports = async (req, res) => {
           msgs.forEach((msg) => {
             if (activityMap[msg.author.id]) {
               const ts = new Date(msg.timestamp).getTime();
-              if (ts > activityMap[msg.author.id].lastMsg) {
+              if (ts > activityMap[msg.author.id].lastMsg)
                 activityMap[msg.author.id].lastMsg = ts;
-              }
             }
           });
         }
-        await new Promise((r) => setTimeout(r, 30)); // Delay para evitar rate limit
+        await new Promise((r) => setTimeout(r, 30));
       } catch (e) {
         continue;
       }

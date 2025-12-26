@@ -343,3 +343,41 @@ document.addEventListener("DOMContentLoaded", () => {
   aplicarRestricoes();
   window.abrirInatividade();
 });
+window.abrirMetaCore = function () {
+  resetarTelas();
+
+  document.getElementById("secao-meta-core").style.display = "block";
+  document.getElementById("secao-meta-core").style.visibility = "visible";
+
+  document.getElementById("botoes-core").style.display = "block";
+  document.getElementById("nav-core").classList.add("active");
+
+  document.getElementById("titulo-pagina").innerText =
+    "AUDITORIA - METAS CORE (PCERJ)";
+};
+
+window.abrirMetaGRR = function () {
+  resetarTelas();
+
+  document.getElementById("secao-meta-grr").style.display = "block";
+  document.getElementById("secao-meta-grr").style.visibility = "visible";
+
+  document.getElementById("botoes-grr").style.display = "block";
+  document.getElementById("nav-grr").classList.add("active");
+
+  document.getElementById("titulo-pagina").innerText =
+    "AUDITORIA - METAS GRR (PRF)";
+};
+
+window.abrirMetaBOPE = function () {
+  resetarTelas();
+
+  document.getElementById("secao-meta-bope").style.display = "block";
+  document.getElementById("secao-meta-bope").style.visibility = "visible";
+
+  document.getElementById("botoes-bope").style.display = "block";
+  document.getElementById("nav-bope").classList.add("active");
+
+  document.getElementById("titulo-pagina").innerText =
+    "AUDITORIA - METAS BOPE (PMERJ)";
+};

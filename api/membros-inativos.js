@@ -16,79 +16,77 @@ module.exports = async (req, res) => {
   const canaisPermitidos = CHAT_ID_BUSCAR
     ? CHAT_ID_BUSCAR.split(",").map((id) => id.trim())
     : [];
-  const TARGET_ROLE_ID =
-    org === "PRF"
-      ? PRF_ROLE_ID
-      : org === "PMERJ"
-      ? PMERJ_ROLE_ID
-      : POLICE_ROLE_ID;
-  const TARGET_ADMISSAO_CH =
-    org === "PRF"
-      ? PRF_ADMISSAO_CH
-      : org === "PMERJ"
-      ? PMERJ_ADMISSAO_CH
-      : ADMISSAO_CHANNEL_ID;
+  const headers = { Authorization: `Bot ${Discord_Bot_Token}` };
 
   try {
-    const headers = { Authorization: `Bot ${Discord_Bot_Token}` };
-
     // 1. Busca Banco de Dados de Admissão
     let dadosRP = {};
     let ultimoIdAdmissao = null;
-    if (TARGET_ADMISSAO_CH) {
-      for (let i = 0; i < 10; i++) {
-        let url = `https://discord.com/api/v10/channels/${TARGET_ADMISSAO_CH}/messages?limit=100`;
-        if (ultimoIdAdmissao) url += `&before=${ultimoIdAdmissao}`;
-        const resAdm = await fetch(url, { headers });
-        if (!resAdm.ok) break;
-        const msgs = await resAdm.json();
-        if (msgs.length === 0) break;
-
-        msgs.forEach((msg) => {
-          const mencao = msg.content.match(/<@!?(\d+)>/);
-          if (mencao) {
-            const userId = mencao[1];
-            if (!dadosRP[userId]) {
-              const nomeMatch = msg.content
+    if (org) {
+      const targetAdm =
+        org === "PRF"
+          ? PRF_ADMISSAO_CH
+          : org === "PMERJ"
+          ? PMERJ_ADMISSAO_CH
+          : ADMISSAO_CHANNEL_ID;
+      if (targetAdm) {
+        for (let i = 0; i < 5; i++) {
+          let url = `https://discord.com/api/v10/channels/${targetAdm}/messages?limit=100`;
+          if (ultimoIdAdmissao) url += `&before=${ultimoIdAdmissao}`;
+          const resAdm = await fetch(url, { headers });
+          const msgs = await resAdm.json();
+          if (!msgs || msgs.length === 0) break;
+          msgs.forEach((msg) => {
+            const m = msg.content.match(/<@!?(\d+)>/);
+            if (m && !dadosRP[m[1]]) {
+              const nome = msg.content
                 .replace(/\*/g, "")
                 .match(/NOME\s*(?:DO\s*RP)?:\s*(.*)/i);
-              const idMatch = msg.content.match(
+              const idCid = msg.content.match(
                 /ID(?:\s*DA\s*CIDADE)?:\s*(\d+)/i
               );
-              dadosRP[userId] = {
-                nome: nomeMatch ? nomeMatch[1].split("\n")[0].trim() : null,
-                cidadeId: idMatch ? idMatch[1].trim() : null,
+              dadosRP[m[1]] = {
+                nome: nome ? nome[1].split("\n")[0].trim() : null,
+                cidadeId: idCid ? idCid[1].trim() : null,
               };
             }
-          }
-        });
-        ultimoIdAdmissao = msgs[msgs.length - 1].id;
+          });
+          ultimoIdAdmissao = msgs[msgs.length - 1].id;
+        }
       }
     }
 
-    // 2. Busca Membros do Servidor
+    // 2. Busca Membros
     const membersRes = await fetch(
       `https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`,
       { headers }
     );
     const members = await membersRes.json();
+    const TARGET_ROLE =
+      org === "PRF"
+        ? PRF_ROLE_ID
+        : org === "PMERJ"
+        ? PMERJ_ROLE_ID
+        : POLICE_ROLE_ID;
     const oficiaisDaForca = members.filter(
       (m) =>
-        m.roles.includes(TARGET_ROLE_ID) &&
+        m.roles.includes(TARGET_ROLE) &&
         (!FERIAS_ROLE_ID || !m.roles.includes(FERIAS_ROLE_ID))
     );
 
-    // 3. Montagem do Mapa de Atividade
+    // 3. Mapa de Atividade
     let activityMap = {};
     oficiaisDaForca.forEach((p) => {
-      const infoRP = dadosRP[p.user.id];
       const nick = p.nick || p.user.username;
       activityMap[p.user.id] = {
         id: p.user.id,
         name: nick,
-        rpName: infoRP?.nome || "Não consta em admissão",
-        cidadeId: nick.match(/\|\s*(\d+)/)?.[1] || infoRP?.cidadeId || "---",
-        lastMsg: 0, // Inicializa em 0
+        rpName: dadosRP[p.user.id]?.nome || "Não consta em admissão",
+        cidadeId:
+          nick.match(/\|\s*(\d+)/)?.[1] ||
+          dadosRP[p.user.id]?.cidadeId ||
+          "---",
+        lastMsg: 0,
         joinedAt: new Date(p.joined_at).getTime(),
         avatar: p.user.avatar
           ? `https://cdn.discordapp.com/avatars/${p.user.id}/${p.user.avatar}.png`
@@ -96,47 +94,53 @@ module.exports = async (req, res) => {
       };
     });
 
-    // 4. Varredura PROFUNDA nos canais permitidos (PAGINAÇÃO)
+    // 4. Varredura PROFUNDA (20 Páginas = 2000 Mensagens)
     for (const channelId of canaisPermitidos) {
-      let ultimoIdMensagemBusca = null;
-
-      // Busca até 500 mensagens por canal (5 páginas de 100) para garantir encontrar a data
-      for (let p = 0; p < 5; p++) {
+      let ultimoIdBusca = null;
+      for (let p = 0; p < 20; p++) {
+        // Aumentado para 2000 mensagens para alcançar dias anteriores
         try {
           let url = `https://discord.com/api/v10/channels/${channelId}/messages?limit=100`;
-          if (ultimoIdMensagemBusca) url += `&before=${ultimoIdMensagemBusca}`;
-
+          if (ultimoIdBusca) url += `&before=${ultimoIdBusca}`;
           const msgRes = await fetch(url, { headers });
-          if (!msgRes.ok) break;
-
           const msgs = await msgRes.json();
-          if (msgs.length === 0) break;
+          if (!msgs || msgs.length === 0) break;
 
           msgs.forEach((msg) => {
             const ts = new Date(msg.timestamp).getTime();
+            const idsParaChecar = new Set();
 
-            // A: Autor da mensagem
-            if (
-              activityMap[msg.author.id] &&
-              ts > activityMap[msg.author.id].lastMsg
-            ) {
-              activityMap[msg.author.id].lastMsg = ts;
-            }
+            // Captura autor
+            idsParaChecar.add(msg.author.id);
+            // Captura menções padrão
+            if (msg.mentions)
+              msg.mentions.forEach((m) => idsParaChecar.add(m.id));
 
-            // B: Menções diretas
-            if (msg.mentions && msg.mentions.length > 0) {
-              msg.mentions.forEach((mencionado) => {
-                if (
-                  activityMap[mencionado.id] &&
-                  ts > activityMap[mencionado.id].lastMsg
-                ) {
-                  activityMap[mencionado.id].lastMsg = ts;
-                }
+            // LÓGICA EXTRA: Captura menções dentro de TEXTO ou EMBEDS (Bots/Webhooks)
+            // Procura o padrão <@ID> ou <@!ID>
+            const mencoesTexto = msg.content.match(/<@!?(\d+)>/g);
+            if (mencoesTexto)
+              mencoesTexto.forEach((m) => idsParaChecar.add(m.match(/\d+/)[0]));
+
+            if (msg.embeds) {
+              msg.embeds.forEach((embed) => {
+                const fullEmbedText = JSON.stringify(embed);
+                const mencoesEmbed = fullEmbedText.match(/<@!?(\d+)>/g);
+                if (mencoesEmbed)
+                  mencoesEmbed.forEach((m) =>
+                    idsParaChecar.add(m.match(/\d+/)[0])
+                  );
               });
             }
-          });
 
-          ultimoIdMensagemBusca = msgs[msgs.length - 1].id;
+            // Atualiza o mapa se o ID estiver na lista de oficiais
+            idsParaChecar.forEach((userId) => {
+              if (activityMap[userId] && ts > activityMap[userId].lastMsg) {
+                activityMap[userId].lastMsg = ts;
+              }
+            });
+          });
+          ultimoIdBusca = msgs[msgs.length - 1].id;
         } catch (e) {
           break;
         }

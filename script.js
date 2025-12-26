@@ -3,7 +3,7 @@
 // =========================================================
 
 function resetarTelas() {
-  // 1. Esconder todas as seções
+  // 1. Esconder todas as seções e forçar invisibilidade para evitar vultos
   const secoes = [
     "secao-inatividade",
     "secao-meta-core",
@@ -24,8 +24,7 @@ function resetarTelas() {
     if (el) el.style.display = "none";
   });
 
-  // 3. LIMPEZA TOTAL DA NAVBAR (CORREÇÃO DO PROBLEMA VISUAL)
-  // Removemos a classe 'active' de TODOS os itens, sem exceção
+  // 3. LIMPEZA TOTAL DA NAVBAR (Remove o dourado de todos)
   document.querySelectorAll(".nav-item").forEach((item) => {
     item.classList.remove("active");
   });
@@ -37,7 +36,7 @@ window.abrirInatividade = function () {
   const tela = document.getElementById("secao-inatividade");
   if (tela) {
     tela.style.display = "block";
-    tela.style.visibility = "visible";
+    tela.style.visibility = "visible"; // Garante que o conteúdo apareça
   }
   document.getElementById("botoes-inatividade").style.display = "block";
   document.getElementById("nav-inatividade").classList.add("active");
@@ -62,15 +61,27 @@ window.abrirMetaCore = function () {
     "RELATÓRIO OPERACIONAL - CORE";
   document.getElementById("subtitulo-pagina").innerText =
     "Contabilização de Metas e Produtividade";
+
+  // Inicializa datas se estiverem vazias
+  const campoInicio = document.getElementById("data-inicio-core");
+  const campoFim = document.getElementById("data-fim-core");
+  if (campoInicio && !campoInicio.value) {
+    const hoje = new Date();
+    const umaSemanaAtras = new Date();
+    umaSemanaAtras.setDate(hoje.getDate() - 7);
+    campoInicio.value = umaSemanaAtras.toISOString().split("T")[0];
+    campoFim.value = hoje.toISOString().split("T")[0];
+  }
 };
 
 window.abrirGestaoFerias = function () {
-  resetarTelas(); // Limpa tudo, inclusive o dourado dos outros
-  document.getElementById("secao-gestao-ferias").style.display = "block";
-  document.getElementById("secao-gestao-ferias").style.visibility = "visible";
+  resetarTelas();
+  const tela = document.getElementById("secao-gestao-ferias");
+  if (tela) {
+    tela.style.display = "block";
+    tela.style.visibility = "visible";
+  }
   document.getElementById("botoes-ferias").style.display = "block";
-
-  // Marca o item atual como ativo
   document.getElementById("nav-ferias").classList.add("active");
 
   document.getElementById("titulo-pagina").innerText =
@@ -81,7 +92,7 @@ window.abrirGestaoFerias = function () {
   if (window.atualizarListaFerias) window.atualizarListaFerias();
 };
 
-// Forçar abertura da tela inicial ao carregar a página
+// Iniciar na aba principal ao carregar
 document.addEventListener("DOMContentLoaded", () => {
   window.abrirInatividade();
 });
@@ -96,15 +107,12 @@ function mostrarAviso(mensagem, tipo = "success") {
     container.id = "custom-alert-container";
     document.body.appendChild(container);
   }
-
   const alert = document.createElement("div");
   alert.className = `pc-alert ${tipo}`;
   const icon =
     tipo === "success" ? "fa-check-circle" : "fa-exclamation-triangle";
-
   alert.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${mensagem}</span>`;
   container.appendChild(alert);
-
   setTimeout(() => {
     alert.classList.add("fade-out");
     setTimeout(() => alert.remove(), 500);
@@ -119,69 +127,47 @@ let listaMembrosAtual = [];
 window.carregarInatividade = async function () {
   const corpo = document.getElementById("corpo-inatividade");
   const btn = document.getElementById("btn-sincronizar");
-  const btnCopiar = document.getElementById("btn-copiar");
   const progContainer = document.getElementById("progress-container");
   const progBar = document.getElementById("progress-bar");
-  const progLabel = document.getElementById("progress-label");
   const progPercent = document.getElementById("progress-percentage");
+  const progLabel = document.getElementById("progress-label");
 
   if (!corpo) return;
-
   corpo.innerHTML = "";
   progContainer.style.display = "block";
   progBar.style.width = "0%";
-  progPercent.innerText = "0%";
   progLabel.innerText = "CONECTANDO AO DISCORD...";
-
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> PROCESSANDO...';
   btn.disabled = true;
-
-  let width = 0;
-  const interval = setInterval(() => {
-    if (width < 90) {
-      width += Math.random() * 2;
-      progBar.style.width = width + "%";
-      progPercent.innerText = Math.floor(width) + "%";
-    }
-  }, 200);
 
   try {
     const res = await fetch("/api/membros-inativos");
     const dados = await res.json();
+    listaMembrosAtual = dados;
 
-    clearInterval(interval);
     progBar.style.width = "100%";
     progPercent.innerText = "100%";
     progLabel.innerText = "AUDITORIA FINALIZADA!";
 
-    listaMembrosAtual = dados;
+    dados.sort((a, b) => (a.lastMsg || 0) - (b.lastMsg || 0));
     const agora = new Date();
     const dataBaseAuditoria = new Date("2025-12-08T00:00:00").getTime();
-    const msPorDia = 1000 * 60 * 60 * 24;
-
-    dados.sort((a, b) => (a.lastMsg || 0) - (b.lastMsg || 0));
 
     dados.forEach((membro) => {
-      let dataReferenciaReal = Math.max(
+      let dataRef = Math.max(
         membro.lastMsg || 0,
         membro.joinedAt || 0,
         dataBaseAuditoria
       );
-      const dias = Math.floor((agora - dataReferenciaReal) / msPorDia);
+      const dias = Math.floor((agora - dataRef) / (1000 * 60 * 60 * 24));
       const statusExonerar = dias >= 7;
 
       const tr = document.createElement("tr");
       tr.innerHTML = `
-                <td>
-                    <div class="user-cell">
-                        <img src="${
-                          membro.avatar ||
-                          "https://cdn.discordapp.com/embed/avatars/0.png"
-                        }" class="avatar-img">
-                        <strong>${membro.name}</strong> 
-                    </div>
-                </td>
-                <td><code style="color:#888">${membro.id}</code></td>
+                <td><div class="user-cell"><img src="${
+                  membro.avatar ||
+                  "https://cdn.discordapp.com/embed/avatars/0.png"
+                }" class="avatar-img"><strong>${membro.name}</strong></div></td>
+                <td><code>${membro.id}</code></td>
                 <td>${
                   membro.lastMsg > 0
                     ? new Date(membro.lastMsg).toLocaleDateString("pt-BR")
@@ -190,24 +176,16 @@ window.carregarInatividade = async function () {
                 <td><strong style="color: ${
                   statusExonerar ? "#ff4d4d" : "#d4af37"
                 }">${dias} Dias</strong></td>
-                <td align="center">
-                    <span class="${
-                      statusExonerar ? "badge-danger" : "badge-success"
-                    }">
-                        ${statusExonerar ? "⚠️ EXONERAR" : "✅ REGULAR"}
-                    </span>
-                </td>
+                <td align="center"><span class="${
+                  statusExonerar ? "badge-danger" : "badge-success"
+                }">${statusExonerar ? "⚠️ EXONERAR" : "✅ REGULAR"}</span></td>
             `;
       corpo.appendChild(tr);
     });
-
-    if (btnCopiar) btnCopiar.style.display = "inline-block";
-    mostrarAviso("Sincronização concluída.");
+    mostrarAviso("Dados atualizados.");
   } catch (err) {
-    clearInterval(interval);
-    mostrarAviso("Erro ao buscar dados.", "error");
+    mostrarAviso("Erro na sincronização.", "error");
   } finally {
-    btn.innerHTML = '<i class="fa-solid fa-rotate"></i> SINCRONIZAR DADOS';
     btn.disabled = false;
     setTimeout(() => {
       progContainer.style.display = "none";

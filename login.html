@@ -84,17 +84,31 @@
   </div>
 
   <script>
-    // ==========================================
-    // CONFIGURAÇÃO DOS CARGOS POR ORGANIZAÇÃO
-    // ==========================================
+    // 1. Defina o seu Client ID aqui para o redirecionamento funcionar
+    const DISCORD_CLIENT_ID = '1453204169661087794';
+
+    // Esta é a função que faltava!
+    function iniciarLogin() {
+      const REDIRECT_URI = window.location.origin + '/login.html';
+      const scope = encodeURIComponent('identify guilds guilds.members.read');
+      const redirect = encodeURIComponent(REDIRECT_URI);
+
+      const url = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${redirect}&response_type=token&scope=${scope}`;
+
+      window.location.href = url;
+    }
+
     async function validarAcesso() {
       const hash = window.location.hash;
       if (hash.includes("access_token")) {
         const params = new URLSearchParams(hash.replace("#", "?"));
         const token = params.get("access_token");
 
+        // Limpa a URL para não expor o token
+        window.history.replaceState({}, document.title, window.location.pathname);
+
         try {
-          // Envia o token para o SEU backend processar com o .env
+          // Envia o token para o seu servidor (que tem os IDs no .env)
           const res = await fetch('/api/auth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -112,13 +126,17 @@
             localStorage.setItem("pc_session", JSON.stringify(sessao));
             window.location.href = "index.html";
           } else {
-            alert("Acesso negado pela administração.");
+            alert("Acesso negado: Você não possui os cargos necessários.");
           }
         } catch (error) {
+          console.error(error);
           alert("Erro ao conectar com o servidor de autenticação.");
         }
       }
     }
+
+    // Executa a validação assim que a página carrega
+    window.onload = validarAcesso;
   </script>
 </body>
 

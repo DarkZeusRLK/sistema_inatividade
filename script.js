@@ -254,7 +254,7 @@ window.copiarRelatorioDiscord = function () {
     const item = `QRA: <@${m.id}>\nID: ${m.id}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────\n`;
 
     // Se adicionar este item ultrapassar 4000, fecha a parte atual e começa uma nova
-    if ((textoAtual + item).length > 3950) {
+    if ((textoAtual + item).length > 2500) {
       partes.push(textoAtual);
       textoAtual =
         `📋 **RELATÓRIO DE EXONERAÇÃO - ${label.nome} (Continuação)** 📋\n\n` +

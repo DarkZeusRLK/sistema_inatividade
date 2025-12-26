@@ -1,63 +1,86 @@
 // =========================================================
-// 1. UTILITÁRIOS E SESSÃO
+// 1. CONFIGURAÇÕES GLOBAIS E SESSÃO
 // =========================================================
 let dadosInatividadeGlobal = [];
 
 const obterSessao = () => {
   const sessionStr = localStorage.getItem("pc_session");
-  if (!sessionStr) return { org: "PCERJ" }; // Fallback
+  if (!sessionStr) return { org: "PCERJ" };
   return JSON.parse(sessionStr);
 };
 
-// Mapeamento de rótulos por organização
 const getOrgLabel = (org) => {
   const labels = {
-    PCERJ: { unidade: "CORE", nome: "PCERJ" },
-    PRF: { unidade: "GRR", nome: "PRF" },
-    PMERJ: { unidade: "BOPE", nome: "PMERJ" },
+    PCERJ: {
+      unidade: "CORE",
+      nome: "PCERJ",
+      logo: "Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png",
+    },
+    PRF: {
+      unidade: "GRR",
+      nome: "PRF",
+      logo: "Imagens/Logo_PRF.png",
+    },
+    PMERJ: {
+      unidade: "BOPE",
+      nome: "PMERJ",
+      logo: "Imagens/Logo_PMERJ.png",
+    },
   };
   return labels[org] || labels["PCERJ"];
 };
 
-window.fazerLogout = function () {
-  if (confirm("Deseja realmente encerrar sua sessão no painel?")) {
-    localStorage.removeItem("pc_session");
-    window.location.href = "login.html";
-  }
-};
+// Exibe notificações flutuantes no painel
+function mostrarAviso(msg, tipo = "success") {
+  const toast = document.createElement("div");
+  toast.className = `toast-aviso ${tipo}`;
+  toast.innerHTML = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.classList.add("show"), 100);
+  setTimeout(() => {
+    toast.classList.remove("show");
+    setTimeout(() => toast.remove(), 500);
+  }, 3000);
+}
 
 // =========================================================
-// 2. SISTEMA DE PERMISSÕES (RESTRITIVO)
+// 2. SISTEMA DE PERMISSÕES E IDENTIDADE VISUAL
 // =========================================================
 
 function aplicarRestricoes() {
   const { org } = obterSessao();
+  const configOrg = getOrgLabel(org);
 
-  // IDs dos itens da Navbar para cada org
+  // 1. Atualiza a Logo da Sidebar
+  const logoElemento = document.getElementById("logo-sidebar");
+  if (logoElemento) {
+    logoElemento.src = configOrg.logo;
+    logoElemento.alt = `Logo ${configOrg.nome}`;
+  }
+
+  // 2. Define visibilidade das abas baseada na Organização
   const permissoes = {
     PCERJ: {
-      mostrar: ["nav-core", "nav-porte", "nav-admin"], // Somente PCERJ vê Porte
+      mostrar: ["nav-core", "nav-porte", "nav-admin", "nav-ferias"],
       esconder: ["nav-grr", "nav-bope"],
     },
     PRF: {
-      mostrar: ["nav-grr"],
+      mostrar: ["nav-grr", "nav-ferias"],
       esconder: ["nav-core", "nav-bope", "nav-porte", "nav-admin"],
     },
     PMERJ: {
-      mostrar: ["nav-bope"],
+      mostrar: ["nav-bope", "nav-ferias"],
       esconder: ["nav-core", "nav-grr", "nav-porte", "nav-admin"],
     },
   };
 
   const config = permissoes[org] || permissoes["PCERJ"];
 
-  // Esconde o que não pertence à org
   config.esconder.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.style.display = "none";
   });
 
-  // Mostra o que pertence à org
   config.mostrar.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.style.display = "flex";
@@ -75,7 +98,6 @@ function resetarTelas() {
     "secao-meta-grr",
     "secao-meta-bope",
     "secao-gestao-ferias",
-    "secao-porte-armas",
   ];
 
   secoes.forEach((id) => {
@@ -120,7 +142,6 @@ window.abrirInatividade = function () {
     "Controle de Presença em Canais Oficiais";
 };
 
-// Funções de abertura de metas (específicas)
 window.abrirMetaCore = function () {
   resetarTelas();
   document.getElementById("secao-meta-core").style.display = "block";
@@ -145,28 +166,37 @@ window.abrirMetaBOPE = function () {
   document.getElementById("nav-bope").classList.add("active");
 };
 
-window.abrirPorte = function () {
-  const { org } = obterSessao();
-  if (org !== "PCERJ") return; // Proteção extra
+window.abrirGestaoFerias = function () {
   resetarTelas();
-  document.getElementById("secao-porte-armas").style.display = "block";
-  document.getElementById("secao-porte-armas").style.visibility = "visible";
-  document.getElementById("nav-porte").classList.add("active");
+  document.getElementById("secao-gestao-ferias").style.display = "block";
+  document.getElementById("secao-gestao-ferias").style.visibility = "visible";
+  document.getElementById("botoes-ferias").style.display = "block";
+  document.getElementById("nav-ferias").classList.add("active");
+
+  document.getElementById("titulo-pagina").innerText =
+    "GESTÃO DE FÉRIAS - COMANDO";
+  document.getElementById("subtitulo-pagina").innerText =
+    "Auditoria de Prazos e Retornos Antecipados";
+
+  if (window.atualizarListaFerias) window.atualizarListaFerias();
 };
 
-document.addEventListener("DOMContentLoaded", () => {
-  aplicarRestricoes();
-  window.abrirInatividade();
-});
+window.fazerLogout = function () {
+  if (confirm("Deseja realmente encerrar sua sessão no painel?")) {
+    localStorage.removeItem("pc_session");
+    window.location.href = "login.html";
+  }
+};
 
 // =========================================================
-// 4. LOGICA DE INATIVIDADE (SUA ANIMAÇÃO PRESERVADA)
+// 4. LÓGICA DE AUDITORIA DE INATIVIDADE
 // =========================================================
 
 window.carregarInatividade = async function () {
   const { org } = obterSessao();
   const corpo = document.getElementById("corpo-inatividade");
   const btn = document.getElementById("btn-sincronizar");
+  const btnCopiar = document.getElementById("btn-copiar");
   const progContainer = document.getElementById("progress-container");
   const progBar = document.getElementById("progress-bar");
   const progPercent = document.getElementById("progress-percentage");
@@ -180,9 +210,6 @@ window.carregarInatividade = async function () {
   progPercent.innerText = "0%";
   progLabel.innerText = "CONECTANDO AO DISCORD...";
 
-  const originalTexto = btn.innerHTML;
-  btn.innerHTML =
-    '<i class="fa-solid fa-spinner fa-spin"></i> SINCRONIZANDO...';
   btn.disabled = true;
 
   let width = 0;
@@ -195,7 +222,6 @@ window.carregarInatividade = async function () {
   }, 150);
 
   try {
-    // Busca os dados filtrados pela ORG na API
     const res = await fetch(`/api/membros-inativos?org=${org}`);
     const dados = await res.json();
     dadosInatividadeGlobal = dados;
@@ -204,6 +230,11 @@ window.carregarInatividade = async function () {
     progBar.style.width = "100%";
     progPercent.innerText = "100%";
     progLabel.innerText = "AUDITORIA FINALIZADA!";
+
+    // ATIVA O BOTÃO DE COPIAR SE HOUVER DADOS
+    if (dados.length > 0 && btnCopiar) {
+      btnCopiar.style.display = "inline-block";
+    }
 
     dados.sort((a, b) => (a.lastMsg || 0) - (b.lastMsg || 0));
     const agora = new Date();
@@ -243,7 +274,6 @@ window.carregarInatividade = async function () {
     clearInterval(interval);
     mostrarAviso("Erro na sincronização.", "error");
   } finally {
-    btn.innerHTML = originalTexto;
     btn.disabled = false;
     setTimeout(() => {
       progContainer.style.display = "none";
@@ -252,7 +282,7 @@ window.carregarInatividade = async function () {
 };
 
 // =========================================================
-// 5. CÓPIA DE RELATÓRIO DINÂMICO
+// 5. RELATÓRIOS E MODAL DIVISOR
 // =========================================================
 
 window.copiarRelatorioDiscord = function () {
@@ -291,7 +321,6 @@ window.copiarRelatorioDiscord = function () {
   let cabecalho = `📋 **RELATÓRIO DE EXONERAÇÃO - ${label.nome}** 📋\n📅 **DATA:** ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
   let relatorio = cabecalho + formatador(exonerados);
 
-  // Lógica de envio/cópia
   if (relatorio.length <= 1900) {
     navigator.clipboard
       .writeText(relatorio)
@@ -301,10 +330,10 @@ window.copiarRelatorioDiscord = function () {
   }
 };
 
-// ... Restante das funções (Férias, Modal Divisor, mostrarAviso) permanecem iguais ...
-
 function abrirModalDivisor(membros, data, header, formatador) {
   const container = document.getElementById("container-botoes-partes");
+  if (!container) return;
+
   container.innerHTML = "";
   const limit = 10;
 
@@ -329,7 +358,7 @@ window.fecharModalRelatorio = () =>
   (document.getElementById("modal-relatorio").style.display = "none");
 
 // =========================================================
-// 5. GESTÃO DE FÉRIAS
+// 6. GESTÃO DE FÉRIAS
 // =========================================================
 
 window.atualizarListaFerias = async function () {
@@ -337,9 +366,8 @@ window.atualizarListaFerias = async function () {
   const logContainer = document.getElementById("status-ferias-info");
   if (!select) return;
 
-  // Feedback visual de carregamento nos Logs
   logContainer.innerHTML =
-    '<i class="fa-solid fa-spinner fa-spin"></i> Sincronizando dados de férias...';
+    '<i class="fa-solid fa-spinner fa-spin"></i> Sincronizando dados...';
   select.innerHTML = '<option value="">⏳ Sincronizando...</option>';
 
   try {
@@ -358,14 +386,11 @@ window.atualizarListaFerias = async function () {
       });
     }
 
-    if (data.logs?.length > 0) {
-      logContainer.innerHTML =
-        "<strong>Remoções Hoje:</strong><br>" +
-        data.logs.map((l) => `✅ ${l}`).join("<br>");
-    } else {
-      logContainer.innerHTML =
-        '<i class="fa-solid fa-check-double"></i> Tudo atualizado. Nenhuma tag pendente de remoção.';
-    }
+    logContainer.innerHTML =
+      data.logs?.length > 0
+        ? "<strong>Remoções Hoje:</strong><br>" +
+          data.logs.map((l) => `✅ ${l}`).join("<br>")
+        : '<i class="fa-solid fa-check-double"></i> Tudo atualizado.';
   } catch (e) {
     logContainer.innerHTML =
       '<span style="color:red">Erro ao carregar dados.</span>';
@@ -392,3 +417,12 @@ window.executarAntecipacao = async function () {
     mostrarAviso("Falha na comunicação.", "error");
   }
 };
+
+// =========================================================
+// 7. INICIALIZAÇÃO
+// =========================================================
+
+document.addEventListener("DOMContentLoaded", () => {
+  aplicarRestricoes();
+  window.abrirInatividade();
+});

@@ -30,7 +30,6 @@ const getOrgLabel = (org) => {
   return labels[org] || labels["PCERJ"];
 };
 
-// Exibe notificações flutuantes no painel
 function mostrarAviso(msg, tipo = "success") {
   const toast = document.createElement("div");
   toast.className = `toast-aviso ${tipo}`;
@@ -51,14 +50,12 @@ function aplicarRestricoes() {
   const { org } = obterSessao();
   const configOrg = getOrgLabel(org);
 
-  // 1. Atualiza a Logo da Sidebar
   const logoElemento = document.getElementById("logo-sidebar");
   if (logoElemento) {
     logoElemento.src = configOrg.logo;
     logoElemento.alt = `Logo ${configOrg.nome}`;
   }
 
-  // 2. Define visibilidade das abas baseada na Organização
   const permissoes = {
     PCERJ: {
       mostrar: ["nav-core", "nav-porte", "nav-admin", "nav-ferias"],
@@ -231,7 +228,6 @@ window.carregarInatividade = async function () {
     progPercent.innerText = "100%";
     progLabel.innerText = "AUDITORIA FINALIZADA!";
 
-    // ATIVA O BOTÃO DE COPIAR SE HOUVER DADOS
     if (dados.length > 0 && btnCopiar) {
       btnCopiar.style.display = "inline-block";
     }
@@ -358,10 +354,11 @@ window.fecharModalRelatorio = () =>
   (document.getElementById("modal-relatorio").style.display = "none");
 
 // =========================================================
-// 6. GESTÃO DE FÉRIAS
+// 6. GESTÃO DE FÉRIAS (FILTRADA POR ORGANIZAÇÃO)
 // =========================================================
 
 window.atualizarListaFerias = async function () {
+  const { org } = obterSessao(); // <--- CAPTURA A ORGANIZAÇÃO LOGADA
   const select = document.getElementById("select-oficiais-ferias");
   const logContainer = document.getElementById("status-ferias-info");
   if (!select) return;
@@ -371,7 +368,8 @@ window.atualizarListaFerias = async function () {
   select.innerHTML = '<option value="">⏳ Sincronizando...</option>';
 
   try {
-    const res = await fetch("/api/verificar-ferias");
+    // ENVIAMOS A ORGANIZAÇÃO NA URL PARA O BACKEND FILTRAR
+    const res = await fetch(`/api/verificar-ferias?org=${org}`);
     const data = await res.json();
     select.innerHTML = '<option value="">Selecione para antecipar...</option>';
 

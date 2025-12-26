@@ -356,7 +356,18 @@ body {
   gap: 15px;
   width: 100%;
 }
+.user-cell {
+  display: flex; /* Ativa o modo Flexbox */
+  align-items: center; /* Alinha a imagem e o texto verticalmente ao centro */
+  gap: 10px; /* Cria um espaçamento automático entre a imagem e o texto */
+}
 
+.avatar-img {
+  width: 32px; /* Define um tamanho fixo para a imagem */
+  height: 32px;
+  border-radius: 50%; /* Deixa a imagem redonda, como no Discord */
+  object-fit: cover; /* Garante que a imagem não fique esticada */
+}
 /* Estilo do Card Horizontal */
 .card-meta.horizontal {
   display: flex;

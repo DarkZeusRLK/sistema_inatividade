@@ -359,33 +359,40 @@ async function executarCopia(texto) {
   }
 }
 
-window.copiarRelatorioDiscord = function() {
+window.copiarRelatorioDiscord = () => {
   if (!dadosInatividadeGlobal || dadosInatividadeGlobal.length === 0) {
-    return mostrarAviso("Não há dados sincronizados para copiar.", "error");
+    return mostrarAviso(
+      "Não há dados para copiar. Sincronize primeiro.",
+      "error"
+    );
   }
 
   const { org } = obterSessao();
-  let relatorio = `**⚠️ RELATÓRIO DE INATIVIDADE - ${org}**\n`;
-  relatorio += `📅 Data: ${new Date().toLocaleDateString('pt-BR')}\n`;
-  relatorio += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+  const config = getOrgLabel(org);
+  const dataRef = new Date().toLocaleDateString("pt-BR");
 
-  // Filtra quem está há mais de 7 dias
-  const inativos = dadosInatividadeGlobal.filter(o => o.diasAusente >= 7);
+  // Cabeçalho do Relatório
+  let relatorioTexto = `**AUDITORIA DE PRESENÇA - ${config.nome}**\n`;
+  relatorioTexto += `📅 Data: ${dataRef}\n`;
+  relatorioTexto += `⚠️ *Oficiais com mais de 7 dias de ausência sem justificativa.*\n\n`;
+
+  // Filtra e formata apenas os que estão em situação crítica (Exemplo: > 7 dias)
+  const inativos = dadosInatividadeGlobal.filter((o) => o.diasAusente >= 7);
 
   if (inativos.length === 0) {
-    relatorio += "✅ Nenhum oficial em situação crítica de inatividade.";
+    relatorioTexto += "✅ Nenhum oficial em situação de inatividade crítica.";
   } else {
-    inativos.forEach(o => {
-      const alerta = o.diasAusente >= 10 ? "❌ [EXONERAÇÃO]" : "⚠️ [ADVERTÊNCIA]";
-      relatorio += `${alerta} **${o.rpName}** (${o.id})\n`;
-      relatorio += `└ *Ausente há ${o.diasAusente} dias* (Última: ${o.ultimaMsg})\n\n`;
+    inativos.forEach((oficial) => {
+      const status =
+        oficial.diasAusente >= 10 ? "❌ [EXONERAÇÃO]" : "⚠️ [ADVERTÊNCIA]";
+      relatorioTexto += `${status} **${oficial.rpName}** (${oficial.id})\n`;
+      relatorioTexto += `└ *Última atividade: ${oficial.ultimaMsg} (${oficial.diasAusente} dias)*\n\n`;
     });
   }
 
-  relatorio += `\n━━━━━━━━━━━━━━━━━━━━━━\n*Gerado via Painel Administrativo*`;
-
-  // Usa o seu sistema de divisão para não quebrar o limite do Discord
-  dividirRelatorio(relatorio, (bloco) => bloco);
+  // Utiliza a função de dividir relatório que você já tem para enviar ao modal
+  dividirRelatorio(relatorioTexto, (bloco) => bloco);
+};
 
 function abrirModalDivisor(membros, data, header, formatador) {
   const modal = document.getElementById("modal-relatorio");

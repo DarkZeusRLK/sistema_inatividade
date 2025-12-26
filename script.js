@@ -1,34 +1,34 @@
 // =========================================================
 // 1. CONFIGURAÇÕES GLOBAIS E SESSÃO
 // =========================================================
-let dadosInatividadeGlobal = []; // Armazena os dados para o relatório
+let dadosInatividadeGlobal = [];
 const DATA_BASE_AUDITORIA = new Date("2025-12-08T00:00:00").getTime();
 
 const obterSessao = () => {
   const sessionStr = localStorage.getItem("pc_session");
-  if (!sessionStr) return { org: "PCERJ", tema: "tema-pcerj" };
+  if (!sessionStr) return { org: "PCERJ" };
   return JSON.parse(sessionStr);
 };
 
-const getOrgConfig = (org) => {
-  const configs = {
+const getOrgLabel = (org) => {
+  const labels = {
     PCERJ: {
-      nome: "PCERJ",
       unidade: "CORE",
+      nome: "PCERJ",
       logo: "Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png",
     },
     PRF: {
-      nome: "PRF",
       unidade: "GRR",
-      logo: "Imagens/PRF_new.png", // Nome corrigido
+      nome: "PRF",
+      logo: "Imagens/PRF_new.png", // Corrigido caminho da imagem
     },
     PMERJ: {
-      nome: "PMERJ",
       unidade: "BOPE",
-      logo: "Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png", // Nome corrigido
+      nome: "PMERJ",
+      logo: "Imagens/Brasão_da_Polícia_Militar_do_Estado_do_Rio_de_Janeiro_-_PMERJ.png", // Corrigido caminho da imagem
     },
   };
-  return configs[org] || configs["PCERJ"];
+  return labels[org] || labels["PCERJ"];
 };
 
 function mostrarAviso(msg, tipo = "success") {
@@ -49,11 +49,10 @@ function mostrarAviso(msg, tipo = "success") {
 
 function aplicarRestricoes() {
   const { org } = obterSessao();
-  const config = getOrgConfig(org);
+  const configOrg = getOrgLabel(org);
 
-  // Atualiza Logo Dinamicamente
-  const logoSidebar = document.getElementById("logo-sidebar");
-  if (logoSidebar) logoSidebar.src = config.logo;
+  const logoElemento = document.getElementById("logo-sidebar");
+  if (logoElemento) logoElemento.src = configOrg.logo;
 
   const permissoes = {
     PCERJ: {
@@ -70,12 +69,12 @@ function aplicarRestricoes() {
     },
   };
 
-  const p = permissoes[org] || permissoes["PCERJ"];
-  p.esconder.forEach((id) => {
+  const config = permissoes[org] || permissoes["PCERJ"];
+  config.esconder.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.style.display = "none";
   });
-  p.mostrar.forEach((id) => {
+  config.mostrar.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.style.display = "flex";
   });
@@ -97,14 +96,14 @@ function resetarTelas() {
     }
   });
 
-  const botoes = [
+  const gruposBotoes = [
     "botoes-inatividade",
     "botoes-core",
     "botoes-grr",
     "botoes-bope",
     "botoes-ferias",
   ];
-  botoes.forEach((id) => {
+  gruposBotoes.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.style.display = "none";
   });
@@ -114,13 +113,9 @@ function resetarTelas() {
     .forEach((item) => item.classList.remove("active"));
 }
 
-// =========================================================
-// 3. NAVEGAÇÃO
-// =========================================================
-
 window.abrirInatividade = function () {
   const { org } = obterSessao();
-  const config = getOrgConfig(org);
+  const label = getOrgLabel(org);
   resetarTelas();
   document.getElementById("secao-inatividade").style.display = "block";
   document.getElementById("secao-inatividade").style.visibility = "visible";
@@ -128,7 +123,7 @@ window.abrirInatividade = function () {
   document.getElementById("nav-inatividade").classList.add("active");
   document.getElementById(
     "titulo-pagina"
-  ).innerText = `AUDITORIA - ${config.nome}`;
+  ).innerText = `AUDITORIA - ${label.nome}`;
 };
 
 window.abrirGestaoFerias = function () {
@@ -137,64 +132,70 @@ window.abrirGestaoFerias = function () {
   document.getElementById("secao-gestao-ferias").style.visibility = "visible";
   document.getElementById("botoes-ferias").style.display = "block";
   document.getElementById("nav-ferias").classList.add("active");
-  document.getElementById("titulo-pagina").innerText = "GESTÃO DE FÉRIAS";
-  window.atualizarListaFerias(); // Carrega filtrado
-};
-
-// Funções de Metas (Simplificadas)
-window.abrirMetaCore = () => {
-  resetarTelas();
-  document.getElementById("secao-meta-core").style.display = "block";
-  document.getElementById("secao-meta-core").style.visibility = "visible";
-  document.getElementById("botoes-core").style.display = "block";
-  document.getElementById("nav-core").classList.add("active");
-};
-window.abrirMetaGRR = () => {
-  resetarTelas();
-  document.getElementById("secao-meta-grr").style.display = "block";
-  document.getElementById("secao-meta-grr").style.visibility = "visible";
-  document.getElementById("botoes-grr").style.display = "block";
-  document.getElementById("nav-grr").classList.add("active");
-};
-window.abrirMetaBOPE = () => {
-  resetarTelas();
-  document.getElementById("secao-meta-bope").style.display = "block";
-  document.getElementById("secao-meta-bope").style.visibility = "visible";
-  document.getElementById("botoes-bope").style.display = "block";
-  document.getElementById("nav-bope").classList.add("active");
+  if (window.atualizarListaFerias) window.atualizarListaFerias();
 };
 
 // =========================================================
-// 4. LÓGICA DE INATIVIDADE E RELATÓRIO
+// 4. LÓGICA DE AUDITORIA E BARRA DE PROGRESSO
 // =========================================================
 
 window.carregarInatividade = async function () {
   const { org } = obterSessao();
   const corpo = document.getElementById("corpo-inatividade");
-  const btnSinc = document.getElementById("btn-sincronizar");
+  const btn = document.getElementById("btn-sincronizar");
   const btnCopiar = document.getElementById("btn-copiar");
-  const progBar = document.getElementById("progress-bar");
   const progContainer = document.getElementById("progress-container");
+  const progBar = document.getElementById("progress-bar");
+  const progPercent = document.getElementById("progress-percentage");
+  const progLabel = document.getElementById("progress-label");
 
   corpo.innerHTML = "";
   progContainer.style.display = "block";
-  btnSinc.disabled = true;
+  progBar.style.width = "0%";
+  progPercent.innerText = "0%";
+  progLabel.innerText = "CONECTANDO AO DISCORD...";
+  btn.disabled = true;
+
+  // LÓGICA DA BARRA DE PROGRESSÃO (RESTAURADA)
+  let width = 0;
+  const interval = setInterval(() => {
+    if (width < 90) {
+      width += Math.random() * 2;
+      progBar.style.width = width + "%";
+      progPercent.innerText = Math.floor(width) + "%";
+    }
+  }, 150);
 
   try {
     const res = await fetch(`/api/membros-inativos?org=${org}`);
     const dados = await res.json();
-    dadosInatividadeGlobal = dados; // Salva globalmente
+
+    clearInterval(interval);
+    progBar.style.width = "100%";
+    progPercent.innerText = "100%";
+    progLabel.innerText = "VARREDURA COMPLETA!";
 
     const agora = Date.now();
-    dados.forEach((m) => {
+
+    // Processamos os dados e salvamos na variável global
+    dadosInatividadeGlobal = dados.map((m) => {
       let dataRef = Math.max(
         m.lastMsg || 0,
         m.joinedAt || 0,
         DATA_BASE_AUDITORIA
       );
-      m.diasInatividade = Math.floor((agora - dataRef) / (1000 * 60 * 60 * 24));
-      m.precisaExonerar = m.diasInatividade >= 7;
+      let dias = Math.floor((agora - dataRef) / (1000 * 60 * 60 * 24));
+      return { ...m, diasInatividade: dias, precisaExonerar: dias >= 7 };
+    });
 
+    if (dadosInatividadeGlobal.length > 0)
+      btnCopiar.style.display = "inline-block";
+
+    dadosInatividadeGlobal.sort(
+      (a, b) => b.diasInatividade - a.diasInatividade
+    );
+
+    dadosInatividadeGlobal.forEach((m) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td><div class="user-cell"><img src="${
@@ -206,9 +207,9 @@ window.carregarInatividade = async function () {
             ? new Date(m.lastMsg).toLocaleDateString("pt-BR")
             : "---"
         }</td>
-        <td style="color: ${m.precisaExonerar ? "#ff4d4d" : "#d4af37"}">${
-        m.diasInatividade
-      } Dias</td>
+        <td><strong style="color: ${
+          m.precisaExonerar ? "#ff4d4d" : "#d4af37"
+        }">${m.diasInatividade} Dias</strong></td>
         <td align="center"><span class="${
           m.precisaExonerar ? "badge-danger" : "badge-success"
         }">${m.precisaExonerar ? "⚠️ EXONERAR" : "✅ REGULAR"}</span></td>
@@ -216,44 +217,56 @@ window.carregarInatividade = async function () {
       corpo.appendChild(tr);
     });
 
-    if (dados.length > 0) btnCopiar.style.display = "inline-block";
-    mostrarAviso("Sincronização concluída!");
+    mostrarAviso("Dados sincronizados.");
   } catch (err) {
-    mostrarAviso("Erro na sincronização.", "error");
+    clearInterval(interval);
+    mostrarAviso("Erro ao buscar dados.", "error");
   } finally {
-    btnSinc.disabled = false;
-    progContainer.style.display = "none";
+    btn.disabled = false;
+    setTimeout(() => {
+      progContainer.style.display = "none";
+    }, 3000);
   }
 };
 
+// =========================================================
+// 5. BOTÃO DE COPIAR RELATÓRIO (FIX)
+// =========================================================
+
 window.copiarRelatorioDiscord = function () {
   const { org } = obterSessao();
-  const config = getOrgConfig(org);
+  const label = getOrgLabel(org);
   const dataHoje = new Date().toLocaleDateString("pt-BR");
 
+  // Filtramos quem deve ser exonerado usando os dados já calculados
   const exonerados = dadosInatividadeGlobal.filter((m) => m.precisaExonerar);
 
-  if (exonerados.length === 0)
-    return mostrarAviso("Nenhum oficial para exonerar!", "warning");
+  if (exonerados.length === 0) {
+    return mostrarAviso(
+      "Nenhum oficial identificado para exoneração (7+ dias).",
+      "warning"
+    );
+  }
 
   const formatador = (lista) => {
     return lista
       .map(
         (m) =>
-          `QRA: <@${m.id}>\nNOME: ${m.rpName || m.name}\nID: ${
-            m.id
-          }\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────`
+          `QRA: <@${m.id}>\nID: ${m.id}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────`
       )
       .join("\n");
   };
 
-  const cabecalho = `📋 **RELATÓRIO DE EXONERAÇÃO - ${config.nome}** 📋\n📅 DATA: ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+  const cabecalho = `📋 **RELATÓRIO DE EXONERAÇÃO - ${label.nome}** 📋\n📅 DATA: ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
   const relatorioCompleto = cabecalho + formatador(exonerados);
 
+  // Se passar de 1900 caracteres, abre o modal divisor (para o Discord não cortar)
   if (relatorioCompleto.length <= 1900) {
     navigator.clipboard
       .writeText(relatorioCompleto)
-      .then(() => mostrarAviso("Relatório copiado!"));
+      .then(() =>
+        mostrarAviso("Relatório copiado para a área de transferência!")
+      );
   } else {
     abrirModalDivisor(exonerados, dataHoje, cabecalho, formatador);
   }
@@ -262,14 +275,14 @@ window.copiarRelatorioDiscord = function () {
 function abrirModalDivisor(membros, data, header, formatador) {
   const container = document.getElementById("container-botoes-partes");
   container.innerHTML = "";
-  const limit = 10;
+  const limit = 10; // 10 oficiais por parte
 
   for (let i = 0; i < membros.length; i += limit) {
     const bloco = membros.slice(i, i + limit);
     const parte = Math.floor(i / limit) + 1;
     const btn = document.createElement("button");
     btn.className = "btn-parte";
-    btn.innerHTML = `<i class="fa-solid fa-copy"></i> PARTE ${parte}`;
+    btn.innerHTML = `<i class="fa-solid fa-copy"></i> COPIAR PARTE ${parte}`;
     btn.onclick = () => {
       navigator.clipboard.writeText(
         header + `(PARTE ${parte})\n\n` + formatador(bloco)
@@ -285,7 +298,7 @@ window.fecharModalRelatorio = () =>
   (document.getElementById("modal-relatorio").style.display = "none");
 
 // =========================================================
-// 5. GESTÃO DE FÉRIAS (FILTRADO POR ORGANIZAÇÃO)
+// 6. GESTÃO DE FÉRIAS (FILTRADO)
 // =========================================================
 
 window.atualizarListaFerias = async function () {
@@ -294,14 +307,13 @@ window.atualizarListaFerias = async function () {
   const logContainer = document.getElementById("status-ferias-info");
 
   if (!select) return;
-  select.innerHTML = '<option value="">⏳ Carregando oficiais...</option>';
+  select.innerHTML = '<option value="">Sincronizando...</option>';
 
   try {
     const res = await fetch(`/api/verificar-ferias?org=${org}`);
     const data = await res.json();
 
     select.innerHTML = '<option value="">Selecione para antecipar...</option>';
-
     if (data.oficiais && data.oficiais.length > 0) {
       data.oficiais.forEach((oficial) => {
         const opt = document.createElement("option");
@@ -312,38 +324,16 @@ window.atualizarListaFerias = async function () {
     } else {
       select.innerHTML = '<option value="">Nenhum oficial em férias.</option>';
     }
-
     logContainer.innerHTML =
       data.logs?.length > 0
-        ? data.logs.map((l) => `✅ ${l}`).join("<br>")
-        : "Nenhum retorno pendente hoje.";
+        ? data.logs.join("<br>")
+        : "Sem retornos pendentes.";
   } catch (e) {
-    mostrarAviso("Erro ao buscar férias.", "error");
+    mostrarAviso("Erro ao carregar férias.", "error");
   }
 };
 
-window.executarAntecipacao = async function () {
-  const userId = document.getElementById("select-oficiais-ferias").value;
-  if (!userId) return mostrarAviso("Selecione um oficial.", "warning");
-
-  try {
-    const res = await fetch("/api/verificar-ferias", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId }),
-    });
-    if (res.ok) {
-      mostrarAviso("Retorno antecipado com sucesso!");
-      window.atualizarListaFerias();
-    }
-  } catch (e) {
-    mostrarAviso("Erro ao processar antecipação.", "error");
-  }
-};
-
-// =========================================================
-// 6. INICIALIZAÇÃO
-// =========================================================
+// Inicialização
 document.addEventListener("DOMContentLoaded", () => {
   aplicarRestricoes();
   window.abrirInatividade();

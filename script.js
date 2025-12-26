@@ -338,6 +338,38 @@ window.atualizarListaFerias = async function () {
     mostrarAviso("Erro ao carregar férias.", "error");
   }
 };
+// =========================================================
+// FUNÇÃO PARA ABRIR A TELA DE FÉRIAS
+// =========================================================
+window.abrirGestaoFerias = function () {
+  const { org } = obterSessao();
+  const label = getOrgLabel(org);
+
+  resetarTelas(); // Esconde as outras seções
+
+  // Mostra a seção de férias
+  const secao = document.getElementById("secao-gestao-ferias");
+  if (secao) {
+    secao.style.display = "block";
+    secao.style.visibility = "visible";
+  }
+
+  // Mostra os botões de férias (se houver no topo)
+  const botoes = document.getElementById("botoes-ferias");
+  if (botoes) botoes.style.display = "block";
+
+  // Marca o item do menu como ativo
+  const navItem = document.getElementById("nav-ferias");
+  if (navItem) navItem.classList.add("active");
+
+  // Atualiza o título da página
+  document.getElementById(
+    "titulo-pagina"
+  ).innerText = `GESTÃO DE FÉRIAS - ${label.nome}`;
+
+  // Carrega os dados da API automaticamente ao abrir a tela
+  window.atualizarListaFerias();
+};
 
 window.abrirMetaCore = function () {
   resetarTelas();

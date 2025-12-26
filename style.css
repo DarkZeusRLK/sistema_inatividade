@@ -349,3 +349,58 @@ body {
   font-size: 0.7rem;
   margin-top: 10px;
 }
+/* Garante que a seção GRR use apenas uma coluna (Cards Largos) */
+#corpo-meta-grr {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 100%;
+}
+
+/* Estilo do Card Horizontal */
+.card-meta.horizontal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 15px 20px;
+  border-radius: 8px;
+  border-left: 4px solid #d4af37; /* Cor Ouro da PRF */
+  gap: 20px;
+}
+
+.card-info-main {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-width: 250px;
+}
+
+.card-stats-wrapper {
+  display: flex;
+  flex: 1;
+  gap: 30px;
+}
+
+.stat-block {
+  flex: 1;
+}
+
+.stat-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  margin-bottom: 5px;
+}
+
+.stat-bar-bg {
+  height: 8px;
+  background: #222;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.stat-bar-fill {
+  height: 100%;
+  transition: width 0.5s ease;
+}

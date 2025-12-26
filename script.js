@@ -175,14 +175,17 @@ window.carregarInatividade = async function () {
         DATA_BASE_AUDITORIA
       );
       let dias = Math.floor((agora - dataRef) / (1000 * 60 * 60 * 24));
+
       return {
         ...m,
         diasInatividade: dias,
         precisaExonerar: dias >= 7,
-        discordNick: m.name || "Sem Nome", // Nome do Discord
-        discordId: m.id, // ID do Discord (numérico longo)
-        rpName: m.rpName || "Não Identificado", // Nome da Cidade
-        cidadeId: m.cidadeId || "00", // ID da Cidade
+        // DADOS PARA O SISTEMA (DISCORD)
+        discordNick: m.name || "Sem Nome",
+        discordId: m.id,
+        // DADOS PARA O RELATÓRIO (CIDADE/ADMISSÃO)
+        rpName: m.rpName || "Não Identificado", // Nome extraído da admissão
+        cidadeId: m.cidadeId || "N/I", // ID extraído da admissão
       };
     });
 
@@ -228,7 +231,7 @@ window.carregarInatividade = async function () {
 };
 
 // =========================================================
-// 5. FUNÇÕES DE CÓPIA (APENAS BOTÕES)
+// 5. FUNÇÕES DE CÓPIA
 // =========================================================
 
 window.copiarRelatorioDiscord = function () {
@@ -242,16 +245,12 @@ window.copiarRelatorioDiscord = function () {
   }
 
   const exonerados = dadosInatividadeGlobal.filter((m) => m.precisaExonerar);
-  if (exonerados.length === 0) {
-    mostrarAviso("Nenhum oficial para exoneração.", "warning");
-    return;
-  }
 
   const partes = [];
   let textoAtual = `📋 **RELATÓRIO DE EXONERAÇÃO - ${label.nome}** 📋\n📅 DATA: ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
   exonerados.forEach((m) => {
-    // MODELO DE CÓPIA PARA DISCORD
+    // AQUI USAMOS OS DADOS DA CIDADE (ADMISSÃO) E A MENÇÃO POR ID
     const item = `QRA: <@${m.discordId}>\nID: ${m.cidadeId}\nNome na cidade: ${m.rpName}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────\n`;
 
     if ((textoAtual + item).length > 2000) {
@@ -267,7 +266,7 @@ window.copiarRelatorioDiscord = function () {
   abrirModalRelatorioDividido(partes);
 };
 
-// --- MODAL DE COPIA INTELIGENTE (APENAS BOTÕES) ---
+// --- MODAL DE COPIA ---
 
 function abrirModalRelatorioDividido(partes) {
   let modal = document.getElementById("modal-relatorio");
@@ -275,8 +274,8 @@ function abrirModalRelatorioDividido(partes) {
 
   const container = document.getElementById("container-botoes-partes");
   container.innerHTML = "";
-  container.style.display = "grid";
-  container.style.gridTemplateColumns = "1fr";
+  container.style.display = "flex";
+  container.style.flexDirection = "column";
   container.style.gap = "10px";
 
   partes.forEach((texto, index) => {
@@ -287,15 +286,12 @@ function abrirModalRelatorioDividido(partes) {
     btnCopiar.className = "btn-gold";
     btnCopiar.style.width = "100%";
     btnCopiar.style.padding = "15px";
-    btnCopiar.style.fontSize = "14px";
-    btnCopiar.style.fontWeight = "bold";
 
     btnCopiar.onclick = () => {
       navigator.clipboard.writeText(texto).then(() => {
         mostrarAviso(`Parte ${index + 1} copiada!`);
       });
     };
-
     container.appendChild(btnCopiar);
   });
 
@@ -306,6 +302,7 @@ window.fecharModalRelatorio = () => {
   document.getElementById("modal-relatorio").style.display = "none";
 };
 
+// ... Restante das funções (Metas, Férias) permanecem como o original ...
 // =========================================================
 // 6. GESTÃO DE FÉRIAS E OUTRAS FUNÇÕES
 // =========================================================

@@ -20,12 +20,12 @@ const getOrgLabel = (org) => {
     PRF: {
       unidade: "GRR",
       nome: "PRF",
-      logo: "Imagens/PRF_new.png", // Corrigido caminho da imagem
+      logo: "Imagens/PRF_new.png",
     },
     PMERJ: {
       unidade: "BOPE",
       nome: "PMERJ",
-      logo: "Imagens/Brasão_da_Polícia_Militar_do_Estado_do_Rio_de_Janeiro_-_PMERJ.png", // Corrigido caminho da imagem
+      logo: "Imagens/Brasão_da_Polícia_Militar_do_Estado_do_Rio_de_Janeiro_-_PMERJ.png",
     },
   };
   return labels[org] || labels["PCERJ"];
@@ -156,7 +156,6 @@ window.carregarInatividade = async function () {
   progLabel.innerText = "CONECTANDO AO DISCORD...";
   btn.disabled = true;
 
-  // LÓGICA DA BARRA DE PROGRESSÃO (RESTAURADA)
   let width = 0;
   const interval = setInterval(() => {
     if (width < 90) {
@@ -177,7 +176,6 @@ window.carregarInatividade = async function () {
 
     const agora = Date.now();
 
-    // Processamos os dados e salvamos na variável global
     dadosInatividadeGlobal = dados.map((m) => {
       let dataRef = Math.max(
         m.lastMsg || 0,
@@ -229,8 +227,8 @@ window.carregarInatividade = async function () {
   }
 };
 
-/// =========================================================
-// 5. BOTÃO DE COPIAR RELATÓRIO (COMPATÍVEL COM IFRAME)
+// =========================================================
+// 5. FUNÇÕES DE CÓPIA COM LIMITE DE 4000 CARACTERES
 // =========================================================
 
 window.copiarRelatorioDiscord = function () {
@@ -239,71 +237,139 @@ window.copiarRelatorioDiscord = function () {
   const dataHoje = new Date().toLocaleDateString("pt-BR");
 
   if (!dadosInatividadeGlobal || dadosInatividadeGlobal.length === 0) {
-    mostrarAviso(
-      "Nenhum dado carregado. Clique em SINCRONIZAR DADOS primeiro.",
-      "warning"
-    );
+    mostrarAviso("Sincronize os dados primeiro.", "warning");
     return;
   }
 
   const exonerados = dadosInatividadeGlobal.filter((m) => m.precisaExonerar);
-
   if (exonerados.length === 0) {
-    mostrarAviso(
-      "Nenhum oficial identificado para exoneração (7+ dias).",
-      "warning"
-    );
+    mostrarAviso("Nenhum oficial para exoneração.", "warning");
     return;
   }
 
-  const texto =
-    `📋 **RELATÓRIO DE EXONERAÇÃO - ${label.nome}** 📋\n` +
-    `📅 DATA: ${dataHoje}\n` +
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-    exonerados
-      .map(
-        (m) =>
-          `QRA: <@${m.id}>\nID: ${m.id}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────`
-      )
-      .join("\n");
+  const partes = [];
+  let textoAtual = `📋 **RELATÓRIO DE EXONERAÇÃO - ${label.nome}** 📋\n📅 DATA: ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
-  abrirModalTextoSelecionavel(texto);
+  exonerados.forEach((m) => {
+    const item = `QRA: <@${m.id}>\nID: ${m.id}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────\n`;
+
+    // Se adicionar este item ultrapassar 4000, fecha a parte atual e começa uma nova
+    if ((textoAtual + item).length > 3950) {
+      partes.push(textoAtual);
+      textoAtual =
+        `📋 **RELATÓRIO DE EXONERAÇÃO - ${label.nome} (Continuação)** 📋\n\n` +
+        item;
+    } else {
+      textoAtual += item;
+    }
+  });
+  partes.push(textoAtual);
+
+  abrirModalRelatorioDividido(partes);
 };
 
-function abrirModalTextoSelecionavel(texto) {
-  let modal = document.getElementById("modal-relatorio");
+// --- NOVAS FUNÇÕES PARA CORE, GRR E BOPE ---
 
+window.copiarRelatorioCore = () =>
+  copiarMetasGenerico("CORE (PCERJ)", "corpo-meta-core");
+window.copiarRelatorioGRR = () =>
+  copiarMetasGenerico("GRR (PRF)", "corpo-meta-grr");
+window.copiarRelatorioBOPE = () =>
+  copiarMetasGenerico("BOPE (PMERJ)", "corpo-meta-bope");
+
+function copiarMetasGenerico(titulo, containerId) {
+  const container = document.getElementById(containerId);
+  if (
+    !container ||
+    container.innerText.trim() === "" ||
+    container.innerText.includes("Carregando")
+  ) {
+    mostrarAviso("Não há dados de metas para copiar.", "warning");
+    return;
+  }
+
+  const dataHoje = new Date().toLocaleDateString("pt-BR");
+  const partes = [];
+  let textoAtual = `📊 **RELATÓRIO DE METAS - ${titulo}** 📊\n📅 DATA: ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+  // Tenta pegar todas as linhas da tabela ou cards
+  const itens = container.querySelectorAll("tr, .card-meta");
+
+  itens.forEach((el) => {
+    const info = el.innerText.replace(/\s+/g, " ").trim();
+    const item = `${info}\n────────────────────────────────\n`;
+
+    if ((textoAtual + item).length > 3950) {
+      partes.push(textoAtual);
+      textoAtual =
+        `📊 **RELATÓRIO DE METAS - ${titulo} (Cont.)** 📊\n\n` + item;
+    } else {
+      textoAtual += item;
+    }
+  });
+  partes.push(textoAtual);
+  abrirModalRelatorioDividido(partes);
+}
+
+// --- MODAL DE COPIA INTELIGENTE ---
+
+function abrirModalRelatorioDividido(partes) {
+  let modal = document.getElementById("modal-relatorio");
   if (!modal) return;
 
   const container = document.getElementById("container-botoes-partes");
-  container.innerHTML = "";
+  container.innerHTML = ""; // Limpa anterior
 
-  const textarea = document.createElement("textarea");
-  textarea.value = texto;
-  textarea.style.width = "100%";
-  textarea.style.height = "300px";
-  textarea.style.background = "#000";
-  textarea.style.color = "#fff";
-  textarea.style.border = "1px solid #444";
-  textarea.style.padding = "10px";
-  textarea.style.resize = "none";
+  partes.forEach((texto, index) => {
+    const divParte = document.createElement("div");
+    divParte.className = "bloco-copia";
+    divParte.style.marginBottom = "20px";
 
-  container.appendChild(textarea);
+    const label = document.createElement("strong");
+    label.innerText = `PARTE ${index + 1} (${texto.length} caracteres)`;
+    label.style.display = "block";
+    label.style.marginBottom = "5px";
 
-  setTimeout(() => {
-    textarea.focus();
-    textarea.select();
-  }, 100);
+    const textarea = document.createElement("textarea");
+    textarea.value = texto;
+    textarea.style.width = "100%";
+    textarea.style.height = "150px";
+    textarea.style.background = "#000";
+    textarea.style.color = "#04d361"; // Verde para facilitar leitura
+    textarea.style.border = "1px solid #333";
+    textarea.style.padding = "10px";
+    textarea.style.fontSize = "12px";
+    textarea.style.resize = "none";
+    textarea.readOnly = true;
 
-  mostrarAviso("Texto selecionado. Pressione CTRL + C para copiar.");
+    const btnCopiar = document.createElement("button");
+    btnCopiar.innerHTML = `<i class="fa-solid fa-copy"></i> COPIAR PARTE ${
+      index + 1
+    }`;
+    btnCopiar.className = "btn-gold";
+    btnCopiar.style.width = "100%";
+    btnCopiar.style.marginTop = "5px";
+    btnCopiar.onclick = () => {
+      textarea.select();
+      navigator.clipboard.writeText(texto);
+      mostrarAviso(`Parte ${index + 1} copiada!`);
+    };
+
+    divParte.appendChild(label);
+    divParte.appendChild(textarea);
+    divParte.appendChild(btnCopiar);
+    container.appendChild(divParte);
+  });
+
   modal.style.display = "flex";
 }
 
 window.fecharModalRelatorio = () => {
   document.getElementById("modal-relatorio").style.display = "none";
 };
+
 // =========================================================
-// 6. GESTÃO DE FÉRIAS (FILTRADO)
+// 6. GESTÃO DE FÉRIAS E OUTRAS FUNÇÕES
 // =========================================================
 
 window.atualizarListaFerias = async function () {
@@ -338,46 +404,37 @@ window.atualizarListaFerias = async function () {
   }
 };
 
-// Inicialização
-document.addEventListener("DOMContentLoaded", () => {
-  aplicarRestricoes();
-  window.abrirInatividade();
-});
 window.abrirMetaCore = function () {
   resetarTelas();
-
   document.getElementById("secao-meta-core").style.display = "block";
   document.getElementById("secao-meta-core").style.visibility = "visible";
-
   document.getElementById("botoes-core").style.display = "block";
   document.getElementById("nav-core").classList.add("active");
-
   document.getElementById("titulo-pagina").innerText =
     "AUDITORIA - METAS CORE (PCERJ)";
 };
 
 window.abrirMetaGRR = function () {
   resetarTelas();
-
   document.getElementById("secao-meta-grr").style.display = "block";
   document.getElementById("secao-meta-grr").style.visibility = "visible";
-
   document.getElementById("botoes-grr").style.display = "block";
   document.getElementById("nav-grr").classList.add("active");
-
   document.getElementById("titulo-pagina").innerText =
     "AUDITORIA - METAS GRR (PRF)";
 };
 
 window.abrirMetaBOPE = function () {
   resetarTelas();
-
   document.getElementById("secao-meta-bope").style.display = "block";
   document.getElementById("secao-meta-bope").style.visibility = "visible";
-
   document.getElementById("botoes-bope").style.display = "block";
   document.getElementById("nav-bope").classList.add("active");
-
   document.getElementById("titulo-pagina").innerText =
     "AUDITORIA - METAS BOPE (PMERJ)";
 };
+
+document.addEventListener("DOMContentLoaded", () => {
+  aplicarRestricoes();
+  window.abrirInatividade();
+});

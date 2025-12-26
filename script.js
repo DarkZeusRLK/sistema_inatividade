@@ -8,8 +8,6 @@ const DATA_BASE_AUDITORIA = new Date("2025-12-08T00:00:00").getTime();
 const obterSessao = () => {
   const sessionStr = localStorage.getItem("pc_session");
 
-  // CORREÇÃO AQUI: Se não houver sessão, ele não assume PCERJ.
-  // Ele envia o usuário para o login.
   if (!sessionStr) {
     if (!window.location.pathname.includes("login.html")) {
       window.location.href = "login.html";
@@ -19,7 +17,6 @@ const obterSessao = () => {
 
   const sessao = JSON.parse(sessionStr);
 
-  // Opcional: Verificar se a sessão expirou
   if (sessao.expira && Date.now() > sessao.expira) {
     localStorage.removeItem("pc_session");
     window.location.href = "login.html";
@@ -47,10 +44,34 @@ const getOrgLabel = (org) => {
       logo: "Imagens/Brasão_da_Polícia_Militar_do_Estado_do_Rio_de_Janeiro_-_PMERJ.png",
     },
   };
-  // Se a org for inválida ou não existir no mapa,
-  // agora retornamos null ou tratamos o erro, para não forçar a PCERJ indevidamente
   return labels[org] || null;
 };
+
+// --- NOVAS FUNÇÕES PARA COMANDO GERAL ---
+
+window.setPainelComando = function (orgEscolhida) {
+  const sessao = obterSessao();
+  if (!sessao) return;
+
+  const temas = {
+    PCERJ: "tema-pcerj",
+    PRF: "tema-prf",
+    PMERJ: "tema-pmerj",
+  };
+
+  sessao.org = orgEscolhida;
+  sessao.tema = temas[orgEscolhida];
+
+  localStorage.setItem("pc_session", JSON.stringify(sessao));
+  window.location.reload(); // Recarrega para aplicar o novo painel e restrições
+};
+
+window.abrirSelecaoPainel = function () {
+  const modal = document.getElementById("modal-selecao-comando");
+  if (modal) modal.style.display = "flex";
+};
+
+// ----------------------------------------
 
 function mostrarAviso(msg, tipo = "success") {
   const toast = document.createElement("div");
@@ -63,25 +84,47 @@ function mostrarAviso(msg, tipo = "success") {
     setTimeout(() => toast.remove(), 500);
   }, 3000);
 }
+
 // =========================================================
 // INICIALIZAÇÃO SEGURA
 // =========================================================
 document.addEventListener("DOMContentLoaded", () => {
   const sessao = obterSessao();
 
-  // Só executa as funções de interface se a sessão existir de fato
-  if (sessao && sessao.org) {
-    aplicarRestricoes();
-    window.abrirInatividade();
+  if (sessao) {
+    // 1. Lógica específica para Comando/Sub-Comando
+    if (sessao.isComando) {
+      const btnTrocar = document.getElementById("wrapper-comando");
+      if (btnTrocar) btnTrocar.style.display = "block";
+
+      // Se logou mas ainda não escolheu qual painel quer ver
+      if (!sessao.org) {
+        window.abrirSelecaoPainel();
+        return; // Para a execução aqui até ele escolher
+      }
+    }
+
+    // 2. Se já tem uma organização definida (Membro comum ou Comando que já escolheu)
+    if (sessao.org) {
+      aplicarRestricoes();
+      window.abrirInatividade();
+    }
   }
 });
+
 // =========================================================
 // 2. SISTEMA DE PERMISSÕES E INTERFACE
 // =========================================================
 
 function aplicarRestricoes() {
-  const { org } = obterSessao();
+  const sessao = obterSessao();
+  if (!sessao || !sessao.org) return;
+
+  const { org } = sessao;
   const configOrg = getOrgLabel(org);
+  if (!configOrg) return;
+
+  // Atualiza Logo e Favicon
   const logoElemento = document.getElementById("logo-sidebar");
   if (logoElemento) logoElemento.src = configOrg.logo;
 
@@ -93,6 +136,7 @@ function aplicarRestricoes() {
   }
   linkFavicon.href = configOrg.logo;
 
+  // Gerenciamento de Nav Items
   const permissoes = {
     PCERJ: {
       mostrar: ["nav-core", "nav-porte", "nav-admin", "nav-ferias"],
@@ -108,15 +152,17 @@ function aplicarRestricoes() {
     },
   };
 
-  const config = permissoes[org] || permissoes["PCERJ"];
-  config.esconder.forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = "none";
-  });
-  config.mostrar.forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = "flex";
-  });
+  const config = permissoes[org];
+  if (config) {
+    config.esconder.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = "none";
+    });
+    config.mostrar.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = "flex";
+    });
+  }
 }
 
 function resetarTelas() {
@@ -151,8 +197,10 @@ function resetarTelas() {
 }
 
 window.abrirInatividade = function () {
-  const { org } = obterSessao();
-  const label = getOrgLabel(org);
+  const sessao = obterSessao();
+  if (!sessao) return;
+  const label = getOrgLabel(sessao.org);
+
   resetarTelas();
   document.getElementById("secao-inatividade").style.display = "block";
   document.getElementById("secao-inatividade").style.visibility = "visible";
@@ -218,8 +266,8 @@ window.carregarInatividade = async function () {
         precisaExonerar: dias >= 7,
         discordNick: m.name || "Sem Nome",
         discordId: m.id,
-        rpName: m.rpName, // Vem do backend tratado
-        cidadeId: m.cidadeId, // Vem do backend tratado
+        rpName: m.rpName,
+        cidadeId: m.cidadeId,
       };
     });
 
@@ -427,9 +475,3 @@ window.abrirMetaBOPE = function () {
   document.getElementById("titulo-pagina").innerText =
     "AUDITORIA - METAS BOPE (PMERJ)";
 };
-
-// Inicialização
-document.addEventListener("DOMContentLoaded", () => {
-  aplicarRestricoes();
-  window.abrirInatividade();
-});

@@ -9,17 +9,15 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
   <link rel="shortcut icon" href="Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png" type="image/x-icon">
+
   <script>
     (function () {
       const sessionStr = localStorage.getItem("pc_session");
-      if (!sessionStr) return; // O script do head já redireciona se não houver
+      if (!sessionStr) return;
 
       const session = JSON.parse(sessionStr);
-
-      // 1. Aplica a classe de cor ao body (Isso você já tinha)
       document.body.classList.add(session.tema);
 
-      // 2. Mapeamento de Brasões e Títulos
       const configOrg = {
         'PCERJ': {
           logo: 'Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png',
@@ -27,39 +25,44 @@
           sigla: 'PCERJ'
         },
         'PRF': {
-          logo: 'Imagens/Brasao_PRF.png', // Certifique-se que o nome do arquivo está correto
+          logo: 'Imagens/PRF_new.png',
           titulo: 'POLÍCIA RODOVIÁRIA',
           sigla: 'PRF'
         },
         'PMERJ': {
-          logo: 'Imagens/Brasao_PMERJ.png', // Certifique-se que o nome do arquivo está correto
+          logo: 'Imagens/Brasão_da_Polícia_Militar_do_Estado_do_Rio_de_Janeiro_-_PMERJ.png',
           titulo: 'POLÍCIA MILITAR',
           sigla: 'PMERJ'
         }
       };
 
-      const config = configOrg[session.org];
+      // Se o usuário já escolheu ou tem uma org definida
+      if (session.org) {
+        const config = configOrg[session.org];
+        if (config) {
+          // Usamos um intervalo curto para garantir que o DOM carregou os IDs abaixo
+          const interval = setInterval(() => {
+            const logoImg = document.getElementById('logo-sidebar');
+            const sidebarTitulo = document.querySelector('.sidebar-header h2');
+            const subtitulo = document.getElementById('subtitulo-pagina');
 
-      if (config) {
-        // Troca o Brasão da Sidebar
-        const logoImg = document.getElementById('logo-sidebar');
-        if (logoImg) logoImg.src = config.logo;
+            if (logoImg && sidebarTitulo) {
+              logoImg.src = config.logo;
+              sidebarTitulo.innerText = config.titulo;
+              if (subtitulo) subtitulo.innerText = `Painel de Auditoria - ${config.sigla}`;
 
-        // Troca o Favicon (ícone da aba do navegador)
-        const favicon = document.querySelector('link[rel="shortcut icon"]');
-        if (favicon) favicon.href = config.logo;
-
-        // Troca o Título da Sidebar
-        const sidebarTitulo = document.querySelector('.sidebar-header h2');
-        if (sidebarTitulo) sidebarTitulo.innerText = config.titulo;
-
-        // Troca o subtítulo da Top Bar (opcional, para dar um toque profissional)
-        const subtitulo = document.getElementById('subtitulo-pagina');
-        if (subtitulo) subtitulo.innerText = `Painel de Auditoria - ${config.sigla}`;
+              // Se for comando, mostra o botão de trocar
+              if (session.isComando) {
+                const btnTrocar = document.getElementById('wrapper-comando');
+                if (btnTrocar) btnTrocar.style.display = 'block';
+              }
+              clearInterval(interval);
+            }
+          }, 50);
+        }
       }
     })();
 
-    // Função de Logout (que o seu HTML já chama no onclick)
     function fazerLogout() {
       localStorage.removeItem("pc_session");
       window.location.href = "login.html";
@@ -72,7 +75,7 @@
   <div class="app-container">
     <aside class="sidebar">
       <div class="sidebar-header">
-        <img src="Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png" id="logo-sidebar" alt="Brasão PC">
+        <img src="Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png" id="logo-sidebar" alt="Brasão">
         <h2>SISTEMA INTEGRADO</h2>
         <p>Painel de Controle</p>
       </div>
@@ -116,7 +119,14 @@
       </nav>
 
       <div class="sidebar-footer">
-        <small>Sistema de Auditoria v1.5</small>
+        <div id="wrapper-comando" style="display: none; padding: 0 10px; margin-bottom: 10px;">
+          <button onclick="abrirSelecaoPainel()" class="nav-item" style="width: 100%; color: #d4af37; border: 1px solid #d4af37; justify-content: center; background: rgba(212, 175, 55, 0.05);">
+            <i class="fa-solid fa-tower-observation"></i>
+            <span>TROCAR PAINEL</span>
+          </button>
+        </div>
+
+        <small>Sistema de Auditoria v1.6</small>
         <a href="#" class="nav-item logout-item" onclick="fazerLogout()">
           <i class="fa-solid fa-right-from-bracket"></i>
           <span>Sair do Sistema</span>
@@ -337,6 +347,27 @@
     </main>
   </div>
 
+  <div id="modal-selecao-comando" class="modal-pcerj" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 10001; align-items: center; justify-content: center;">
+    <div class="modal-content" style="max-width: 450px; text-align: center; border: 2px solid #d4af37; padding: 40px; background: #111;">
+      <h2 style="color: #d4af37; margin-bottom: 10px; font-size: 1.8rem;">
+        <i class="fa-solid fa-shield-halved"></i> CENTRAL DE COMANDO
+      </h2>
+      <p style="color: #ccc; margin-bottom: 30px;">Selecione a corporação que deseja auditar:</p>
+
+      <div style="display: flex; flex-direction: column; gap: 15px;">
+        <button onclick="setPainelComando('PCERJ')" class="btn-gold" style="width: 100%; padding: 15px; font-weight: bold;">
+          <i class="fa-solid fa-building-shield"></i> ACESSAR CORE (PCERJ)
+        </button>
+        <button onclick="setPainelComando('PRF')" class="btn-gold" style="width: 100%; padding: 15px; font-weight: bold;">
+          <i class="fa-solid fa-road"></i> ACESSAR GRR (PRF)
+        </button>
+        <button onclick="setPainelComando('PMERJ')" class="btn-gold" style="width: 100%; padding: 15px; font-weight: bold;">
+          <i class="fa-solid fa-skull-crossbones"></i> ACESSAR BOPE (PMERJ)
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div id="modal-relatorio" class="modal-pcerj" style="display: none;">
     <div class="modal-content">
       <div class="modal-header">
@@ -348,10 +379,6 @@
     </div>
   </div>
 
-  <script>
-    const session = JSON.parse(localStorage.getItem("pc_session"));
-    if (session) document.body.classList.add(session.tema);
-  </script>
   <script src="script.js"></script>
   <script src="metas/script-core.js"></script>
   <script src="metas/script-grr.js"></script>

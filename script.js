@@ -1,9 +1,9 @@
 // =========================================================
-// 1. SISTEMA DE NAVEGAÇÃO (CORREÇÃO DEFINITIVA DE SOBREPOSIÇÃO)
+// 1. SISTEMA DE NAVEGAÇÃO E CONTROLE DE INTERFACE
 // =========================================================
 
 function resetarTelas() {
-  // 1. Esconder todas as seções e forçar invisibilidade para evitar vultos
+  // Esconder todas as seções e forçar invisibilidade
   const secoes = [
     "secao-inatividade",
     "secao-meta-core",
@@ -17,30 +17,28 @@ function resetarTelas() {
     }
   });
 
-  // 2. Esconder todos os grupos de botões do topo
+  // Esconder todos os grupos de botões do topo
   const gruposBotoes = ["botoes-inatividade", "botoes-core", "botoes-ferias"];
   gruposBotoes.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.style.display = "none";
   });
 
-  // 3. LIMPEZA TOTAL DA NAVBAR (Remove o dourado de todos)
+  // Limpeza da Navbar (Remove o destaque dourado)
   document.querySelectorAll(".nav-item").forEach((item) => {
     item.classList.remove("active");
   });
 }
 
-// Funções de ativação de aba
 window.abrirInatividade = function () {
   resetarTelas();
   const tela = document.getElementById("secao-inatividade");
   if (tela) {
     tela.style.display = "block";
-    tela.style.visibility = "visible"; // Garante que o conteúdo apareça
+    tela.style.visibility = "visible";
   }
   document.getElementById("botoes-inatividade").style.display = "block";
   document.getElementById("nav-inatividade").classList.add("active");
-
   document.getElementById("titulo-pagina").innerText =
     "SISTEMA DE AUDITORIA DE ATIVIDADE";
   document.getElementById("subtitulo-pagina").innerText =
@@ -56,22 +54,10 @@ window.abrirMetaCore = function () {
   }
   document.getElementById("botoes-core").style.display = "block";
   document.getElementById("nav-core").classList.add("active");
-
   document.getElementById("titulo-pagina").innerText =
     "RELATÓRIO OPERACIONAL - CORE";
   document.getElementById("subtitulo-pagina").innerText =
     "Contabilização de Metas e Produtividade";
-
-  // Inicializa datas se estiverem vazias
-  const campoInicio = document.getElementById("data-inicio-core");
-  const campoFim = document.getElementById("data-fim-core");
-  if (campoInicio && !campoInicio.value) {
-    const hoje = new Date();
-    const umaSemanaAtras = new Date();
-    umaSemanaAtras.setDate(hoje.getDate() - 7);
-    campoInicio.value = umaSemanaAtras.toISOString().split("T")[0];
-    campoFim.value = hoje.toISOString().split("T")[0];
-  }
 };
 
 window.abrirGestaoFerias = function () {
@@ -83,7 +69,6 @@ window.abrirGestaoFerias = function () {
   }
   document.getElementById("botoes-ferias").style.display = "block";
   document.getElementById("nav-ferias").classList.add("active");
-
   document.getElementById("titulo-pagina").innerText =
     "GESTÃO DE FÉRIAS - COMANDO";
   document.getElementById("subtitulo-pagina").innerText =
@@ -92,14 +77,14 @@ window.abrirGestaoFerias = function () {
   if (window.atualizarListaFerias) window.atualizarListaFerias();
 };
 
-// Iniciar na aba principal ao carregar
 document.addEventListener("DOMContentLoaded", () => {
   window.abrirInatividade();
 });
 
 // =========================================================
-// 2. SISTEMA DE ALERTAS PERSONALIZADOS
+// 2. ALERTAS PERSONALIZADOS
 // =========================================================
+
 function mostrarAviso(mensagem, tipo = "success") {
   let container = document.getElementById("custom-alert-container");
   if (!container) {
@@ -120,7 +105,7 @@ function mostrarAviso(mensagem, tipo = "success") {
 }
 
 // =========================================================
-// 3. SINCRONIZAÇÃO E BARRA DE PROGRESSO (INATIVIDADE)
+// 3. LOGICA DE INATIVIDADE (COM ANIMAÇÃO DE PROGRESSO)
 // =========================================================
 let listaMembrosAtual = [];
 
@@ -133,17 +118,36 @@ window.carregarInatividade = async function () {
   const progLabel = document.getElementById("progress-label");
 
   if (!corpo) return;
+
+  // Preparação Visual
   corpo.innerHTML = "";
   progContainer.style.display = "block";
   progBar.style.width = "0%";
+  progPercent.innerText = "0%";
   progLabel.innerText = "CONECTANDO AO DISCORD...";
+
+  const originalTexto = btn.innerHTML;
+  btn.innerHTML =
+    '<i class="fa-solid fa-spinner fa-spin"></i> SINCRONIZANDO...';
   btn.disabled = true;
+
+  // Simulação de Progresso Fluido enquanto a API não responde
+  let width = 0;
+  const interval = setInterval(() => {
+    if (width < 90) {
+      width += Math.random() * 2;
+      progBar.style.width = width + "%";
+      progPercent.innerText = Math.floor(width) + "%";
+    }
+  }, 150);
 
   try {
     const res = await fetch("/api/membros-inativos");
     const dados = await res.json();
     listaMembrosAtual = dados;
 
+    // Finalização do Progresso
+    clearInterval(interval);
     progBar.style.width = "100%";
     progPercent.innerText = "100%";
     progLabel.innerText = "AUDITORIA FINALIZADA!";
@@ -163,29 +167,30 @@ window.carregarInatividade = async function () {
 
       const tr = document.createElement("tr");
       tr.innerHTML = `
-                <td><div class="user-cell"><img src="${
-                  membro.avatar ||
-                  "https://cdn.discordapp.com/embed/avatars/0.png"
-                }" class="avatar-img"><strong>${membro.name}</strong></div></td>
-                <td><code>${membro.id}</code></td>
-                <td>${
-                  membro.lastMsg > 0
-                    ? new Date(membro.lastMsg).toLocaleDateString("pt-BR")
-                    : "---"
-                }</td>
-                <td><strong style="color: ${
-                  statusExonerar ? "#ff4d4d" : "#d4af37"
-                }">${dias} Dias</strong></td>
-                <td align="center"><span class="${
-                  statusExonerar ? "badge-danger" : "badge-success"
-                }">${statusExonerar ? "⚠️ EXONERAR" : "✅ REGULAR"}</span></td>
-            `;
+        <td><div class="user-cell"><img src="${
+          membro.avatar || "https://cdn.discordapp.com/embed/avatars/0.png"
+        }" class="avatar-img"><strong>${membro.name}</strong></div></td>
+        <td><code>${membro.id}</code></td>
+        <td>${
+          membro.lastMsg > 0
+            ? new Date(membro.lastMsg).toLocaleDateString("pt-BR")
+            : "---"
+        }</td>
+        <td><strong style="color: ${
+          statusExonerar ? "#ff4d4d" : "#d4af37"
+        }">${dias} Dias</strong></td>
+        <td align="center"><span class="${
+          statusExonerar ? "badge-danger" : "badge-success"
+        }">${statusExonerar ? "⚠️ EXONERAR" : "✅ REGULAR"}</span></td>
+      `;
       corpo.appendChild(tr);
     });
     mostrarAviso("Dados atualizados.");
   } catch (err) {
+    clearInterval(interval);
     mostrarAviso("Erro na sincronização.", "error");
   } finally {
+    btn.innerHTML = originalTexto;
     btn.disabled = false;
     setTimeout(() => {
       progContainer.style.display = "none";
@@ -194,11 +199,13 @@ window.carregarInatividade = async function () {
 };
 
 // =========================================================
-// 4. LÓGICA DE RELATÓRIOS E FÉRIAS
+// 4. LÓGICA DE RELATÓRIOS (COPIAR DISCORD)
 // =========================================================
 
 window.copiarRelatorioDiscord = function () {
-  if (listaMembrosAtual.length === 0) return;
+  if (listaMembrosAtual.length === 0)
+    return mostrarAviso("Sincronize os dados primeiro.", "warning");
+
   const agora = new Date();
   const dataHoje = agora.toLocaleDateString("pt-BR");
   const dataBaseAuditoria = new Date("2025-12-08T00:00:00").getTime();
@@ -260,11 +267,21 @@ function abrirModalDivisor(membros, data, header, formatador) {
   document.getElementById("modal-relatorio").style.display = "flex";
 }
 
+window.fecharModalRelatorio = () =>
+  (document.getElementById("modal-relatorio").style.display = "none");
+
+// =========================================================
+// 5. GESTÃO DE FÉRIAS
+// =========================================================
+
 window.atualizarListaFerias = async function () {
   const select = document.getElementById("select-oficiais-ferias");
   const logContainer = document.getElementById("status-ferias-info");
   if (!select) return;
 
+  // Feedback visual de carregamento nos Logs
+  logContainer.innerHTML =
+    '<i class="fa-solid fa-spinner fa-spin"></i> Sincronizando dados de férias...';
   select.innerHTML = '<option value="">⏳ Sincronizando...</option>';
 
   try {
@@ -285,10 +302,15 @@ window.atualizarListaFerias = async function () {
 
     if (data.logs?.length > 0) {
       logContainer.innerHTML =
-        "<strong>Remoções:</strong><br>" +
+        "<strong>Remoções Hoje:</strong><br>" +
         data.logs.map((l) => `✅ ${l}`).join("<br>");
+    } else {
+      logContainer.innerHTML =
+        '<i class="fa-solid fa-check-double"></i> Tudo atualizado. Nenhuma tag pendente de remoção.';
     }
   } catch (e) {
+    logContainer.innerHTML =
+      '<span style="color:red">Erro ao carregar dados.</span>';
     select.innerHTML = '<option value="">Erro ao carregar.</option>';
   }
 };
@@ -306,12 +328,9 @@ window.executarAntecipacao = async function () {
     });
     if (res.ok) {
       mostrarAviso("Férias antecipadas!");
-      atualizarListaFerias();
+      window.atualizarListaFerias();
     }
   } catch (e) {
     mostrarAviso("Falha na comunicação.", "error");
   }
 };
-
-window.fecharModalRelatorio = () =>
-  (document.getElementById("modal-relatorio").style.display = "none");

@@ -77,6 +77,42 @@ document.addEventListener("DOMContentLoaded", () => {
   aplicarRestricoes(); // <-- Nova função aqui
   window.abrirInatividade();
 });
+document.addEventListener("DOMContentLoaded", () => {
+  // 1. Pega os dados do login
+  const sessao = JSON.parse(localStorage.getItem("pc_session"));
+
+  if (!sessao) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  // 2. Aplica o Tema ao Body (muda as cores do CSS)
+  document.body.className = sessao.tema;
+
+  // 3. Troca o Brasão e os Textos
+  const logoImg = document.getElementById("logo-org"); // ID da imagem da logo
+  const tituloPainel = document.querySelector(".sidebar-header h2");
+
+  // Mapeamento de Brasões (Verifique se os nomes dos arquivos estão corretos)
+  const BRASOES = {
+    PCERJ: "Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png",
+    PRF: "Imagens/PRF_new.png", // Certifique-se que este arquivo existe
+    PMERJ:
+      "Imagens/Brasão_da_Polícia_Militar_do_Estado_do_Rio_de_Janeiro_-_PMERJ.png", // Certifique-se que este arquivo existe
+  };
+
+  if (logoImg && BRASOES[sessao.org]) {
+    logoImg.src = BRASOES[sessao.org];
+  }
+
+  if (tituloPainel) {
+    tituloPainel.innerText = sessao.org; // Escreve PRF, PCERJ ou PMERJ
+  }
+
+  // 4. Exibe o nome do usuário logado
+  const nomeUsuario = document.getElementById("nome-usuario");
+  if (nomeUsuario) nomeUsuario.innerText = sessao.nome;
+});
 // =========================================================
 // 2. SISTEMA DE NAVEGAÇÃO E CONTROLE DE INTERFACE
 // =========================================================

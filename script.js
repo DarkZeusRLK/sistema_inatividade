@@ -240,8 +240,22 @@ window.carregarInatividade = async function () {
   if (!corpo) return;
   corpo.innerHTML = "";
   if (btnCopiar) btnCopiar.style.display = "none";
+
+  // --- INÍCIO DA ANIMAÇÃO DE PROGRESSÃO ---
   progContainer.style.display = "block";
   progBar.style.width = "0%";
+
+  let largura = 0;
+  // Intervalo para fazer a barra subir "falsamente" até 90% enquanto a API não responde
+  const progressoSimulado = setInterval(() => {
+    if (largura >= 90) {
+      clearInterval(progressoSimulado);
+    } else {
+      largura += Math.random() * 5; // Incrementos aleatórios para parecer real
+      progBar.style.width = largura + "%";
+    }
+  }, 200);
+  // --- FIM DA ANIMAÇÃO DE PROGRESSÃO ---
 
   const originalTexto = btnSinc.innerHTML;
   btnSinc.innerHTML =
@@ -253,7 +267,10 @@ window.carregarInatividade = async function () {
     const dados = await res.json();
     listaMembrosAtual = dados;
 
+    // Para a simulação e completa a barra
+    clearInterval(progressoSimulado);
     progBar.style.width = "100%";
+
     if (btnCopiar) btnCopiar.style.display = "inline-block";
 
     dados.sort((a, b) => (a.lastMsg || 0) - (b.lastMsg || 0));
@@ -291,13 +308,17 @@ window.carregarInatividade = async function () {
     });
     mostrarAviso("Dados atualizados.");
   } catch (err) {
+    clearInterval(progressoSimulado);
+    progBar.style.backgroundColor = "#ff4d4d"; // Barra fica vermelha em caso de erro
     mostrarAviso("Erro na sincronização.", "error");
   } finally {
     btnSinc.innerHTML = originalTexto;
     btnSinc.disabled = false;
+    // Esconde a barra após 2 segundos de conclusão
     setTimeout(() => {
       progContainer.style.display = "none";
-    }, 3000);
+      progBar.style.backgroundColor = ""; // Reseta cor para o padrão (gold/blue)
+    }, 2000);
   }
 };
 

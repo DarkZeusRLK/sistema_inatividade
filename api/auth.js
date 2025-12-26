@@ -23,9 +23,9 @@ app.post("*", async (req, res) => {
     }
 
     const ORG_MAP = {
-      [process.env.ROLE_ID_PCERJ?.trim()]: { id: "PCERJ", tema: "tema-pcerj" },
-      [process.env.ROLE_ID_PRF?.trim()]: { id: "PRF", tema: "tema-prf" },
-      [process.env.ROLE_ID_PMERJ?.trim()]: { id: "PMERJ", tema: "tema-pmerj" },
+      [process.env.PCERJ_ROLE_ID?.trim()]: { id: "PCERJ", tema: "tema-pcerj" },
+      [process.env.PRF_ROLE_ID?.trim()]: { id: "PRF", tema: "tema-prf" },
+      [process.env.PMERJ_ROLE_ID?.trim()]: { id: "PMERJ", tema: "tema-pmerj" },
     };
 
     let userOrg = null;

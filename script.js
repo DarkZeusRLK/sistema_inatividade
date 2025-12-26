@@ -2,6 +2,7 @@
 // 1. CONFIGURAÇÕES GLOBAIS E SESSÃO
 // =========================================================
 let dadosInatividadeGlobal = [];
+// Define a data de início da auditoria (ninguém será punido por mensagens antes disso)
 const DATA_BASE_AUDITORIA = new Date("2025-12-08T00:00:00").getTime();
 
 const obterSessao = () => {
@@ -128,7 +129,7 @@ window.abrirInatividade = function () {
 };
 
 // =========================================================
-// 4. LÓGICA DE AUDITORIA E BARRA DE PROGRESSO
+// 3. LÓGICA DE AUDITORIA E BARRA DE PROGRESSO
 // =========================================================
 
 window.carregarInatividade = async function () {
@@ -180,12 +181,10 @@ window.carregarInatividade = async function () {
         ...m,
         diasInatividade: dias,
         precisaExonerar: dias >= 7,
-        // DADOS PARA O SISTEMA (DISCORD)
         discordNick: m.name || "Sem Nome",
         discordId: m.id,
-        // DADOS PARA O RELATÓRIO (CIDADE/ADMISSÃO)
-        rpName: m.rpName || "Não Identificado", // Nome extraído da admissão
-        cidadeId: m.cidadeId || "N/I", // ID extraído da admissão
+        rpName: m.rpName, // Vem do backend tratado
+        cidadeId: m.cidadeId, // Vem do backend tratado
       };
     });
 
@@ -231,7 +230,7 @@ window.carregarInatividade = async function () {
 };
 
 // =========================================================
-// 5. FUNÇÕES DE CÓPIA
+// 4. FUNÇÕES DE CÓPIA E RELATÓRIO
 // =========================================================
 
 window.copiarRelatorioDiscord = function () {
@@ -245,15 +244,13 @@ window.copiarRelatorioDiscord = function () {
   }
 
   const exonerados = dadosInatividadeGlobal.filter((m) => m.precisaExonerar);
-
   const partes = [];
   let textoAtual = `📋 **RELATÓRIO DE EXONERAÇÃO - ${label.nome}** 📋\n📅 DATA: ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
   exonerados.forEach((m) => {
-    // Aqui m.cidadeId e m.rpName já vêm tratados pelo backend
     const item = `QRA: <@${m.discordId}>\nID: ${m.cidadeId}\nNome na cidade: ${m.rpName}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────\n`;
 
-    if ((textoAtual + item).length > 2000) {
+    if ((textoAtual + item).length > 1900) {
       partes.push(textoAtual);
       textoAtual =
         `📋 **RELATÓRIO DE EXONERAÇÃO - ${label.nome} (Cont.)** 📋\n\n` + item;
@@ -262,21 +259,14 @@ window.copiarRelatorioDiscord = function () {
     }
   });
   partes.push(textoAtual);
-
   abrirModalRelatorioDividido(partes);
 };
-
-// --- MODAL DE COPIA ---
 
 function abrirModalRelatorioDividido(partes) {
   let modal = document.getElementById("modal-relatorio");
   if (!modal) return;
-
   const container = document.getElementById("container-botoes-partes");
   container.innerHTML = "";
-  container.style.display = "flex";
-  container.style.flexDirection = "column";
-  container.style.gap = "10px";
 
   partes.forEach((texto, index) => {
     const btnCopiar = document.createElement("button");
@@ -285,8 +275,6 @@ function abrirModalRelatorioDividido(partes) {
     }`;
     btnCopiar.className = "btn-gold";
     btnCopiar.style.width = "100%";
-    btnCopiar.style.padding = "15px";
-
     btnCopiar.onclick = () => {
       navigator.clipboard.writeText(texto).then(() => {
         mostrarAviso(`Parte ${index + 1} copiada!`);
@@ -294,7 +282,6 @@ function abrirModalRelatorioDividido(partes) {
     };
     container.appendChild(btnCopiar);
   });
-
   modal.style.display = "flex";
 }
 
@@ -302,24 +289,36 @@ window.fecharModalRelatorio = () => {
   document.getElementById("modal-relatorio").style.display = "none";
 };
 
-// ... Restante das funções (Metas, Férias) permanecem como o original ...
 // =========================================================
-// 6. GESTÃO DE FÉRIAS E OUTRAS FUNÇÕES
+// 5. GESTÃO DE FÉRIAS
 // =========================================================
+
+window.abrirGestaoFerias = function () {
+  const { org } = obterSessao();
+  const label = getOrgLabel(org);
+  resetarTelas();
+  document.getElementById("secao-gestao-ferias").style.display = "block";
+  document.getElementById("secao-gestao-ferias").style.visibility = "visible";
+  document.getElementById("botoes-ferias").style.display = "block";
+  document.getElementById("nav-ferias").classList.add("active");
+  document.getElementById(
+    "titulo-pagina"
+  ).innerText = `GESTÃO DE FÉRIAS - ${label.nome}`;
+  window.atualizarListaFerias();
+};
 
 window.atualizarListaFerias = async function () {
   const { org } = obterSessao();
   const select = document.getElementById("select-oficiais-ferias");
   const logContainer = document.getElementById("status-ferias-info");
-
   if (!select) return;
-  select.innerHTML = '<option value="">Sincronizando...</option>';
 
+  select.innerHTML = '<option value="">Sincronizando...</option>';
   try {
     const res = await fetch(`/api/verificar-ferias?org=${org}`);
     const data = await res.json();
-
     select.innerHTML = '<option value="">Selecione para antecipar...</option>';
+
     if (data.oficiais && data.oficiais.length > 0) {
       data.oficiais.forEach((oficial) => {
         const opt = document.createElement("option");
@@ -333,43 +332,36 @@ window.atualizarListaFerias = async function () {
     logContainer.innerHTML =
       data.logs?.length > 0
         ? data.logs.join("<br>")
-        : "Sem retornos pendentes.";
+        : "Sem retornos pendentes hoje.";
   } catch (e) {
     mostrarAviso("Erro ao carregar férias.", "error");
   }
 };
-// =========================================================
-// FUNÇÃO PARA ABRIR A TELA DE FÉRIAS
-// =========================================================
-window.abrirGestaoFerias = function () {
-  const { org } = obterSessao();
-  const label = getOrgLabel(org);
 
-  resetarTelas(); // Esconde as outras seções
+window.executarAntecipacao = async function () {
+  const userId = document.getElementById("select-oficiais-ferias").value;
+  if (!userId) return mostrarAviso("Selecione um oficial.", "warning");
+  if (!confirm("Confirmar retorno antecipado? O cargo será devolvido agora."))
+    return;
 
-  // Mostra a seção de férias
-  const secao = document.getElementById("secao-gestao-ferias");
-  if (secao) {
-    secao.style.display = "block";
-    secao.style.visibility = "visible";
+  try {
+    const res = await fetch("/api/verificar-ferias", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+    if (res.ok) {
+      mostrarAviso("Férias antecipadas com sucesso!");
+      window.atualizarListaFerias();
+    }
+  } catch (e) {
+    mostrarAviso("Erro ao processar antecipação.", "error");
   }
-
-  // Mostra os botões de férias (se houver no topo)
-  const botoes = document.getElementById("botoes-ferias");
-  if (botoes) botoes.style.display = "block";
-
-  // Marca o item do menu como ativo
-  const navItem = document.getElementById("nav-ferias");
-  if (navItem) navItem.classList.add("active");
-
-  // Atualiza o título da página
-  document.getElementById(
-    "titulo-pagina"
-  ).innerText = `GESTÃO DE FÉRIAS - ${label.nome}`;
-
-  // Carrega os dados da API automaticamente ao abrir a tela
-  window.atualizarListaFerias();
 };
+
+// =========================================================
+// 6. METAS (PÁGINAS ESPECÍFICAS)
+// =========================================================
 
 window.abrirMetaCore = function () {
   resetarTelas();
@@ -401,6 +393,7 @@ window.abrirMetaBOPE = function () {
     "AUDITORIA - METAS BOPE (PMERJ)";
 };
 
+// Inicialização
 document.addEventListener("DOMContentLoaded", () => {
   aplicarRestricoes();
   window.abrirInatividade();

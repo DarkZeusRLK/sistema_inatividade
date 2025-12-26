@@ -1,36 +1,64 @@
 // =========================================================
-// 1. UTILITÁRIOS E SESSÃO
+// 1. CONFIGURAÇÕES E SESSÃO
 // =========================================================
 
 const obterSessao = () => {
   const sessionStr = localStorage.getItem("pc_session");
-  if (!sessionStr) return { org: "PCERJ" };
+  if (!sessionStr) return null;
   return JSON.parse(sessionStr);
 };
 
 const getOrgLabel = (org) => {
   const labels = {
-    PCERJ: { unidade: "CORE", nome: "PCERJ" },
-    PRF: { unidade: "GRR", nome: "PRF" },
-    PMERJ: { unidade: "BOPE", nome: "PMERJ" },
+    PCERJ: { unidade: "CORE", nome: "PCERJ", tema: "tema-pcerj" },
+    PRF: { unidade: "GRR", nome: "PRF", tema: "tema-prf" },
+    PMERJ: { unidade: "BOPE", nome: "PMERJ", tema: "tema-pmerj" },
   };
   return labels[org] || labels["PCERJ"];
 };
-// Função para encerrar a sessão
-window.fazerLogout = function () {
-  if (confirm("Deseja realmente encerrar sua sessão no painel?")) {
-    localStorage.removeItem("pc_session"); // Remove os dados de login
-    window.location.href = "login.html"; // Redireciona para o login
+
+// =========================================================
+// 2. INICIALIZAÇÃO DINÂMICA (SUBSTITUI OS 3 DOMContentLoaded)
+// =========================================================
+
+document.addEventListener("DOMContentLoaded", () => {
+  const sessao = obterSessao();
+  if (!sessao) {
+    window.location.href = "login.html";
+    return;
   }
-};
+
+  // 1. Aplica Identidade Visual
+  document.body.className = sessao.tema;
+  const config = getOrgLabel(sessao.org);
+
+  const logoImg = document.getElementById("logo-org");
+  const tituloPainel = document.querySelector(".sidebar-header h2");
+  const nomeUsuario = document.getElementById("nome-usuario"); // Certifique-se que esse ID existe no HTML
+
+  const BRASOES = {
+    PCERJ: "Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png",
+    PRF: "Imagens/PRF_new.png",
+    PMERJ:
+      "Imagens/Brasão_da_Polícia_Militar_do_Estado_do_Rio_de_Janeiro_-_PMERJ.png",
+  };
+
+  if (logoImg) logoImg.src = BRASOES[sessao.org];
+  if (tituloPainel) tituloPainel.innerText = config.nome;
+  if (nomeUsuario) nomeUsuario.innerText = sessao.nome;
+
+  // 2. Aplica Restrições de Acesso
+  aplicarRestricoes(sessao.org);
+
+  // 3. Abre a tela inicial
+  window.abrirInatividade();
+});
+
 // =========================================================
-// 1.5 SISTEMA DE PERMISSÕES POR ORGANIZAÇÃO
+// 3. NAVEGAÇÃO E RESTRIÇÕES
 // =========================================================
 
-function aplicarRestricoes() {
-  const { org } = obterSessao();
-
-  // 1. Mapeamento de quem pode ver o quê
+function aplicarRestricoes(org) {
   const permissoes = {
     PCERJ: {
       mostrar: ["nav-core", "nav-porte", "nav-admin"],
@@ -48,7 +76,6 @@ function aplicarRestricoes() {
 
   const config = permissoes[org] || permissoes["PCERJ"];
 
-  // 2. Aplicar visibilidade na Sidebar
   config.esconder.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.style.display = "none";
@@ -59,66 +86,18 @@ function aplicarRestricoes() {
     if (el) el.style.display = "flex";
   });
 
-  // 3. Segurança adicional: Impedir acesso via funções de clique
-  // Se um espertinho tentar digitar "abrirMetaCore()" no console sendo PRF
-  if (org !== "PCERJ") {
-    window.abrirMetaCore = () => mostrarAviso("Acesso negado à PCERJ", "error");
-  }
-  if (org !== "PRF") {
-    window.abrirMetaGRR = () => mostrarAviso("Acesso negado à PRF", "error");
-  }
-  if (org !== "PMERJ") {
-    window.abrirMetaBOPE = () => mostrarAviso("Acesso negado à PMERJ", "error");
-  }
+  // Bloqueio de funções via Console
+  if (org !== "PCERJ")
+    window.abrirMetaCore = () =>
+      mostrarAviso("Acesso restrito à PCERJ", "error");
+  if (org !== "PRF")
+    window.abrirMetaGRR = () => mostrarAviso("Acesso restrito à PRF", "error");
+  if (org !== "PMERJ")
+    window.abrirMetaBOPE = () =>
+      mostrarAviso("Acesso restrito à PMERJ", "error");
 }
 
-// ATUALIZE seu DOMContentLoaded para chamar a função
-document.addEventListener("DOMContentLoaded", () => {
-  aplicarRestricoes(); // <-- Nova função aqui
-  window.abrirInatividade();
-});
-document.addEventListener("DOMContentLoaded", () => {
-  // 1. Pega os dados do login
-  const sessao = JSON.parse(localStorage.getItem("pc_session"));
-
-  if (!sessao) {
-    window.location.href = "login.html";
-    return;
-  }
-
-  // 2. Aplica o Tema ao Body (muda as cores do CSS)
-  document.body.className = sessao.tema;
-
-  // 3. Troca o Brasão e os Textos
-  const logoImg = document.getElementById("logo-org"); // ID da imagem da logo
-  const tituloPainel = document.querySelector(".sidebar-header h2");
-
-  // Mapeamento de Brasões (Verifique se os nomes dos arquivos estão corretos)
-  const BRASOES = {
-    PCERJ: "Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png",
-    PRF: "Imagens/PRF_new.png", // Certifique-se que este arquivo existe
-    PMERJ:
-      "Imagens/Brasão_da_Polícia_Militar_do_Estado_do_Rio_de_Janeiro_-_PMERJ.png", // Certifique-se que este arquivo existe
-  };
-
-  if (logoImg && BRASOES[sessao.org]) {
-    logoImg.src = BRASOES[sessao.org];
-  }
-
-  if (tituloPainel) {
-    tituloPainel.innerText = sessao.org; // Escreve PRF, PCERJ ou PMERJ
-  }
-
-  // 4. Exibe o nome do usuário logado
-  const nomeUsuario = document.getElementById("nome-usuario");
-  if (nomeUsuario) nomeUsuario.innerText = sessao.nome;
-});
-// =========================================================
-// 2. SISTEMA DE NAVEGAÇÃO E CONTROLE DE INTERFACE
-// =========================================================
-
 function resetarTelas() {
-  // Lista de todas as seções criadas no HTML
   const secoes = [
     "secao-inatividade",
     "secao-meta-core",
@@ -126,16 +105,6 @@ function resetarTelas() {
     "secao-meta-bope",
     "secao-gestao-ferias",
   ];
-
-  secoes.forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.style.display = "none";
-      el.style.visibility = "hidden";
-    }
-  });
-
-  // Lista de todos os grupos de botões no topo
   const gruposBotoes = [
     "botoes-inatividade",
     "botoes-core",
@@ -143,72 +112,62 @@ function resetarTelas() {
     "botoes-bope",
     "botoes-ferias",
   ];
-  gruposBotoes.forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = "none";
-  });
 
-  document.querySelectorAll(".nav-item").forEach((item) => {
-    item.classList.remove("active");
+  secoes.forEach((id) => {
+    if (document.getElementById(id))
+      document.getElementById(id).style.display = "none";
   });
+  gruposBotoes.forEach((id) => {
+    if (document.getElementById(id))
+      document.getElementById(id).style.display = "none";
+  });
+  document
+    .querySelectorAll(".nav-item")
+    .forEach((item) => item.classList.remove("active"));
 }
 
-// Funções de abertura de abas
+// Funções globais de abertura
 window.abrirInatividade = function () {
-  const { org } = obterSessao();
-  const label = getOrgLabel(org);
+  const sessao = obterSessao();
   resetarTelas();
   document.getElementById("secao-inatividade").style.display = "block";
-  document.getElementById("secao-inatividade").style.visibility = "visible";
   document.getElementById("botoes-inatividade").style.display = "block";
   document.getElementById("nav-inatividade").classList.add("active");
   document.getElementById(
     "titulo-pagina"
-  ).innerText = `SISTEMA DE AUDITORIA - ${label.nome}`;
-  document.getElementById("subtitulo-pagina").innerText =
-    "Controle de Presença em Canais Oficiais";
+  ).innerText = `SISTEMA DE AUDITORIA - ${sessao.org}`;
 };
 
 window.abrirMetaCore = function () {
   resetarTelas();
   document.getElementById("secao-meta-core").style.display = "block";
-  document.getElementById("secao-meta-core").style.visibility = "visible";
   document.getElementById("botoes-core").style.display = "block";
   document.getElementById("nav-core").classList.add("active");
   document.getElementById("titulo-pagina").innerText =
     "RELATÓRIO OPERACIONAL - CORE";
-  document.getElementById("subtitulo-pagina").innerText =
-    "Contabilização de Metas e Produtividade PCERJ";
 };
 
 window.abrirMetaGRR = function () {
   resetarTelas();
   document.getElementById("secao-meta-grr").style.display = "block";
-  document.getElementById("secao-meta-grr").style.visibility = "visible";
   document.getElementById("botoes-grr").style.display = "block";
   document.getElementById("nav-grr").classList.add("active");
   document.getElementById("titulo-pagina").innerText =
     "RELATÓRIO OPERACIONAL - GRR";
-  document.getElementById("subtitulo-pagina").innerText =
-    "Contabilização de Metas e Produtividade PRF";
 };
 
 window.abrirMetaBOPE = function () {
   resetarTelas();
   document.getElementById("secao-meta-bope").style.display = "block";
-  document.getElementById("secao-meta-bope").style.visibility = "visible";
   document.getElementById("botoes-bope").style.display = "block";
   document.getElementById("nav-bope").classList.add("active");
   document.getElementById("titulo-pagina").innerText =
     "RELATÓRIO OPERACIONAL - BOPE";
-  document.getElementById("subtitulo-pagina").innerText =
-    "Contabilização de Metas e Produtividade PMERJ";
 };
 
 window.abrirGestaoFerias = function () {
   resetarTelas();
   document.getElementById("secao-gestao-ferias").style.display = "block";
-  document.getElementById("secao-gestao-ferias").style.visibility = "visible";
   document.getElementById("botoes-ferias").style.display = "block";
   document.getElementById("nav-ferias").classList.add("active");
   document.getElementById("titulo-pagina").innerText =
@@ -216,60 +175,35 @@ window.abrirGestaoFerias = function () {
   if (window.atualizarListaFerias) window.atualizarListaFerias();
 };
 
-document.addEventListener("DOMContentLoaded", () => {
-  window.abrirInatividade();
-});
-
 // =========================================================
-// 3. ALERTAS E INATIVIDADE (MANTIDOS SEU CÓDIGO ORIGINAL)
+// 4. LÓGICA DE AUDITORIA E BARRA DE PROGRESSO
 // =========================================================
-
-function mostrarAviso(mensagem, tipo = "success") {
-  let container = document.getElementById("custom-alert-container");
-  if (!container) {
-    container = document.createElement("div");
-    container.id = "custom-alert-container";
-    document.body.appendChild(container);
-  }
-  const alert = document.createElement("div");
-  alert.className = `pc-alert ${tipo}`;
-  const icon =
-    tipo === "success" ? "fa-check-circle" : "fa-exclamation-triangle";
-  alert.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${mensagem}</span>`;
-  container.appendChild(alert);
-  setTimeout(() => {
-    alert.classList.add("fade-out");
-    setTimeout(() => alert.remove(), 500);
-  }, 4000);
-}
 
 let listaMembrosAtual = [];
 
 window.carregarInatividade = async function () {
-  const { org } = obterSessao();
+  const sessao = obterSessao();
   const corpo = document.getElementById("corpo-inatividade");
   const btnSinc = document.getElementById("btn-sincronizar");
   const btnCopiar = document.getElementById("btn-copiar");
   const progContainer = document.getElementById("progress-container");
   const progBar = document.getElementById("progress-bar");
 
-  if (!corpo) return;
-  corpo.innerHTML = "";
-  if (btnCopiar) btnCopiar.style.display = "none";
+  corpo.innerHTML =
+    '<tr><td colspan="5" align="center">Sincronizando...</td></tr>';
   progContainer.style.display = "block";
-  progBar.style.width = "0%";
-
-  const originalTexto = btnSinc.innerHTML;
-  btnSinc.innerHTML =
-    '<i class="fa-solid fa-spinner fa-spin"></i> SINCRONIZANDO...';
+  progBar.style.width = "10%"; // Começa em 10%
   btnSinc.disabled = true;
 
   try {
-    const res = await fetch(`/api/membros-inativos?org=${org}`);
+    const res = await fetch(`/api/membros-inativos?org=${sessao.org}`);
+    progBar.style.width = "60%"; // Meio do caminho
+
     const dados = await res.json();
     listaMembrosAtual = dados;
 
-    progBar.style.width = "100%";
+    progBar.style.width = "100%"; // Finaliza
+    corpo.innerHTML = "";
     if (btnCopiar) btnCopiar.style.display = "inline-block";
 
     dados.sort((a, b) => (a.lastMsg || 0) - (b.lastMsg || 0));
@@ -287,43 +221,44 @@ window.carregarInatividade = async function () {
 
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td><div class="user-cell"><img src="${
-          membro.avatar || "https://cdn.discordapp.com/embed/avatars/0.png"
-        }" class="avatar-img"><strong>${membro.name}</strong></div></td>
-        <td><code>${membro.id}</code></td>
-        <td>${
-          membro.lastMsg > 0
-            ? new Date(membro.lastMsg).toLocaleDateString("pt-BR")
-            : "---"
-        }</td>
-        <td><strong style="color: ${
-          statusExonerar ? "#ff4d4d" : "#d4af37"
-        }">${dias} Dias</strong></td>
-        <td align="center"><span class="${
-          statusExonerar ? "badge-danger" : "badge-success"
-        }">${statusExonerar ? "⚠️ EXONERAR" : "✅ REGULAR"}</span></td>
-      `;
+                <td><div class="user-cell"><img src="${
+                  membro.avatar ||
+                  "https://cdn.discordapp.com/embed/avatars/0.png"
+                }" class="avatar-img"><strong>${membro.name}</strong></div></td>
+                <td><code>${membro.id}</code></td>
+                <td>${
+                  membro.lastMsg > 0
+                    ? new Date(membro.lastMsg).toLocaleDateString("pt-BR")
+                    : "---"
+                }</td>
+                <td><strong style="color: ${
+                  statusExonerar ? "var(--danger)" : "var(--gold)"
+                }">${dias} Dias</strong></td>
+                <td align="center"><span class="${
+                  statusExonerar ? "badge-danger" : "badge-success"
+                }">${statusExonerar ? "⚠️ EXONERAR" : "✅ REGULAR"}</span></td>
+            `;
       corpo.appendChild(tr);
     });
-    mostrarAviso("Dados atualizados.");
+    mostrarAviso("Sincronização concluída!");
   } catch (err) {
-    mostrarAviso("Erro na sincronização.", "error");
+    mostrarAviso("Erro ao buscar dados.", "error");
+    corpo.innerHTML =
+      '<tr><td colspan="5" align="center">Erro na conexão.</td></tr>';
   } finally {
-    btnSinc.innerHTML = originalTexto;
     btnSinc.disabled = false;
     setTimeout(() => {
       progContainer.style.display = "none";
-    }, 3000);
+    }, 2000);
   }
 };
 
 // =========================================================
-// 5. LÓGICA DE RELATÓRIO E FÉRIAS (MANTIDOS SEU CÓDIGO)
+// 5. RELATÓRIOS E UTILITÁRIOS
 // =========================================================
 
 window.copiarRelatorioDiscord = function () {
-  const { org } = obterSessao();
-  const label = getOrgLabel(org);
+  const sessao = obterSessao();
   if (listaMembrosAtual.length === 0)
     return mostrarAviso("Sincronize os dados primeiro.", "warning");
 
@@ -338,104 +273,53 @@ window.copiarRelatorioDiscord = function () {
   });
 
   if (exonerados.length === 0)
-    return mostrarAviso("Nenhum oficial identificado.", "error");
+    return mostrarAviso("Nenhum oficial para exonerar.", "success");
 
   const formatador = (membros) => {
     let texto = "";
     membros.forEach((m) => {
       let idRP = m.fullNickname?.split("|")[1]?.trim() || "---";
-      texto += `QRA: <@${m.id}>\nNOME NA CIDADE: ${
+      texto += `QRA: <@${m.id}>\nNOME: ${
         m.rpName || m.name
       }\nID: ${idRP}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────\n`;
     });
     return texto;
   };
 
-  let cabecalho = `📋 **RELATÓRIO DE EXONERAÇÃO - ADMINISTRAÇÃO ${label.nome}** 📋\n📅 **DATA:** ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-  let relatorio = cabecalho + formatador(exonerados);
+  let cabecalho = `📋 **RELATÓRIO DE EXONERAÇÃO - ${sessao.org}** 📋\n📅 **DATA:** ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+  let relatorioFinal = cabecalho + formatador(exonerados);
 
-  if (relatorio.length <= 1900) {
+  if (relatorioFinal.length <= 1900) {
     navigator.clipboard
-      .writeText(relatorio)
+      .writeText(relatorioFinal)
       .then(() => mostrarAviso("Relatório copiado!"));
   } else {
     abrirModalDivisor(exonerados, dataHoje, cabecalho, formatador);
   }
 };
 
-function abrirModalDivisor(membros, data, header, formatador) {
-  const container = document.getElementById("container-botoes-partes");
-  container.innerHTML = "";
-  const limit = 8;
-  for (let i = 0; i < membros.length; i += limit) {
-    const bloco = membros.slice(i, i + limit);
-    const parte = Math.floor(i / limit) + 1;
-    const btn = document.createElement("button");
-    btn.className = "btn-parte";
-    btn.innerHTML = `<i class="fa-solid fa-copy"></i> PARTE ${parte}`;
-    btn.onclick = () => {
-      navigator.clipboard.writeText(
-        header + `(PARTE ${parte})\n\n` + formatador(bloco)
-      );
-      mostrarAviso(`Parte ${parte} copiada!`);
-    };
-    container.appendChild(btn);
+function mostrarAviso(mensagem, tipo = "success") {
+  let container = document.getElementById("custom-alert-container");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "custom-alert-container";
+    document.body.appendChild(container);
   }
-  document.getElementById("modal-relatorio").style.display = "flex";
+  const alert = document.createElement("div");
+  alert.className = `pc-alert ${tipo}`;
+  alert.innerHTML = `<i class="fa-solid ${
+    tipo === "success" ? "fa-check-circle" : "fa-triangle-exclamation"
+  }"></i> <span>${mensagem}</span>`;
+  container.appendChild(alert);
+  setTimeout(() => {
+    alert.classList.add("fade-out");
+    setTimeout(() => alert.remove(), 500);
+  }, 3500);
 }
 
-window.fecharModalRelatorio = () =>
-  (document.getElementById("modal-relatorio").style.display = "none");
-
-window.atualizarListaFerias = async function () {
-  const { org } = obterSessao();
-  const select = document.getElementById("select-oficiais-ferias");
-  const logContainer = document.getElementById("status-ferias-info");
-  if (!select) return;
-  logContainer.innerHTML =
-    '<i class="fa-solid fa-spinner fa-spin"></i> Sincronizando dados de férias...';
-  select.innerHTML = '<option value="">⏳ Sincronizando...</option>';
-  try {
-    const res = await fetch(`/api/verificar-ferias?org=${org}`);
-    const data = await res.json();
-    select.innerHTML = '<option value="">Selecione para antecipar...</option>';
-    if (data.oficiais.length === 0) {
-      select.innerHTML = '<option value="">Nenhum oficial em férias.</option>';
-    } else {
-      data.oficiais.forEach((oficial) => {
-        const opt = document.createElement("option");
-        opt.value = oficial.id;
-        opt.textContent = `🌴 ${oficial.nome} (Até: ${oficial.dataRetorno})`;
-        select.appendChild(opt);
-      });
-    }
-    logContainer.innerHTML =
-      data.logs?.length > 0
-        ? "<strong>Remoções Hoje:</strong><br>" +
-          data.logs.map((l) => `✅ ${l}`).join("<br>")
-        : '<i class="fa-solid fa-check-double"></i> Tudo atualizado.';
-  } catch (e) {
-    logContainer.innerHTML =
-      '<span style="color:red">Erro ao carregar dados.</span>';
-    select.innerHTML = '<option value="">Erro ao carregar.</option>';
-  }
-};
-
-window.executarAntecipacao = async function () {
-  const userId = document.getElementById("select-oficiais-ferias").value;
-  if (!userId) return mostrarAviso("Selecione um oficial.", "warning");
-  if (!confirm("Confirmar retorno antecipado?")) return;
-  try {
-    const res = await fetch("/api/verificar-ferias", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId }),
-    });
-    if (res.ok) {
-      mostrarAviso("Férias antecipadas!");
-      window.atualizarListaFerias();
-    }
-  } catch (e) {
-    mostrarAviso("Falha na comunicação.", "error");
+window.fazerLogout = function () {
+  if (confirm("Deseja sair do sistema?")) {
+    localStorage.removeItem("pc_session");
+    window.location.href = "login.html";
   }
 };

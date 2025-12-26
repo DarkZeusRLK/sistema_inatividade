@@ -15,31 +15,31 @@ app.post("*", async (req, res) => {
     );
 
     const memberData = await memberRes.json();
+    if (!memberRes.ok)
+      return res.status(401).json({ error: "Membro não encontrado." });
 
-    if (!memberRes.ok) {
-      return res
-        .status(401)
-        .json({ error: "Membro não encontrado no servidor." });
-    }
-
-    const ORG_MAP = {
-      [process.env.POLICE_ROLE_ID?.trim()]: { id: "PCERJ", tema: "tema-pcerj" },
-      [process.env.PRF_ROLE_ID?.trim()]: { id: "PRF", tema: "tema-prf" },
-      [process.env.PMERJ_ROLE_ID?.trim()]: { id: "PMERJ", tema: "tema-pmerj" },
-    };
+    // IDs vindos do seu arquivo .env
+    const rolePCERJ = process.env.POLICE_ROLE_ID?.trim();
+    const rolePRF = process.env.PRF_ROLE_ID?.trim();
+    const rolePMERJ = process.env.PMERJ_ROLE_ID?.trim();
 
     let userOrg = null;
-    for (const roleId of memberData.roles) {
-      if (ORG_MAP[roleId]) {
-        userOrg = ORG_MAP[roleId];
-        break;
-      }
+
+    // DEFINIÇÃO POR PRIORIDADE:
+    // Verificamos primeiro as forças específicas (PMERJ/PRF)
+    if (memberData.roles.includes(rolePMERJ)) {
+      userOrg = { id: "PMERJ", tema: "tema-pmerj" };
+    } else if (memberData.roles.includes(rolePRF)) {
+      userOrg = { id: "PRF", tema: "tema-prf" };
+    } else if (memberData.roles.includes(rolePCERJ)) {
+      userOrg = { id: "PCERJ", tema: "tema-pcerj" };
     }
 
-    if (!userOrg)
+    if (!userOrg) {
       return res
         .status(403)
-        .json({ error: "Acesso negado: Sem cargo administrativo." });
+        .json({ error: "Você não tem um cargo autorizado para este painel." });
+    }
 
     res.json({
       org: userOrg.id,

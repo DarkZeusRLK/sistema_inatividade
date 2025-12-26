@@ -2,13 +2,31 @@
 // 1. CONFIGURAÇÕES GLOBAIS E SESSÃO
 // =========================================================
 let dadosInatividadeGlobal = [];
-// Define a data de início da auditoria (ninguém será punido por mensagens antes disso)
+// Define a data de início da auditoria
 const DATA_BASE_AUDITORIA = new Date("2025-12-08T00:00:00").getTime();
 
 const obterSessao = () => {
   const sessionStr = localStorage.getItem("pc_session");
-  if (!sessionStr) return { org: "PCERJ" };
-  return JSON.parse(sessionStr);
+
+  // CORREÇÃO AQUI: Se não houver sessão, ele não assume PCERJ.
+  // Ele envia o usuário para o login.
+  if (!sessionStr) {
+    if (!window.location.pathname.includes("login.html")) {
+      window.location.href = "login.html";
+    }
+    return null;
+  }
+
+  const sessao = JSON.parse(sessionStr);
+
+  // Opcional: Verificar se a sessão expirou
+  if (sessao.expira && Date.now() > sessao.expira) {
+    localStorage.removeItem("pc_session");
+    window.location.href = "login.html";
+    return null;
+  }
+
+  return sessao;
 };
 
 const getOrgLabel = (org) => {
@@ -18,14 +36,20 @@ const getOrgLabel = (org) => {
       nome: "PCERJ",
       logo: "Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png",
     },
-    PRF: { unidade: "GRR", nome: "PRF", logo: "Imagens/PRF_new.png" },
+    PRF: {
+      unidade: "GRR",
+      nome: "PRF",
+      logo: "Imagens/PRF_new.png",
+    },
     PMERJ: {
       unidade: "BOPE",
       nome: "PMERJ",
       logo: "Imagens/Brasão_da_Polícia_Militar_do_Estado_do_Rio_de_Janeiro_-_PMERJ.png",
     },
   };
-  return labels[org] || labels["PCERJ"];
+  // Se a org for inválida ou não existir no mapa,
+  // agora retornamos null ou tratamos o erro, para não forçar a PCERJ indevidamente
+  return labels[org] || null;
 };
 
 function mostrarAviso(msg, tipo = "success") {
@@ -39,7 +63,18 @@ function mostrarAviso(msg, tipo = "success") {
     setTimeout(() => toast.remove(), 500);
   }, 3000);
 }
+// =========================================================
+// INICIALIZAÇÃO SEGURA
+// =========================================================
+document.addEventListener("DOMContentLoaded", () => {
+  const sessao = obterSessao();
 
+  // Só executa as funções de interface se a sessão existir de fato
+  if (sessao && sessao.org) {
+    aplicarRestricoes();
+    window.abrirInatividade();
+  }
+});
 // =========================================================
 // 2. SISTEMA DE PERMISSÕES E INTERFACE
 // =========================================================

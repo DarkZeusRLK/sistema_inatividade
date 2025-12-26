@@ -348,21 +348,21 @@
   </div>
 
   <div id="modal-selecao-comando" class="modal-pcerj" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 10001; align-items: center; justify-content: center;">
-    <div class="modal-content" style="max-width: 450px; text-align: center; border: 2px solid #d4af37; padding: 40px; background: #111;">
-      <h2 style="color: #d4af37; margin-bottom: 10px; font-size: 1.8rem;">
+    <div class="modal-content" style="max-width: 450px; text-align: center; border: 2px solid #d4af37; padding: 40px; background: #111; border-radius: 15px; box-shadow: 0 0 30px rgba(212, 175, 55, 0.3);">
+      <h2 style="color: #d4af37; margin-bottom: 10px; font-size: 1.8rem; letter-spacing: 2px;">
         <i class="fa-solid fa-shield-halved"></i> CENTRAL DE COMANDO
       </h2>
-      <p style="color: #ccc; margin-bottom: 30px;">Selecione a corporação que deseja auditar:</p>
+      <p style="color: #ccc; margin-bottom: 30px;">Selecione a corporação que deseja auditar agora:</p>
 
       <div style="display: flex; flex-direction: column; gap: 15px;">
-        <button onclick="setPainelComando('PCERJ')" class="btn-gold" style="width: 100%; padding: 15px; font-weight: bold;">
-          <i class="fa-solid fa-building-shield"></i> ACESSAR CORE (PCERJ)
+        <button onclick="setPainelComando('PCERJ')" class="btn-selecao-org pcerj-btn">
+          <i class="fa-solid fa-building-shield"></i> ACESSAR PCERJ
         </button>
-        <button onclick="setPainelComando('PRF')" class="btn-gold" style="width: 100%; padding: 15px; font-weight: bold;">
-          <i class="fa-solid fa-road"></i> ACESSAR GRR (PRF)
+        <button onclick="setPainelComando('PRF')" class="btn-selecao-org prf-btn">
+          <i class="fa-solid fa-road"></i> ACESSAR PRF
         </button>
-        <button onclick="setPainelComando('PMERJ')" class="btn-gold" style="width: 100%; padding: 15px; font-weight: bold;">
-          <i class="fa-solid fa-skull-crossbones"></i> ACESSAR BOPE (PMERJ)
+        <button onclick="setPainelComando('PMERJ')" class="btn-selecao-org pmerj-btn">
+          <i class="fa-solid fa-skull-crossbones"></i> ACESSAR PMERJ
         </button>
       </div>
     </div>

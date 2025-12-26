@@ -2,7 +2,6 @@
 // 1. CONFIGURAÇÕES GLOBAIS E SESSÃO
 // =========================================================
 let dadosInatividadeGlobal = [];
-// Define a data de início da auditoria
 const DATA_BASE_AUDITORIA = new Date("2025-12-08T00:00:00").getTime();
 
 const obterSessao = () => {
@@ -33,21 +32,25 @@ const getOrgLabel = (org) => {
       nome: "PCERJ",
       logo: "Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png",
     },
-    PRF: {
-      unidade: "GRR",
-      nome: "PRF",
-      logo: "Imagens/PRF_new.png",
-    },
+    PRF: { unidade: "GRR", nome: "PRF", logo: "Imagens/PRF_new.png" },
     PMERJ: {
       unidade: "BOPE",
       nome: "PMERJ",
       logo: "Imagens/Brasão_da_Polícia_Militar_do_Estado_do_Rio_de_Janeiro_-_PMERJ.png",
     },
   };
-  return labels[org] || null;
+  return (
+    labels[org] || {
+      unidade: "---",
+      nome: "SISTEMA",
+      logo: "Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png",
+    }
+  );
 };
 
-// --- NOVAS FUNÇÕES PARA COMANDO GERAL ---
+// =========================================================
+// 2. FUNÇÕES DO COMANDO GERAL
+// =========================================================
 
 window.setPainelComando = function (orgEscolhida) {
   const sessao = obterSessao();
@@ -59,62 +62,51 @@ window.setPainelComando = function (orgEscolhida) {
     PMERJ: "tema-pmerj",
   };
 
+  // Atualiza a sessão com a escolha do Comandante
   sessao.org = orgEscolhida;
   sessao.tema = temas[orgEscolhida];
 
   localStorage.setItem("pc_session", JSON.stringify(sessao));
-  window.location.reload(); // Recarrega para aplicar o novo painel e restrições
+
+  // Recarrega a página para que o CSS (tema) e o script (restrições) apliquem a nova identidade
+  window.location.reload();
 };
 
 window.abrirSelecaoPainel = function () {
   const modal = document.getElementById("modal-selecao-comando");
-  if (modal) modal.style.display = "flex";
+  if (modal) {
+    modal.style.display = "flex";
+  }
 };
 
-// ----------------------------------------
-
-function mostrarAviso(msg, tipo = "success") {
-  const toast = document.createElement("div");
-  toast.className = `toast-aviso ${tipo}`;
-  toast.innerHTML = msg;
-  document.body.appendChild(toast);
-  setTimeout(() => toast.classList.add("show"), 100);
-  setTimeout(() => {
-    toast.classList.remove("show");
-    setTimeout(() => toast.remove(), 500);
-  }, 3000);
-}
-
 // =========================================================
-// INICIALIZAÇÃO SEGURA
+// 3. INICIALIZAÇÃO E PERMISSÕES
 // =========================================================
+
 document.addEventListener("DOMContentLoaded", () => {
   const sessao = obterSessao();
+  if (!sessao) return;
 
-  if (sessao) {
-    // 1. Lógica específica para Comando/Sub-Comando
-    if (sessao.isComando) {
-      const btnTrocar = document.getElementById("wrapper-comando");
-      if (btnTrocar) btnTrocar.style.display = "block";
+  // Aplica o tema imediatamente no body para evitar "piscada" de cores
+  if (sessao.tema) document.body.classList.add(sessao.tema);
 
-      // Se logou mas ainda não escolheu qual painel quer ver
-      if (!sessao.org) {
-        window.abrirSelecaoPainel();
-        return; // Para a execução aqui até ele escolher
-      }
-    }
+  // Lógica de Comando
+  if (sessao.isComando) {
+    // Mostra o botão de "Trocar Painel" na sidebar
+    const btnTrocar = document.getElementById("wrapper-comando");
+    if (btnTrocar) btnTrocar.style.display = "block";
 
-    // 2. Se já tem uma organização definida (Membro comum ou Comando que já escolheu)
-    if (sessao.org) {
-      aplicarRestricoes();
-      window.abrirInatividade();
+    // Bloqueia a tela se o Comandante ainda não escolheu uma Org
+    if (!sessao.org) {
+      window.abrirSelecaoPainel();
+      return; // Interrompe o carregamento do resto do painel
     }
   }
-});
 
-// =========================================================
-// 2. SISTEMA DE PERMISSÕES E INTERFACE
-// =========================================================
+  // Se chegou aqui, há uma organização definida (Membro comum ou Comando com org setada)
+  aplicarRestricoes();
+  window.abrirInatividade();
+});
 
 function aplicarRestricoes() {
   const sessao = obterSessao();
@@ -122,48 +114,57 @@ function aplicarRestricoes() {
 
   const { org } = sessao;
   const configOrg = getOrgLabel(org);
-  if (!configOrg) return;
 
-  // Atualiza Logo e Favicon
+  // 1. Atualiza Identidade Visual (Logo e Títulos)
   const logoElemento = document.getElementById("logo-sidebar");
   if (logoElemento) logoElemento.src = configOrg.logo;
 
-  let linkFavicon = document.querySelector("link[rel*='icon']");
-  if (!linkFavicon) {
-    linkFavicon = document.createElement("link");
-    linkFavicon.rel = "shortcut icon";
-    document.getElementsByTagName("head")[0].appendChild(linkFavicon);
-  }
-  linkFavicon.href = configOrg.logo;
+  const sidebarTitulo = document.querySelector(".sidebar-header h2");
+  if (sidebarTitulo)
+    sidebarTitulo.innerText = `POLÍCIA ${
+      org === "PCERJ" ? "CIVIL" : org === "PMERJ" ? "MILITAR" : "RODOVIÁRIA"
+    }`;
 
-  // Gerenciamento de Nav Items
+  // 2. Filtra Itens de Navegação (Camuflagem)
   const permissoes = {
     PCERJ: {
-      mostrar: ["nav-core", "nav-porte", "nav-admin", "nav-ferias"],
+      mostrar: [
+        "nav-core",
+        "nav-porte",
+        "nav-admin",
+        "nav-ferias",
+        "nav-inatividade",
+      ],
       esconder: ["nav-grr", "nav-bope"],
     },
     PRF: {
-      mostrar: ["nav-grr", "nav-ferias"],
+      mostrar: ["nav-grr", "nav-ferias", "nav-inatividade"],
       esconder: ["nav-core", "nav-bope", "nav-porte", "nav-admin"],
     },
     PMERJ: {
-      mostrar: ["nav-bope", "nav-ferias"],
+      mostrar: ["nav-bope", "nav-ferias", "nav-inatividade"],
       esconder: ["nav-core", "nav-grr", "nav-porte", "nav-admin"],
     },
   };
 
   const config = permissoes[org];
   if (config) {
+    // Esconde o que não pertence à corporação selecionada
     config.esconder.forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.style.display = "none";
     });
+    // Garante que o que pertence está visível
     config.mostrar.forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.style.display = "flex";
     });
   }
 }
+
+// =========================================================
+// 4. GERENCIAMENTO DE TELAS
+// =========================================================
 
 function resetarTelas() {
   const secoes = [
@@ -173,13 +174,6 @@ function resetarTelas() {
     "secao-meta-bope",
     "secao-gestao-ferias",
   ];
-  secoes.forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.style.display = "none";
-      el.style.visibility = "hidden";
-    }
-  });
   const gruposBotoes = [
     "botoes-inatividade",
     "botoes-core",
@@ -187,10 +181,20 @@ function resetarTelas() {
     "botoes-bope",
     "botoes-ferias",
   ];
+
+  secoes.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.style.display = "none";
+      el.style.visibility = "hidden";
+    }
+  });
+
   gruposBotoes.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.style.display = "none";
   });
+
   document
     .querySelectorAll(".nav-item")
     .forEach((item) => item.classList.remove("active"));
@@ -198,7 +202,7 @@ function resetarTelas() {
 
 window.abrirInatividade = function () {
   const sessao = obterSessao();
-  if (!sessao) return;
+  if (!sessao || !sessao.org) return;
   const label = getOrgLabel(sessao.org);
 
   resetarTelas();
@@ -209,6 +213,9 @@ window.abrirInatividade = function () {
   document.getElementById(
     "titulo-pagina"
   ).innerText = `AUDITORIA - ${label.nome}`;
+  document.getElementById(
+    "subtitulo-pagina"
+  ).innerText = `Controle de Presença - Unidade ${label.unidade}`;
 };
 
 // =========================================================

@@ -3,31 +3,20 @@
 // =========================================================
 
 function resetarTelas() {
-  // 1. Esconder absolutamente todas as seções de conteúdo principais
   const secoes = [
     "secao-inatividade",
     "secao-meta-core",
     "secao-gestao-ferias",
   ];
-
   secoes.forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.style.display = "none";
-      el.style.visibility = "hidden"; // Reforço para evitar vultos
-    }
-  });
-
-  // 2. Esconder todos os grupos de botões dinâmicos da Top Bar
-  const gruposBotoes = ["botoes-inatividade", "botoes-core", "botoes-ferias"];
-  gruposBotoes.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.style.display = "none";
   });
 
-  // 3. Limpar estados visuais da Sidebar
-  document.querySelectorAll(".nav-item").forEach((item) => {
-    item.classList.remove("active");
+  const botoes = ["botoes-inatividade", "botoes-core", "botoes-ferias"];
+  botoes.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "none";
   });
 }
 

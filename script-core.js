@@ -3,12 +3,18 @@ let listaMetaCoreAtual = [];
 
 // 1. NAVEGAÇÃO - ABRIR ABA CORE
 window.abrirMetaCore = function () {
-  document.getElementById("secao-inatividade").style.display = "none";
+  // Chama a função global de reset que está no script.js
+  if (typeof resetarTelas === "function") {
+    resetarTelas();
+  } else {
+    // Backup caso o resetarTelas falhe
+    document.getElementById("secao-inatividade").style.display = "none";
+    document.getElementById("secao-gestao-ferias").style.display = "none";
+  }
+
+  // Agora mostra a parte do CORE
   document.getElementById("secao-meta-core").style.display = "block";
-  document.getElementById("secao-gestao-ferias").style.display = "none";
-  document.getElementById("botoes-inatividade").style.display = "none";
   document.getElementById("botoes-core").style.display = "block";
-  document.getElementById("botoes-ferias").style.display = "none";
 
   document.getElementById("titulo-pagina").innerText =
     "CONTROLE DE METAS - CORE";
@@ -34,10 +40,8 @@ window.abrirMetaCore = function () {
 window.abrirInatividade = function () {
   document.getElementById("secao-inatividade").style.display = "block";
   document.getElementById("secao-meta-core").style.display = "none";
-  document.getElementById("secao-gestao-ferias").style.display = "none";
   document.getElementById("botoes-inatividade").style.display = "block";
   document.getElementById("botoes-core").style.display = "none";
-  document.getElementById("botoes-ferias").style.display = "none";
 
   document.getElementById("titulo-pagina").innerText =
     "SISTEMA DE AUDITORIA DE ATIVIDADE";

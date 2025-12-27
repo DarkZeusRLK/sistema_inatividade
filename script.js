@@ -60,14 +60,16 @@ function atualizarIdentidadeVisual(org) {
   // Muda a logo da barra lateral
   document.getElementById("logo-sidebar").src = logoUrl;
 
-  // Muda o favicon (ícone da aba)
+  * Troca o Favicon (ícone da aba do navegador) dinamicamente
+ */
+function atualizarFavicon(url) {
   let favicon = document.querySelector("link[rel~='icon']");
   if (!favicon) {
     favicon = document.createElement("link");
     favicon.rel = "icon";
     document.getElementsByTagName("head")[0].appendChild(favicon);
   }
-  favicon.href = logoUrl;
+  favicon.href = url;
 }
 // =========================================================
 // 2. FUNÇÕES DO COMANDO GERAL

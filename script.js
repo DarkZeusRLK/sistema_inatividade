@@ -194,13 +194,16 @@ function resetarTelas() {
     "secao-meta-grr",
     "secao-meta-bope",
     "secao-gestao-ferias",
+    "secao-ensino", // ADICIONADO AQUI
   ];
+
   const gruposBotoes = [
     "botoes-inatividade",
     "botoes-core",
     "botoes-grr",
     "botoes-bope",
     "botoes-ferias",
+    "botoes-ensino", // ADICIONADO AQUI
   ];
 
   secoes.forEach((id) => {

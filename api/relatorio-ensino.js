@@ -7,7 +7,7 @@ module.exports = async (req, res) => {
     ? CHANNELS_ENV.split(",").map((id) => id.trim())
     : [];
   const instructorRoles = ENSINO_ROLES_MATRIZES_ID
-    ? ENSINO_ROLE_ID.split(",").map((id) => id.trim())
+    ? ENSINO_ROLES_MATRIZES_ID.split(",").map((id) => id.trim())
     : [];
 
   const headers = { Authorization: `Bot ${Discord_Bot_Token}` };

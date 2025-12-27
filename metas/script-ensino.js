@@ -1,21 +1,40 @@
 window.carregarRelatorioEnsino = async function () {
-  const { org } = obterSessao();
+  // Função auxiliar caso obterSessao não esteja no escopo global
+  const sessao =
+    typeof obterSessao === "function"
+      ? obterSessao()
+      : JSON.parse(localStorage.getItem("pc_session") || "{}");
+  const org = sessao.org;
+
   const corpo = document.getElementById("corpo-ensino");
   const progContainer = document.getElementById("progress-container-ensino");
-  const progBar = document.getElementById("progress-bar-ensino");
   const btn = document.getElementById("btn-sincronizar-ensino");
 
   if (!corpo) return;
 
-  corpo.innerHTML = "";
-  progContainer.style.display = "block";
+  corpo.innerHTML =
+    '<tr><td colspan="5" style="text-align: center; padding: 20px;">Processando dados...</td></tr>';
+  if (progContainer) progContainer.style.display = "block";
   if (btn) btn.disabled = true;
 
   try {
     const res = await fetch(`/api/relatorio-ensino?org=${org}`);
-    const dados = await res.json();
 
-    // Ordenar por quem tem mais total de atividades
+    // Verifica se a resposta foi bem sucedida
+    if (!res.ok) {
+      const txtErro = await res.text();
+      throw new Error(`Erro no servidor (${res.status}): ${txtErro}`);
+    }
+
+    const dados = await res.json();
+    corpo.innerHTML = "";
+
+    if (dados.length === 0) {
+      corpo.innerHTML =
+        '<tr><td colspan="5" style="text-align: center; padding: 20px;">Nenhum instrutor encontrado com os cargos configurados.</td></tr>';
+      return;
+    }
+
     dados.sort((a, b) => b.total - a.total);
 
     dados.forEach((inst) => {
@@ -44,8 +63,9 @@ window.carregarRelatorioEnsino = async function () {
     });
   } catch (err) {
     console.error("Erro Ensino:", err);
+    corpo.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #ff4444; padding: 20px;">Erro ao carregar: ${err.message}</td></tr>`;
   } finally {
-    progContainer.style.display = "none";
+    if (progContainer) progContainer.style.display = "none";
     if (btn) btn.disabled = false;
   }
 };

@@ -36,11 +36,9 @@
         }
       };
 
-      // Se o usuário já escolheu ou tem uma org definida
       if (session.org) {
         const config = configOrg[session.org];
         if (config) {
-          // Usamos um intervalo curto para garantir que o DOM carregou os IDs abaixo
           const interval = setInterval(() => {
             const logoImg = document.getElementById('logo-sidebar');
             const sidebarTitulo = document.querySelector('.sidebar-header h2');
@@ -51,7 +49,6 @@
               sidebarTitulo.innerText = config.titulo;
               if (subtitulo) subtitulo.innerText = `Painel de Auditoria - ${config.sigla}`;
 
-              // Se for comando, mostra o botão de trocar
               if (session.isComando) {
                 const btnTrocar = document.getElementById('wrapper-comando');
                 if (btnTrocar) btnTrocar.style.display = 'block';
@@ -84,6 +81,11 @@
         <a href="#" id="nav-inatividade" class="nav-item active" onclick="abrirInatividade()">
           <i class="fa-solid fa-user-clock"></i>
           <span>Inatividade (7 Dias)</span>
+        </a>
+
+        <a href="#" id="nav-ensino" class="nav-item" onclick="abrirEnsino()">
+          <i class="fa-solid fa-chalkboard-user"></i>
+          <span>Divisão de Ensino</span>
         </a>
 
         <a href="#" id="nav-core" class="nav-item" onclick="abrirMetaCore()">
@@ -126,7 +128,7 @@
           </button>
         </div>
 
-        <small>Sistema de Auditoria v1.6</small>
+        <small>Sistema de Auditoria v1.7</small>
         <a href="#" class="nav-item logout-item" onclick="fazerLogout()">
           <i class="fa-solid fa-right-from-bracket"></i>
           <span>Sair do Sistema</span>
@@ -148,6 +150,12 @@
             </button>
             <button onclick="copiarRelatorioDiscord()" id="btn-copiar" class="btn-outline-gold" style="display: none; margin-left: 10px;">
               <i class="fa-solid fa-copy"></i> COPIAR RELATÓRIO
+            </button>
+          </div>
+
+          <div id="botoes-ensino" style="display: none;">
+            <button onclick="carregarRelatorioEnsino()" class="btn-gold">
+              <i class="fa-solid fa-arrows-rotate"></i> ATUALIZAR METAS ENSINO
             </button>
           </div>
 
@@ -221,6 +229,7 @@
           </div>
         </div>
       </div>
+
       <section id="secao-ensino" style="display: none; padding: 20px;">
         <div class="info-alert-gold">
           <div class="alert-icon"><i class="fa-solid fa-chalkboard-user"></i></div>

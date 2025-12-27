@@ -140,7 +140,7 @@ window.carregarRelatorioEnsino = async function () {
 };
 
 /**
- * Gera um relatório formal e bonito para o Discord
+ * Gera um relatório formal, bonito e dividido em partes para evitar limites do Discord
  */
 window.copiarRelatorioEnsino = function () {
   const corpo = document.getElementById("corpo-ensino");
@@ -160,23 +160,29 @@ window.copiarRelatorioEnsino = function () {
     return;
   }
 
-  // Função interna para formatar data ISO (YYYY-MM-DD) para BR (DD/MM/YYYY)
+  // Formatação de Datas
   const formatarDataBR = (data) =>
     data ? data.split("-").reverse().join("/") : null;
   const dInicio = formatarDataBR(dataIn) || "Início";
   const dFim = formatarDataBR(dataFi) || "Hoje";
 
-  // Início da montagem do texto
-  let texto = `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-  texto += `📑 **RELATÓRIO DE PRODUTIVIDADE - ENSINO**\n`;
-  texto += `🏢 **UNIDADE:** ${sessao.org}\n`;
-  texto += `📅 **PERÍODO:** ${dInicio} até ${dFim}\n`;
-  texto += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+  // Variáveis de controle de divisão
+  const partes = [];
+  const limiteCaracteres = 1900; // Margem de segurança para o limite de 2000 do Discord comum
 
+  let cabecalhoBase = `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  cabecalhoBase += `📑 **RELATÓRIO DE PRODUTIVIDADE - ENSINO**\n`;
+  cabecalhoBase += `🏢 **UNIDADE:** ${sessao.org}\n`;
+  cabecalhoBase += `📅 **PERÍODO:** ${dInicio} até ${dFim}\n`;
+  cabecalhoBase += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+  let textoAtual = cabecalhoBase;
   let totalGeralCursos = 0;
   let totalGeralRecs = 0;
 
-  Array.from(corpo.rows).forEach((row, index) => {
+  const linhas = Array.from(corpo.rows);
+
+  linhas.forEach((row, index) => {
     const col = row.cells;
     if (col.length >= 5) {
       const nome = col[0].innerText.trim();
@@ -188,33 +194,61 @@ window.copiarRelatorioEnsino = function () {
       totalGeralCursos += cursos;
       totalGeralRecs += recs;
 
-      // Medalha para os 3 primeiros
       const rank =
         index === 0 ? "🥇 " : index === 1 ? "🥈 " : index === 2 ? "🥉 " : "🔹 ";
 
-      texto += `${rank}**${nome}** [${id}]\n`;
-      texto += `├  Cursos: \`${cursos.toString().padStart(2, "0")}\`\n`;
-      texto += `├  Recrutamentos: \`${recs.toString().padStart(2, "0")}\`\n`;
-      texto += `└  **PONTUAÇÃO: ${total}**\n\n`;
+      const itemInstrutor = `${rank}**${nome}** [${id}]\n├ Cursos: \`${cursos
+        .toString()
+        .padStart(2, "0")}\`\n├ Recrutamentos: \`${recs
+        .toString()
+        .padStart(2, "0")}\`\n└ **PONTUAÇÃO: ${total}**\n\n`;
+
+      // Se a nova linha ultrapassar o limite, fecha a parte atual e começa outra
+      if ((textoAtual + itemInstrutor).length > limiteCaracteres) {
+        partes.push(textoAtual);
+        textoAtual =
+          `📑 **RELATÓRIO DE ENSINO (${sessao.org}) - CONTINUAÇÃO**\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+          itemInstrutor;
+      } else {
+        textoAtual += itemInstrutor;
+      }
     }
   });
 
-  // Rodapé estatístico
-  texto += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-  texto += `📊 **RESUMO GERAL DO PERÍODO**\n`;
-  texto += `• Total de Cursos: ${totalGeralCursos}\n`;
-  texto += `• Total de Recrutamentos: ${totalGeralRecs}\n`;
-  texto += `\n*Relatório gerado automaticamente pelo Sistema de Gestão.*\n`;
-  texto += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+  // Montagem do Rodapé Estatístico
+  let rodape = `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  rodape += `📊 **RESUMO GERAL DO PERÍODO**\n`;
+  rodape += `• Total de Cursos: ${totalGeralCursos}\n`;
+  rodape += `• Total de Recrutamentos: ${totalGeralRecs}\n`;
+  rodape += `\n*Relatório gerado automaticamente pelo Sistema de Gestão.*\n`;
+  rodape += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
-  navigator.clipboard
-    .writeText(texto)
-    .then(() => {
+  // Adiciona o rodapé. Se não couber na última parte, cria uma nova.
+  if ((textoAtual + rodape).length > limiteCaracteres) {
+    partes.push(textoAtual);
+    partes.push(rodape);
+  } else {
+    textoAtual += rodape;
+    partes.push(textoAtual);
+  }
+
+  // --- LÓGICA DE ENTREGA ---
+  if (partes.length === 1) {
+    // Se for pequeno, copia direto e avisa
+    navigator.clipboard.writeText(partes[0]).then(() => {
       if (typeof mostrarAviso === "function")
         mostrarAviso("Relatório formal copiado!");
-    })
-    .catch((err) => {
-      console.error("Erro ao copiar:", err);
-      alert("Erro ao copiar para a área de transferência.");
     });
+  } else {
+    // Se for grande, chama o modal de partes (existente no seu script principal)
+    if (typeof abrirModalRelatorioDividido === "function") {
+      abrirModalRelatorioDividido(partes);
+    } else {
+      // Fallback básico
+      navigator.clipboard.writeText(partes[0]);
+      alert(
+        `Relatório extenso (${partes.length} partes). A primeira parte foi copiada.`
+      );
+    }
+  }
 };

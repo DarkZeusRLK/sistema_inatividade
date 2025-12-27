@@ -512,3 +512,23 @@ window.abrirMetaBOPE = function () {
   document.getElementById("titulo-pagina").innerText =
     "AUDITORIA - METAS BOPE (PMERJ)";
 };
+function abrirEnsino() {
+  // Esconde tudo
+  document.getElementById("secao-inatividade").style.display = "none";
+  document.getElementById("secao-meta-core").style.display = "none";
+  // ... esconde os outros ...
+
+  // Esconde botões do header
+  document.getElementById("botoes-inatividade").style.display = "none";
+  // ... esconde os outros botões ...
+
+  // Mostra o Ensino
+  document.getElementById("secao-ensino").style.display = "block";
+  document.getElementById("botoes-ensino").style.display = "block";
+
+  // Atualiza a classe active no menu
+  document
+    .querySelectorAll(".nav-item")
+    .forEach((i) => i.classList.remove("active"));
+  document.getElementById("nav-ensino").classList.add("active");
+}

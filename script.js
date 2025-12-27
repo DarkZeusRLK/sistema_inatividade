@@ -6,22 +6,18 @@ const DATA_BASE_AUDITORIA = new Date("2025-12-08T00:00:00").getTime();
 
 const obterSessao = () => {
   const sessionStr = localStorage.getItem("pc_session");
-
   if (!sessionStr) {
     if (!window.location.pathname.includes("login.html")) {
       window.location.href = "login.html";
     }
     return null;
   }
-
   const sessao = JSON.parse(sessionStr);
-
   if (sessao.expira && Date.now() > sessao.expira) {
     localStorage.removeItem("pc_session");
     window.location.href = "login.html";
     return null;
   }
-
   return sessao;
 };
 
@@ -32,11 +28,7 @@ const getOrgLabel = (org) => {
       nome: "PCERJ",
       logo: "Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png",
     },
-    PRF: {
-      unidade: "GRR",
-      nome: "PRF",
-      logo: "Imagens/PRF_new.png",
-    },
+    PRF: { unidade: "GRR", nome: "PRF", logo: "Imagens/PRF_new.png" },
     PMERJ: {
       unidade: "BOPE",
       nome: "PMERJ",
@@ -52,12 +44,17 @@ const getOrgLabel = (org) => {
   );
 };
 
-/**
- * Atualiza a Logo da Sidebar e o Favicon da aba do navegador
- */
+// --- FUNÇÃO DE ÍCONE ADICIONADA ---
 function atualizarIdentidadeVisual(org) {
-  const config = getOrgLabel(org);
-  const logoUrl = config.logo;
+  const logos = {
+    PRF: "Imagens/PRF_new.png",
+    PMERJ:
+      "Imagens/Brasão_da_Polícia_Militar_do_Estado_do_Rio_de_Janeiro_-_PMERJ.png",
+    PCERJ: "Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png",
+    POLICE: "Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png",
+  };
+
+  const logoUrl = logos[org] || logos["PCERJ"];
 
   // Muda a logo da barra lateral
   const logoSidebar = document.getElementById("logo-sidebar");
@@ -73,6 +70,23 @@ function atualizarIdentidadeVisual(org) {
   favicon.href = logoUrl;
 }
 
+/**
+ * Função de Notificação (Restaurada para evitar erro "mostrarAviso is not defined")
+ */
+window.mostrarAviso = function (msg, tipo = "success") {
+  const aviso = document.getElementById("aviso-global");
+  if (!aviso) {
+    console.log(`[${tipo}] ${msg}`);
+    return;
+  }
+  aviso.innerText = msg;
+  aviso.className = `aviso-toast ${tipo}`;
+  aviso.style.display = "block";
+  setTimeout(() => {
+    aviso.style.display = "none";
+  }, 3000);
+};
+
 // =========================================================
 // 2. FUNÇÕES DO COMANDO GERAL
 // =========================================================
@@ -80,16 +94,9 @@ function atualizarIdentidadeVisual(org) {
 window.setPainelComando = function (orgEscolhida) {
   const sessao = obterSessao();
   if (!sessao) return;
-
-  const temas = {
-    PCERJ: "tema-pcerj",
-    PRF: "tema-prf",
-    PMERJ: "tema-pmerj",
-  };
-
+  const temas = { PCERJ: "tema-pcerj", PRF: "tema-prf", PMERJ: "tema-pmerj" };
   sessao.org = orgEscolhida;
   sessao.tema = temas[orgEscolhida];
-
   localStorage.setItem("pc_session", JSON.stringify(sessao));
   window.location.reload();
 };
@@ -112,7 +119,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (sessao.isComando) {
     const btnTrocar = document.getElementById("wrapper-comando");
     if (btnTrocar) btnTrocar.style.display = "block";
-
     if (!sessao.org) {
       window.abrirSelecaoPainel();
       return;
@@ -130,16 +136,15 @@ function aplicarRestricoes() {
   const { org } = sessao;
   const configOrg = getOrgLabel(org);
 
-  // 1. Atualiza Identidade Visual (Logo, Favicon e Títulos)
+  // Executa a nova função de identidade visual (Logo + Favicon)
   atualizarIdentidadeVisual(org);
 
   const sidebarTitulo = document.querySelector(".sidebar-header h2");
-  if (sidebarTitulo) {
-    const titulos = { PCERJ: "CIVIL", PMERJ: "MILITAR", PRF: "RODOVIÁRIA" };
-    sidebarTitulo.innerText = `POLÍCIA ${titulos[org] || "SISTEMA"}`;
-  }
+  if (sidebarTitulo)
+    sidebarTitulo.innerText = `POLÍCIA ${
+      org === "PCERJ" ? "CIVIL" : org === "PMERJ" ? "MILITAR" : "RODOVIÁRIA"
+    }`;
 
-  // 2. Filtra Itens de Navegação
   const permissoes = {
     PCERJ: {
       mostrar: [
@@ -153,11 +158,11 @@ function aplicarRestricoes() {
       esconder: ["nav-grr", "nav-bope"],
     },
     PRF: {
-      mostrar: ["nav-grr", "nav-ferias", "nav-inatividade", "nav-ensino"],
+      mostrar: ["nav-grr", "nav-ferias", "nav-inatividade"],
       esconder: ["nav-core", "nav-bope", "nav-porte", "nav-admin"],
     },
     PMERJ: {
-      mostrar: ["nav-bope", "nav-ferias", "nav-inatividade", "nav-ensino"],
+      mostrar: ["nav-bope", "nav-ferias", "nav-inatividade"],
       esconder: ["nav-core", "nav-grr", "nav-porte", "nav-admin"],
     },
   };
@@ -188,7 +193,6 @@ function resetarTelas() {
     "secao-gestao-ferias",
     "secao-ensino",
   ];
-
   const gruposBotoes = [
     "botoes-inatividade",
     "botoes-core",
@@ -205,12 +209,10 @@ function resetarTelas() {
       el.style.visibility = "hidden";
     }
   });
-
   gruposBotoes.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.style.display = "none";
   });
-
   document
     .querySelectorAll(".nav-item")
     .forEach((item) => item.classList.remove("active"));
@@ -220,7 +222,6 @@ window.abrirInatividade = function () {
   const sessao = obterSessao();
   if (!sessao || !sessao.org) return;
   const label = getOrgLabel(sessao.org);
-
   resetarTelas();
   document.getElementById("secao-inatividade").style.display = "block";
   document.getElementById("secao-inatividade").style.visibility = "visible";
@@ -234,26 +235,8 @@ window.abrirInatividade = function () {
   ).innerText = `Controle de Presença - Unidade ${label.unidade}`;
 };
 
-window.abrirEnsino = function () {
-  const sessao = obterSessao();
-  if (!sessao || !sessao.org) return;
-  const label = getOrgLabel(sessao.org);
-
-  resetarTelas();
-  document.getElementById("secao-ensino").style.display = "block";
-  document.getElementById("secao-ensino").style.visibility = "visible";
-  document.getElementById("botoes-ensino").style.display = "block";
-  document.getElementById("nav-ensino").classList.add("active");
-  document.getElementById(
-    "titulo-pagina"
-  ).innerText = `DIVISÃO DE ENSINO - ${label.nome}`;
-  document.getElementById(
-    "subtitulo-pagina"
-  ).innerText = `Relatório Automático de Metas e Instrutoria`;
-};
-
 // =========================================================
-// 5. LÓGICA DE AUDITORIA E RELATÓRIO
+// 5. LÓGICA DE AUDITORIA E BARRA DE PROGRESSO (RESTAURADO)
 // =========================================================
 
 window.carregarInatividade = async function () {
@@ -285,7 +268,6 @@ window.carregarInatividade = async function () {
   try {
     const res = await fetch(`/api/membros-inativos?org=${org}`);
     const dados = await res.json();
-
     clearInterval(interval);
     progBar.style.width = "100%";
     progPercent.innerText = "100%";
@@ -306,6 +288,9 @@ window.carregarInatividade = async function () {
         precisaExonerar: dias >= 7,
         discordNick: m.name || "Sem Nome",
         discordId: m.id,
+        rpName: m.rpName,
+        cidadeId: m.cidadeId,
+        lastMsg: m.lastMsg,
       };
     });
 
@@ -325,7 +310,7 @@ window.carregarInatividade = async function () {
         <td>${
           m.lastMsg > 0
             ? new Date(m.lastMsg).toLocaleDateString("pt-BR")
-            : '<span style="color: #ffb400; font-weight: bold;">⚠️ SEM REGISTROS</span>'
+            : '<span style="color: #ffb400; font-size: 0.85em; font-weight: bold;">⚠️ SEM REGISTROS</span>'
         }</td>
         <td><strong style="color: ${
           m.precisaExonerar ? "#ff4d4d" : "#d4af37"
@@ -336,7 +321,6 @@ window.carregarInatividade = async function () {
       `;
       corpo.appendChild(tr);
     });
-
     mostrarAviso("Dados sincronizados.");
   } catch (err) {
     clearInterval(interval);
@@ -349,16 +333,18 @@ window.carregarInatividade = async function () {
   }
 };
 
+// =========================================================
+// 6. FUNÇÕES DE CÓPIA E RELATÓRIO
+// =========================================================
+
 window.copiarRelatorioDiscord = function () {
   const { org } = obterSessao();
   const label = getOrgLabel(org);
   const dataHoje = new Date().toLocaleDateString("pt-BR");
-
   if (!dadosInatividadeGlobal || dadosInatividadeGlobal.length === 0) {
     mostrarAviso("Sincronize os dados primeiro.", "warning");
     return;
   }
-
   const exonerados = dadosInatividadeGlobal.filter((m) => m.precisaExonerar);
   const partes = [];
   let textoAtual = `📋 **RELATÓRIO DE EXONERAÇÃO - ${label.nome}** 📋\n📅 DATA: ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
@@ -377,29 +363,24 @@ window.copiarRelatorioDiscord = function () {
   abrirModalRelatorioDividido(partes);
 };
 
-// =========================================================
-// 6. MODAIS E UTILITÁRIOS
-// =========================================================
-
 function abrirModalRelatorioDividido(partes) {
-  const modal = document.getElementById("modal-relatorio");
+  let modal = document.getElementById("modal-relatorio");
+  if (!modal) return;
   const container = document.getElementById("container-botoes-partes");
-  if (!modal || !container) return;
-
   container.innerHTML = "";
   partes.forEach((texto, index) => {
-    const btn = document.createElement("button");
-    btn.innerHTML = `<i class="fa-solid fa-copy"></i> COPIAR PARTE ${
+    const btnCopiar = document.createElement("button");
+    btnCopiar.innerHTML = `<i class="fa-solid fa-copy"></i> COPIAR PARTE ${
       index + 1
     }`;
-    btn.className = "btn-gold";
-    btn.style.width = "100%";
-    btn.onclick = () => {
+    btnCopiar.className = "btn-gold";
+    btnCopiar.style.width = "100%";
+    btnCopiar.onclick = () => {
       navigator.clipboard.writeText(texto).then(() => {
         mostrarAviso(`Parte ${index + 1} copiada!`);
       });
     };
-    container.appendChild(btn);
+    container.appendChild(btnCopiar);
   });
   modal.style.display = "flex";
 }
@@ -409,7 +390,7 @@ window.fecharModalRelatorio = () => {
 };
 
 // =========================================================
-// 7. GESTÃO DE FÉRIAS E METAS
+// 7. GESTÃO DE FÉRIAS (RESTAURADO)
 // =========================================================
 
 window.abrirGestaoFerias = function () {
@@ -425,6 +406,61 @@ window.abrirGestaoFerias = function () {
   ).innerText = `GESTÃO DE FÉRIAS - ${label.nome}`;
   window.atualizarListaFerias();
 };
+
+window.atualizarListaFerias = async function () {
+  const { org } = obterSessao();
+  const select = document.getElementById("select-oficiais-ferias");
+  const logContainer = document.getElementById("status-ferias-info");
+  if (!select) return;
+
+  select.innerHTML = '<option value="">Sincronizando...</option>';
+  try {
+    const res = await fetch(`/api/verificar-ferias?org=${org}`);
+    const data = await res.json();
+    select.innerHTML = '<option value="">Selecione para antecipar...</option>';
+
+    if (data.oficiais && data.oficiais.length > 0) {
+      data.oficiais.forEach((oficial) => {
+        const opt = document.createElement("option");
+        opt.value = oficial.id;
+        opt.textContent = `🌴 ${oficial.nome} (Até: ${oficial.dataRetorno})`;
+        select.appendChild(opt);
+      });
+    } else {
+      select.innerHTML = '<option value="">Nenhum oficial em férias.</option>';
+    }
+    logContainer.innerHTML =
+      data.logs?.length > 0
+        ? data.logs.join("<br>")
+        : "Sem retornos pendentes hoje.";
+  } catch (e) {
+    mostrarAviso("Erro ao carregar férias.", "error");
+  }
+};
+
+window.executarAntecipacao = async function () {
+  const userId = document.getElementById("select-oficiais-ferias").value;
+  if (!userId) return mostrarAviso("Selecione um oficial.", "warning");
+  if (!confirm("Confirmar retorno antecipado? O cargo será devolvido agora."))
+    return;
+  try {
+    const res = await fetch("/api/verificar-ferias", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+    if (res.ok) {
+      mostrarAviso("Férias antecipadas com sucesso!");
+      window.atualizarListaFerias();
+    }
+  } catch (e) {
+    mostrarAviso("Erro ao processar antecipação.", "error");
+  }
+};
+
+// =========================================================
+// 8. METAS E ENSINO (RESTAURADO)
+// =========================================================
 
 window.abrirMetaCore = function () {
   resetarTelas();
@@ -454,4 +490,12 @@ window.abrirMetaBOPE = function () {
   document.getElementById("nav-bope").classList.add("active");
   document.getElementById("titulo-pagina").innerText =
     "AUDITORIA - METAS BOPE (PMERJ)";
+};
+
+window.abrirEnsino = function () {
+  resetarTelas();
+  document.getElementById("secao-ensino").style.display = "block";
+  document.getElementById("botoes-ensino").style.display = "block";
+  document.getElementById("nav-ensino").classList.add("active");
+  document.getElementById("titulo-pagina").innerText = "SISTEMA DE ENSINO";
 };

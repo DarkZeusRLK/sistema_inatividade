@@ -355,7 +355,7 @@ window.copiarRelatorioDiscord = function () {
     let item = "";
 
     // VERIFICAÇÃO SE É PMERJ PARA MUDAR O MODELO
-    if (org === "pmerj") {
+    if (org === "PMERJ") {
       item = `\`QRA:\` <@${m.discordId}>\n\`ID:\` ${m.cidadeId}\n\`Nome na cidade:\` ${m.rpName}\n\`DATA:\` ${dataHoje}\n\`MOTIVO:\` INATIVIDADE\n────────────────────────────────\n`;
     } else {
       // MODELO PADRÃO PARA PCERJ E PRF

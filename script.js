@@ -334,23 +334,35 @@ window.carregarInatividade = async function () {
 };
 
 // =========================================================
-// 6. FUNÇÕES DE CÓPIA E RELATÓRIO
+// 6. FUNÇÕES DE CÓPIA E RELATÓRIO (MODELO PMERJ DIFERENCIADO)
 // =========================================================
 
 window.copiarRelatorioDiscord = function () {
   const { org } = obterSessao();
   const label = getOrgLabel(org);
   const dataHoje = new Date().toLocaleDateString("pt-BR");
+
   if (!dadosInatividadeGlobal || dadosInatividadeGlobal.length === 0) {
     mostrarAviso("Sincronize os dados primeiro.", "warning");
     return;
   }
+
   const exonerados = dadosInatividadeGlobal.filter((m) => m.precisaExonerar);
   const partes = [];
   let textoAtual = `📋 **RELATÓRIO DE EXONERAÇÃO - ${label.nome}** 📋\n📅 DATA: ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
   exonerados.forEach((m) => {
-    const item = `QRA: <@${m.discordId}>\nID: ${m.cidadeId}\nNome na cidade: ${m.rpName}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────\n`;
+    let item = "";
+
+    // VERIFICAÇÃO SE É PMERJ PARA MUDAR O MODELO
+    if (org === "pmerj") {
+      item = `\`QRA:\` <@${m.discordId}>\n\`ID:\` ${m.cidadeId}\n\`Nome na cidade:\` ${m.rpName}\n\`DATA:\` ${dataHoje}\n\`MOTIVO:\` INATIVIDADE\n────────────────────────────────\n`;
+    } else {
+      // MODELO PADRÃO PARA PCERJ E PRF
+      item = `QRA: <@${m.discordId}>\nID: ${m.cidadeId}\nNome na cidade: ${m.rpName}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────\n`;
+    }
+
+    // Lógica para não ultrapassar o limite do Discord (2000 caracteres)
     if ((textoAtual + item).length > 1900) {
       partes.push(textoAtual);
       textoAtual =
@@ -359,6 +371,7 @@ window.copiarRelatorioDiscord = function () {
       textoAtual += item;
     }
   });
+
   partes.push(textoAtual);
   abrirModalRelatorioDividido(partes);
 };

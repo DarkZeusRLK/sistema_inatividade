@@ -3,7 +3,7 @@
 // =========================================================
 let dadosInatividadeGlobal = [];
 
-// DATA BASE: Dezembro/2025 para cálculo correto em 2026
+// DATA BASE: 08/12/2025 (Passado recente em relação a 2026 -> Cálculo Positivo)
 const DATA_BASE_AUDITORIA = new Date("2025-12-08T00:00:00").getTime();
 
 const obterSessao = () => {
@@ -57,7 +57,6 @@ function atualizarIdentidadeVisual(org) {
   };
 
   const logoUrl = logos[org] || logos["PCERJ"];
-
   const logoSidebar = document.getElementById("logo-sidebar");
   if (logoSidebar) logoSidebar.src = logoUrl;
 
@@ -130,7 +129,6 @@ document.addEventListener("DOMContentLoaded", () => {
 function aplicarRestricoes() {
   const sessao = obterSessao();
   if (!sessao || !sessao.org) return;
-
   const { org } = sessao;
   atualizarIdentidadeVisual(org);
 
@@ -233,7 +231,7 @@ window.abrirInatividade = function () {
 };
 
 // =========================================================
-// 5. LÓGICA DE AUDITORIA (CORRIGIDA - ID REAL VS PASSAPORTE)
+// 5. LÓGICA DE AUDITORIA
 // =========================================================
 
 window.carregarInatividade = async function () {
@@ -289,31 +287,23 @@ window.carregarInatividade = async function () {
       let dias = Math.floor((agora - dataReferencia) / (1000 * 60 * 60 * 24));
       if (dias < 0) dias = 0;
 
-      // --- CORREÇÃO DO ID ---
-      // m.id = ID do Discord (Snowflake - Número Grande) vindo da API
-      // m.cidadeId = Passaporte (Número Pequeno) vindo da API
-      // Se m.cidadeId for nulo, tenta pegar do apelido (Ex: "Chico | 2104")
-
-      let passaporteReal = m.cidadeId;
-      if (!passaporteReal && m.name) {
-        // Tenta extrair números do final do nome se a API não trouxer o ID da cidade separado
-        const match = m.name.match(/\|?\s*(\d+)$/);
-        if (match) passaporteReal = match[1];
-      }
+      // GARANTIA DE DADOS:
+      // m.id -> Vem da API como o ID REAL DO DISCORD (Snowflake)
+      // m.cidadeId -> Vem da API como o Passaporte (ou extraído do nick)
 
       return {
         ...m,
         diasInatividade: dias,
         precisaExonerar: dias >= 7,
         discordNick: m.name,
-        discordId: m.id, // ID REAL DO DISCORD (usado para mencionar <@...>)
-        cidadeId: passaporteReal || "N/A", // PASSAPORTE (ID da cidade)
-        rpName: m.rpName || m.name,
+        discordId: m.id, // ID PARA MENÇÃO <@...>
+        cidadeId: m.cidadeId, // ID PARA TEXTO (PASSAPORTE)
+        rpName: m.rpName,
         lastMsg: m.lastMsg,
       };
     });
 
-    // Filtra > 7 dias
+    // Filtra apenas inativos > 7 dias
     const listaFiltrada = dadosInatividadeGlobal.filter(
       (m) => m.diasInatividade >= 7
     );
@@ -332,8 +322,6 @@ window.carregarInatividade = async function () {
           ? new Date(m.lastMsg).toLocaleDateString("pt-BR")
           : '<span style="color:#ff4d4d; font-size:10px;">SEM LOGS</span>';
 
-      // Na tabela, mostramos o Passaporte na coluna de ID para identificação rápida
-      // Mas o botão de relatório usará o discordId
       tr.innerHTML = `
         <td>
            <div class="user-cell">
@@ -373,7 +361,7 @@ window.carregarInatividade = async function () {
 };
 
 // =========================================================
-// 6. RELATÓRIO E CÓPIA (CORRIGIDO PARA MENCIONAR ID REAL)
+// 6. RELATÓRIO E CÓPIA
 // =========================================================
 
 window.copiarRelatorioDiscord = function () {
@@ -399,16 +387,13 @@ window.copiarRelatorioDiscord = function () {
   exonerados.forEach((m) => {
     let item = "";
 
-    // AQUI ESTÁ A CORREÇÃO PRINCIPAL:
-    // <@${m.discordId}> -> Menciona o usuário real (fica azul clicável)
-    // ${m.cidadeId} -> Mostra o Passaporte apenas como texto
+    // AQUI ESTA A CORREÇÃO:
+    // <@${m.discordId}> -> ID Grande (Azul)
+    // ${m.cidadeId} -> Passaporte (Texto)
 
-    // MODELO PMERJ
     if (org === "PMERJ") {
-      item = `\`QRA:\` <@${m.discordId}>\n\`Passaporte:\` ${m.cidadeId}\n\`Nome:\` ${m.rpName}\n\`Tempo Off:\` ${m.diasInatividade} dias\n\`Situação:\` INATIVIDADE\n────────────────────────────────\n`;
-    }
-    // MODELO PRF / PCERJ (PADRÃO)
-    else {
+      item = `\`QRA:\` <@${m.discordId}>\n\`ID:\` ${m.cidadeId}\n\`Nome:\` ${m.rpName}\n\`Tempo Off:\` ${m.diasInatividade} dias\n\`Situação:\` INATIVIDADE\n────────────────────────────────\n`;
+    } else {
       item = `**OFICIAL:** <@${m.discordId}>\n**PASSAPORTE:** ${m.cidadeId}\n**NOME:** ${m.rpName}\n**DIAS INATIVO:** ${m.diasInatividade}\n────────────────────────────────\n`;
     }
 
@@ -451,7 +436,6 @@ function abrirModalRelatorioDividido(partes) {
       container.appendChild(btnCopiar);
     });
   }
-
   modal.style.display = "flex";
 }
 
@@ -461,7 +445,7 @@ window.fecharModalRelatorio = () => {
 };
 
 // =========================================================
-// 7. GESTÃO DE FÉRIAS E OUTRAS TELAS
+// 7. PLACEHOLDERS DE OUTRAS FUNÇÕES
 // =========================================================
 
 window.abrirGestaoFerias = function () {
@@ -469,50 +453,37 @@ window.abrirGestaoFerias = function () {
   const label = getOrgLabel(org);
   resetarTelas();
   document.getElementById("secao-gestao-ferias").style.display = "block";
-  document.getElementById("secao-gestao-ferias").style.visibility = "visible";
-  document.getElementById("botoes-ferias").style.display = "block";
   document.getElementById("nav-ferias").classList.add("active");
   document.getElementById(
     "titulo-pagina"
   ).innerText = `GESTÃO DE FÉRIAS - ${label.nome}`;
-
   if (window.atualizarListaFerias) window.atualizarListaFerias();
 };
 
 window.abrirMetaCore = function () {
   resetarTelas();
   document.getElementById("secao-meta-core").style.display = "block";
-  document.getElementById("secao-meta-core").style.visibility = "visible";
-  document.getElementById("botoes-core").style.display = "block";
   document.getElementById("nav-core").classList.add("active");
-  document.getElementById("titulo-pagina").innerText =
-    "AUDITORIA - METAS CORE (PCERJ)";
+  document.getElementById("titulo-pagina").innerText = "AUDITORIA - METAS CORE";
 };
 
 window.abrirMetaGRR = function () {
   resetarTelas();
   document.getElementById("secao-meta-grr").style.display = "block";
-  document.getElementById("secao-meta-grr").style.visibility = "visible";
-  document.getElementById("botoes-grr").style.display = "block";
   document.getElementById("nav-grr").classList.add("active");
-  document.getElementById("titulo-pagina").innerText =
-    "AUDITORIA - METAS GRR (PRF)";
+  document.getElementById("titulo-pagina").innerText = "AUDITORIA - METAS GRR";
 };
 
 window.abrirMetaBOPE = function () {
   resetarTelas();
   document.getElementById("secao-meta-bope").style.display = "block";
-  document.getElementById("secao-meta-bope").style.visibility = "visible";
-  document.getElementById("botoes-bope").style.display = "block";
   document.getElementById("nav-bope").classList.add("active");
-  document.getElementById("titulo-pagina").innerText =
-    "AUDITORIA - METAS BOPE (PMERJ)";
+  document.getElementById("titulo-pagina").innerText = "AUDITORIA - METAS BOPE";
 };
 
 window.abrirEnsino = function () {
   resetarTelas();
   document.getElementById("secao-ensino").style.display = "block";
-  document.getElementById("botoes-ensino").style.display = "block";
   document.getElementById("nav-ensino").classList.add("active");
   document.getElementById("titulo-pagina").innerText = "SISTEMA DE ENSINO";
 };

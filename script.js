@@ -254,146 +254,119 @@ window.carregarInatividade = async function () {
   const progPercent = document.getElementById("progress-percentage");
   const progLabel = document.getElementById("progress-label");
 
-  // Reset Visual
   corpo.innerHTML = "";
   if (btnCopiar) btnCopiar.style.display = "none";
+
   progContainer.style.display = "block";
   progBar.style.width = "0%";
   progPercent.innerText = "0%";
-  progLabel.innerText = "INICIANDO VARREDURA...";
+  progLabel.innerText = "LENDO LOGS E CHATS...";
   btn.disabled = true;
 
-  // Barra Fake inicial para dar feedback visual imediato
+  // Animação fake
   let width = 0;
   const interval = setInterval(() => {
-    if (width < 85) {
-      width += Math.random() * 3;
+    if (width < 90) {
+      width += Math.random() * 2;
       progBar.style.width = width + "%";
       progPercent.innerText = Math.floor(width) + "%";
     }
-  }, 200);
+  }, 300);
 
   try {
-    console.log("📡 Solicitando dados da API...");
     const res = await fetch(`/api/membros-inativos?org=${org}`);
-
-    // VERIFICAÇÃO DE ERRO HTTP (ex: 500, 404)
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`Erro Servidor (${res.status}): ${errText}`);
-    }
-
+    if (!res.ok) throw new Error("Erro na API");
     const dados = await res.json();
-
-    // VERIFICAÇÃO SE VEIO UM ERRO JSON OU FORMATO INVÁLIDO
-    if (!Array.isArray(dados)) {
-      if (dados.error) throw new Error(dados.error);
-      throw new Error("Formato inválido recebido da API.");
-    }
 
     clearInterval(interval);
     progBar.style.width = "100%";
     progPercent.innerText = "100%";
-    progLabel.innerText = "PROCESSANDO DADOS...";
+    progLabel.innerText = "DADOS PROCESSADOS!";
 
-    if (dados.length === 0) {
-      mostrarAviso("Nenhum membro encontrado ou erro na leitura.", "warning");
+    if (!Array.isArray(dados) || dados.length === 0) {
+      mostrarAviso(
+        "Todos os oficiais estão ativos (Ninguém > 7 dias off).",
+        "success"
+      );
       return;
     }
 
-    // Processamento dos dados
     dadosInatividadeGlobal = dados.map((m) => {
       const agora = Date.now();
 
-      // Se lastMsg for 0, usa a data de entrada ou a data base antiga
-      let dataRef =
-        m.lastMsg > 0
-          ? m.lastMsg
-          : Math.max(m.joinedAt || 0, DATA_BASE_AUDITORIA);
+      // Se lastMsg vier 0 da API, significa que não achou nada nos chats.
+      // Nesse caso, usamos a data de entrada do membro no servidor (se disponível) ou a Data Base
+      let dataReferencia = m.lastMsg > 0 ? m.lastMsg : DATA_BASE_AUDITORIA;
 
-      // Cálculo de dias
-      let dias = Math.floor((agora - dataRef) / (1000 * 60 * 60 * 24));
+      let dias = Math.floor((agora - dataReferencia) / (1000 * 60 * 60 * 24));
       if (dias < 0) dias = 0;
 
       return {
         ...m,
         diasInatividade: dias,
-        // AQUI MUDAMOS DE 3 PARA 7
-        precisaExonerar: dias >= 7,
-        discordNick: m.name || "Sem Nome",
+        precisaExonerar: dias >= 7, // REGRA DE 7 DIAS
+        discordNick: m.name,
         discordId: m.id,
-        rpName: m.rpName || "Não identificado",
-        cidadeId: m.cidadeId || "---",
+        rpName: m.rpName,
+        cidadeId: m.cidadeId,
         lastMsg: m.lastMsg,
       };
     });
 
-    // Botão de copiar aparece se tiver dados
-    if (dadosInatividadeGlobal.length > 0 && btnCopiar) {
+    // Filtra visualmente também, só pra garantir
+    const listaFiltrada = dadosInatividadeGlobal.filter(
+      (m) => m.diasInatividade >= 7
+    );
+
+    if (listaFiltrada.length > 0 && btnCopiar) {
       btnCopiar.style.display = "inline-block";
     }
 
-    // Ordena: Quem tem mais dias inativo aparece primeiro
-    dadosInatividadeGlobal.sort(
-      (a, b) => b.diasInatividade - a.diasInatividade
-    );
+    listaFiltrada.sort((a, b) => b.diasInatividade - a.diasInatividade);
 
-    // Renderiza na Tabela
-    dadosInatividadeGlobal.forEach((m) => {
+    listaFiltrada.forEach((m) => {
       const tr = document.createElement("tr");
 
-      const dataFormatada =
+      const dataStr =
         m.lastMsg > 0
           ? new Date(m.lastMsg).toLocaleDateString("pt-BR")
-          : '<span style="color: #ffb400; font-size: 0.85em;">SEM REGISTRO</span>';
+          : '<span style="color:#ff4d4d; font-size:10px;">SEM LOGS</span>';
 
       tr.innerHTML = `
         <td>
-            <div class="user-cell">
-                <img src="${
-                  m.avatar || "https://cdn.discordapp.com/embed/avatars/0.png"
-                }" class="avatar-img" onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
-                <div>
-                    <strong>${m.discordNick}</strong>
-                    <div style="font-size: 11px; color: #aaa;">${m.rpName}</div>
-                </div>
-            </div>
+           <div class="user-cell">
+             <img src="${
+               m.avatar || "https://cdn.discordapp.com/embed/avatars/0.png"
+             }" class="avatar-img">
+             <div>
+               <strong>${m.discordNick}</strong>
+               <div style="font-size:11px; color:#aaa;">${m.rpName}</div>
+             </div>
+           </div>
         </td>
         <td><code>${m.cidadeId}</code></td>
-        <td>${dataFormatada}</td>
-        <td>
-            <strong style="color: ${m.precisaExonerar ? "#ff4d4d" : "#d4af37"}">
-                ${m.diasInatividade} Dias
-            </strong>
-        </td>
-        <td align="center">
-            <span class="${
-              m.precisaExonerar ? "badge-danger" : "badge-success"
-            }">
-                ${m.precisaExonerar ? "⚠️ REVISAR" : "✅ ATIVO"}
-            </span>
-        </td>
+        <td>${dataStr}</td>
+        <td><strong style="color: #ff4d4d">${
+          m.diasInatividade
+        } Dias</strong></td>
+        <td align="center"><span class="badge-danger">⚠️ INATIVO</span></td>
       `;
       corpo.appendChild(tr);
     });
 
-    mostrarAviso(
-      `Sincronização concluída! ${dados.length} oficiais analisados.`
-    );
+    mostrarAviso(`${listaFiltrada.length} oficiais inativos encontrados.`);
   } catch (err) {
     clearInterval(interval);
-    console.error("Erro no Frontend:", err);
-    progBar.style.backgroundColor = "#ff4d4d";
-    progLabel.innerText = "FALHA NA CONEXÃO";
-    mostrarAviso(err.message || "Erro ao conectar com a API.", "error");
+    console.error(err);
+    progBar.style.backgroundColor = "red";
+    progLabel.innerText = "ERRO AO PROCESSAR";
+    mostrarAviso("Erro ao buscar dados.", "error");
   } finally {
     btn.disabled = false;
     setTimeout(() => {
-      // Esconde a barra apenas se deu certo ou passou muito tempo
       progContainer.style.display = "none";
-      // Reseta cor da barra
       progBar.style.backgroundColor = "var(--gold-primary)";
-    }, 4000);
+    }, 3000);
   }
 };
 

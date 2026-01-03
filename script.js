@@ -2,7 +2,6 @@
 // 1. CONFIGURAÇÕES GLOBAIS E SESSÃO
 // =========================================================
 let dadosInatividadeGlobal = [];
-// Define a data base (ex: data do último "limpa" geral ou início da gestão)
 const DATA_BASE_AUDITORIA = new Date("2025-12-08T00:00:00").getTime();
 
 const obterSessao = () => {
@@ -45,7 +44,7 @@ const getOrgLabel = (org) => {
   );
 };
 
-// --- IDENTIDADE VISUAL ---
+// --- FUNÇÃO DE ÍCONE ADICIONADA ---
 function atualizarIdentidadeVisual(org) {
   const logos = {
     PRF: "Imagens/PRF_new.png",
@@ -61,7 +60,7 @@ function atualizarIdentidadeVisual(org) {
   const logoSidebar = document.getElementById("logo-sidebar");
   if (logoSidebar) logoSidebar.src = logoUrl;
 
-  // Muda o favicon
+  // Muda o favicon (ícone da aba)
   let favicon = document.querySelector("link[rel~='icon']");
   if (!favicon) {
     favicon = document.createElement("link");
@@ -72,14 +71,12 @@ function atualizarIdentidadeVisual(org) {
 }
 
 /**
- * Função de Notificação
+ * Função de Notificação (Restaurada para evitar erro "mostrarAviso is not defined")
  */
 window.mostrarAviso = function (msg, tipo = "success") {
   const aviso = document.getElementById("aviso-global");
   if (!aviso) {
     console.log(`[${tipo}] ${msg}`);
-    // Fallback caso o elemento não exista no HTML
-    alert(msg);
     return;
   }
   aviso.innerText = msg;
@@ -87,7 +84,7 @@ window.mostrarAviso = function (msg, tipo = "success") {
   aviso.style.display = "block";
   setTimeout(() => {
     aviso.style.display = "none";
-  }, 4000);
+  }, 3000);
 };
 
 // =========================================================
@@ -129,7 +126,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   aplicarRestricoes();
-  window.abrirInatividade(); // Abre por padrão na tela de auditoria
+  window.abrirInatividade();
 });
 
 function aplicarRestricoes() {
@@ -137,7 +134,9 @@ function aplicarRestricoes() {
   if (!sessao || !sessao.org) return;
 
   const { org } = sessao;
+  const configOrg = getOrgLabel(org);
 
+  // Executa a nova função de identidade visual (Logo + Favicon)
   atualizarIdentidadeVisual(org);
 
   const sidebarTitulo = document.querySelector(".sidebar-header h2");
@@ -223,13 +222,11 @@ window.abrirInatividade = function () {
   const sessao = obterSessao();
   if (!sessao || !sessao.org) return;
   const label = getOrgLabel(sessao.org);
-
   resetarTelas();
   document.getElementById("secao-inatividade").style.display = "block";
   document.getElementById("secao-inatividade").style.visibility = "visible";
   document.getElementById("botoes-inatividade").style.display = "block";
   document.getElementById("nav-inatividade").classList.add("active");
-
   document.getElementById(
     "titulo-pagina"
   ).innerText = `AUDITORIA - ${label.nome}`;
@@ -239,7 +236,7 @@ window.abrirInatividade = function () {
 };
 
 // =========================================================
-// 5. LÓGICA DE AUDITORIA (CORRIGIDA E BLINDADA)
+// 5. LÓGICA DE AUDITORIA E BARRA DE PROGRESSO (RESTAURADO)
 // =========================================================
 
 window.carregarInatividade = async function () {
@@ -252,150 +249,92 @@ window.carregarInatividade = async function () {
   const progPercent = document.getElementById("progress-percentage");
   const progLabel = document.getElementById("progress-label");
 
-  // Reset Visual
   corpo.innerHTML = "";
-  if (btnCopiar) btnCopiar.style.display = "none";
   progContainer.style.display = "block";
   progBar.style.width = "0%";
   progPercent.innerText = "0%";
-  progLabel.innerText = "INICIANDO VARREDURA...";
+  progLabel.innerText = "CONECTANDO AO DISCORD...";
   btn.disabled = true;
 
-  // Barra Fake inicial para dar feedback visual imediato
   let width = 0;
   const interval = setInterval(() => {
-    if (width < 85) {
-      width += Math.random() * 3;
+    if (width < 90) {
+      width += Math.random() * 2;
       progBar.style.width = width + "%";
       progPercent.innerText = Math.floor(width) + "%";
     }
-  }, 200);
+  }, 150);
 
   try {
-    console.log("📡 Solicitando dados da API...");
     const res = await fetch(`/api/membros-inativos?org=${org}`);
-
-    // VERIFICAÇÃO DE ERRO HTTP (ex: 500, 404)
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`Erro Servidor (${res.status}): ${errText}`);
-    }
-
     const dados = await res.json();
-
-    // VERIFICAÇÃO SE VEIO UM ERRO JSON OU FORMATO INVÁLIDO
-    if (!Array.isArray(dados)) {
-      if (dados.error) throw new Error(dados.error);
-      throw new Error("Formato inválido recebido da API.");
-    }
-
     clearInterval(interval);
     progBar.style.width = "100%";
     progPercent.innerText = "100%";
-    progLabel.innerText = "PROCESSANDO DADOS...";
+    progLabel.innerText = "VARREDURA COMPLETA!";
 
-    if (dados.length === 0) {
-      mostrarAviso("Nenhum membro encontrado ou erro na leitura.", "warning");
-      return;
-    }
-
-    // Processamento dos dados
     dadosInatividadeGlobal = dados.map((m) => {
       const agora = Date.now();
-
-      // Se lastMsg for 0, usa a data de entrada (joinedAt). Se joinedAt for antigo, usa a DATA_BASE.
       let dataRef =
         m.lastMsg > 0
           ? m.lastMsg
           : Math.max(m.joinedAt || 0, DATA_BASE_AUDITORIA);
-
-      // Cálculo de dias
       let dias = Math.floor((agora - dataRef) / (1000 * 60 * 60 * 24));
-      if (dias < 0) dias = 0; // Evita dias negativos se data for hoje
+      if (dias < 0) dias = 0;
 
       return {
         ...m,
         diasInatividade: dias,
-        precisaExonerar: dias >= 3, // Regra de 3 dias (ajuste conforme necessidade)
+        precisaExonerar: dias >= 7,
         discordNick: m.name || "Sem Nome",
         discordId: m.id,
-        rpName: m.rpName || "Não identificado",
-        cidadeId: m.cidadeId || "---",
+        rpName: m.rpName,
+        cidadeId: m.cidadeId,
         lastMsg: m.lastMsg,
       };
     });
 
-    // Botão de copiar aparece se tiver dados
-    if (dadosInatividadeGlobal.length > 0 && btnCopiar) {
+    if (dadosInatividadeGlobal.length > 0)
       btnCopiar.style.display = "inline-block";
-    }
-
-    // Ordena: Quem tem mais dias inativo aparece primeiro
     dadosInatividadeGlobal.sort(
       (a, b) => b.diasInatividade - a.diasInatividade
     );
 
-    // Renderiza na Tabela
     dadosInatividadeGlobal.forEach((m) => {
       const tr = document.createElement("tr");
-
-      const dataFormatada =
-        m.lastMsg > 0
-          ? new Date(m.lastMsg).toLocaleDateString("pt-BR")
-          : '<span style="color: #ffb400; font-size: 0.85em;">SEM REGISTRO</span>';
-
       tr.innerHTML = `
-        <td>
-            <div class="user-cell">
-                <img src="${
-                  m.avatar || "https://cdn.discordapp.com/embed/avatars/0.png"
-                }" class="avatar-img" onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
-                <div>
-                    <strong>${m.discordNick}</strong>
-                    <div style="font-size: 11px; color: #aaa;">${m.rpName}</div>
-                </div>
-            </div>
-        </td>
-        <td><code>${m.cidadeId}</code></td>
-        <td>${dataFormatada}</td>
-        <td>
-            <strong style="color: ${m.precisaExonerar ? "#ff4d4d" : "#d4af37"}">
-                ${m.diasInatividade} Dias
-            </strong>
-        </td>
-        <td align="center">
-            <span class="${
-              m.precisaExonerar ? "badge-danger" : "badge-success"
-            }">
-                ${m.precisaExonerar ? "⚠️ REVISAR" : "✅ ATIVO"}
-            </span>
-        </td>
+        <td><div class="user-cell"><img src="${
+          m.avatar || "https://cdn.discordapp.com/embed/avatars/0.png"
+        }" class="avatar-img"><strong>${m.discordNick}</strong></div></td>
+        <td><code>${m.discordId}</code></td>
+        <td>${
+          m.lastMsg > 0
+            ? new Date(m.lastMsg).toLocaleDateString("pt-BR")
+            : '<span style="color: #ffb400; font-size: 0.85em; font-weight: bold;">⚠️ SEM REGISTROS</span>'
+        }</td>
+        <td><strong style="color: ${
+          m.precisaExonerar ? "#ff4d4d" : "#d4af37"
+        }">${m.diasInatividade} Dias</strong></td>
+        <td align="center"><span class="${
+          m.precisaExonerar ? "badge-danger" : "badge-success"
+        }">${m.precisaExonerar ? "⚠️ EXONERAR" : "✅ REGULAR"}</span></td>
       `;
       corpo.appendChild(tr);
     });
-
-    mostrarAviso(
-      `Sincronização concluída! ${dados.length} oficiais analisados.`
-    );
+    mostrarAviso("Dados sincronizados.");
   } catch (err) {
     clearInterval(interval);
-    console.error("Erro no Frontend:", err);
-    progBar.style.backgroundColor = "#ff4d4d";
-    progLabel.innerText = "FALHA NA CONEXÃO";
-    mostrarAviso(err.message || "Erro ao conectar com a API.", "error");
+    mostrarAviso("Erro ao buscar dados.", "error");
   } finally {
     btn.disabled = false;
     setTimeout(() => {
-      // Esconde a barra apenas se deu certo ou passou muito tempo
       progContainer.style.display = "none";
-      // Reseta cor da barra
-      progBar.style.backgroundColor = "var(--gold-primary)";
-    }, 4000);
+    }, 3000);
   }
 };
 
 // =========================================================
-// 6. RELATÓRIO E CÓPIA
+// 6. FUNÇÕES DE CÓPIA E RELATÓRIO (MODELO PMERJ DIFERENCIADO)
 // =========================================================
 
 window.copiarRelatorioDiscord = function () {
@@ -408,33 +347,26 @@ window.copiarRelatorioDiscord = function () {
     return;
   }
 
-  // Filtra apenas quem está marcado para exonerar/revisar
   const exonerados = dadosInatividadeGlobal.filter((m) => m.precisaExonerar);
-
-  if (exonerados.length === 0) {
-    mostrarAviso("Ninguém atingiu o limite de inatividade!", "success");
-    return;
-  }
-
   const partes = [];
-  let textoAtual = `📋 **RELATÓRIO DE INATIVIDADE - ${label.nome}** 📋\n📅 DATA: ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+  let textoAtual = `📋 **RELATÓRIO DE EXONERAÇÃO - ${label.nome}** 📋\n📅 DATA: ${dataHoje}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
   exonerados.forEach((m) => {
     let item = "";
 
-    // MODELO PMERJ
+    // VERIFICAÇÃO SE É PMERJ PARA MUDAR O MODELO
     if (org === "PMERJ") {
-      item = `\`QRA:\` <@${m.discordId}>\n\`ID:\` ${m.cidadeId}\n\`Nome:\` ${m.rpName}\n\`Tempo Off:\` ${m.diasInatividade} dias\n\`Situação:\` INATIVIDADE\n────────────────────────────────\n`;
-    }
-    // MODELO PRF / PCERJ (PADRÃO)
-    else {
-      item = `**OFICIAL:** <@${m.discordId}>\n**PASSAPORTE:** ${m.cidadeId}\n**NOME:** ${m.rpName}\n**DIAS INATIVO:** ${m.diasInatividade}\n────────────────────────────────\n`;
+      item = `\`QRA:\` <@${m.discordId}>\n\`ID:\` ${m.cidadeId}\n\`Nome na cidade:\` ${m.rpName}\n\`DATA:\` ${dataHoje}\n\`MOTIVO:\` INATIVIDADE\n────────────────────────────────\n`;
+    } else {
+      // MODELO PADRÃO PARA PCERJ E PRF
+      item = `QRA: <@${m.discordId}>\nID: ${m.cidadeId}\nNome na cidade: ${m.rpName}\nDATA: ${dataHoje}\nMOTIVO: INATIVIDADE\n────────────────────────────────\n`;
     }
 
-    // Divide se passar de 1900 caracteres (limite seguro do Discord)
+    // Lógica para não ultrapassar o limite do Discord (2000 caracteres)
     if ((textoAtual + item).length > 1900) {
       partes.push(textoAtual);
-      textoAtual = `📋 **CONTINUAÇÃO RELATÓRIO...**\n\n` + item;
+      textoAtual =
+        `📋 **RELATÓRIO DE EXONERAÇÃO - ${label.nome} (Cont.)** 📋\n\n` + item;
     } else {
       textoAtual += item;
     }
@@ -446,44 +378,32 @@ window.copiarRelatorioDiscord = function () {
 
 function abrirModalRelatorioDividido(partes) {
   let modal = document.getElementById("modal-relatorio");
-  // Se o modal não existe no HTML, cria um alerta simples
-  if (!modal) {
-    // Tenta copiar a primeira parte direto
-    navigator.clipboard.writeText(partes[0]);
-    mostrarAviso("Relatório copiado (Parte 1). Verifique se há mais partes.");
-    return;
-  }
-
-  const container = document.getElementById("container-botoes-partes"); // Precisa existir no HTML
-  if (container) {
-    container.innerHTML = "";
-    partes.forEach((texto, index) => {
-      const btnCopiar = document.createElement("button");
-      btnCopiar.innerHTML = `<i class="fa-solid fa-copy"></i> COPIAR PARTE ${
-        index + 1
-      }`;
-      btnCopiar.className = "btn-gold";
-      btnCopiar.style.width = "100%";
-      btnCopiar.style.marginBottom = "10px";
-      btnCopiar.onclick = () => {
-        navigator.clipboard.writeText(texto).then(() => {
-          mostrarAviso(`Parte ${index + 1} copiada!`);
-        });
-      };
-      container.appendChild(btnCopiar);
-    });
-  }
-
+  if (!modal) return;
+  const container = document.getElementById("container-botoes-partes");
+  container.innerHTML = "";
+  partes.forEach((texto, index) => {
+    const btnCopiar = document.createElement("button");
+    btnCopiar.innerHTML = `<i class="fa-solid fa-copy"></i> COPIAR PARTE ${
+      index + 1
+    }`;
+    btnCopiar.className = "btn-gold";
+    btnCopiar.style.width = "100%";
+    btnCopiar.onclick = () => {
+      navigator.clipboard.writeText(texto).then(() => {
+        mostrarAviso(`Parte ${index + 1} copiada!`);
+      });
+    };
+    container.appendChild(btnCopiar);
+  });
   modal.style.display = "flex";
 }
 
 window.fecharModalRelatorio = () => {
-  const modal = document.getElementById("modal-relatorio");
-  if (modal) modal.style.display = "none";
+  document.getElementById("modal-relatorio").style.display = "none";
 };
 
 // =========================================================
-// 7. GESTÃO DE FÉRIAS (PLACEHOLDER)
+// 7. GESTÃO DE FÉRIAS (RESTAURADO)
 // =========================================================
 
 window.abrirGestaoFerias = function () {
@@ -497,13 +417,62 @@ window.abrirGestaoFerias = function () {
   document.getElementById(
     "titulo-pagina"
   ).innerText = `GESTÃO DE FÉRIAS - ${label.nome}`;
+  window.atualizarListaFerias();
+};
 
-  // Se tiver função de carregar férias, chama aqui
-  if (window.atualizarListaFerias) window.atualizarListaFerias();
+window.atualizarListaFerias = async function () {
+  const { org } = obterSessao();
+  const select = document.getElementById("select-oficiais-ferias");
+  const logContainer = document.getElementById("status-ferias-info");
+  if (!select) return;
+
+  select.innerHTML = '<option value="">Sincronizando...</option>';
+  try {
+    const res = await fetch(`/api/verificar-ferias?org=${org}`);
+    const data = await res.json();
+    select.innerHTML = '<option value="">Selecione para antecipar...</option>';
+
+    if (data.oficiais && data.oficiais.length > 0) {
+      data.oficiais.forEach((oficial) => {
+        const opt = document.createElement("option");
+        opt.value = oficial.id;
+        opt.textContent = `🌴 ${oficial.nome} (Até: ${oficial.dataRetorno})`;
+        select.appendChild(opt);
+      });
+    } else {
+      select.innerHTML = '<option value="">Nenhum oficial em férias.</option>';
+    }
+    logContainer.innerHTML =
+      data.logs?.length > 0
+        ? data.logs.join("<br>")
+        : "Sem retornos pendentes hoje.";
+  } catch (e) {
+    mostrarAviso("Erro ao carregar férias.", "error");
+  }
+};
+
+window.executarAntecipacao = async function () {
+  const userId = document.getElementById("select-oficiais-ferias").value;
+  if (!userId) return mostrarAviso("Selecione um oficial.", "warning");
+  if (!confirm("Confirmar retorno antecipado? O cargo será devolvido agora."))
+    return;
+  try {
+    const res = await fetch("/api/verificar-ferias", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+    if (res.ok) {
+      mostrarAviso("Férias antecipadas com sucesso!");
+      window.atualizarListaFerias();
+    }
+  } catch (e) {
+    mostrarAviso("Erro ao processar antecipação.", "error");
+  }
 };
 
 // =========================================================
-// 8. METAS E ENSINO
+// 8. METAS E ENSINO (RESTAURADO)
 // =========================================================
 
 window.abrirMetaCore = function () {

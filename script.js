@@ -3,8 +3,7 @@
 // =========================================================
 let dadosInatividadeGlobal = [];
 
-// IMPORTANTE: Coloque uma data no PASSADO para servir de base para quem nunca falou.
-// Se colocar no futuro (2025), o cálculo dá negativo.
+// DATA BASE: Dezembro/2025 para cálculo correto em 2026
 const DATA_BASE_AUDITORIA = new Date("2025-12-08T00:00:00").getTime();
 
 const obterSessao = () => {
@@ -59,11 +58,9 @@ function atualizarIdentidadeVisual(org) {
 
   const logoUrl = logos[org] || logos["PCERJ"];
 
-  // Muda a logo da barra lateral
   const logoSidebar = document.getElementById("logo-sidebar");
   if (logoSidebar) logoSidebar.src = logoUrl;
 
-  // Muda o favicon
   let favicon = document.querySelector("link[rel~='icon']");
   if (!favicon) {
     favicon = document.createElement("link");
@@ -73,14 +70,10 @@ function atualizarIdentidadeVisual(org) {
   favicon.href = logoUrl;
 }
 
-/**
- * Função de Notificação
- */
 window.mostrarAviso = function (msg, tipo = "success") {
   const aviso = document.getElementById("aviso-global");
   if (!aviso) {
     console.log(`[${tipo}] ${msg}`);
-    // Fallback caso o elemento não exista no HTML
     alert(msg);
     return;
   }
@@ -131,7 +124,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   aplicarRestricoes();
-  window.abrirInatividade(); // Abre por padrão na tela de auditoria
+  window.abrirInatividade();
 });
 
 function aplicarRestricoes() {
@@ -139,7 +132,6 @@ function aplicarRestricoes() {
   if (!sessao || !sessao.org) return;
 
   const { org } = sessao;
-
   atualizarIdentidadeVisual(org);
 
   const sidebarTitulo = document.querySelector(".sidebar-header h2");
@@ -241,7 +233,7 @@ window.abrirInatividade = function () {
 };
 
 // =========================================================
-// 5. LÓGICA DE AUDITORIA (CORRIGIDA E BLINDADA)
+// 5. LÓGICA DE AUDITORIA (CORRIGIDA - ID REAL VS PASSAPORTE)
 // =========================================================
 
 window.carregarInatividade = async function () {
@@ -263,7 +255,6 @@ window.carregarInatividade = async function () {
   progLabel.innerText = "LENDO LOGS E CHATS...";
   btn.disabled = true;
 
-  // Animação fake
   let width = 0;
   const interval = setInterval(() => {
     if (width < 90) {
@@ -293,27 +284,36 @@ window.carregarInatividade = async function () {
 
     dadosInatividadeGlobal = dados.map((m) => {
       const agora = Date.now();
-
-      // Se lastMsg vier 0 da API, significa que não achou nada nos chats.
-      // Nesse caso, usamos a data de entrada do membro no servidor (se disponível) ou a Data Base
       let dataReferencia = m.lastMsg > 0 ? m.lastMsg : DATA_BASE_AUDITORIA;
 
       let dias = Math.floor((agora - dataReferencia) / (1000 * 60 * 60 * 24));
       if (dias < 0) dias = 0;
 
+      // --- CORREÇÃO DO ID ---
+      // m.id = ID do Discord (Snowflake - Número Grande) vindo da API
+      // m.cidadeId = Passaporte (Número Pequeno) vindo da API
+      // Se m.cidadeId for nulo, tenta pegar do apelido (Ex: "Chico | 2104")
+
+      let passaporteReal = m.cidadeId;
+      if (!passaporteReal && m.name) {
+        // Tenta extrair números do final do nome se a API não trouxer o ID da cidade separado
+        const match = m.name.match(/\|?\s*(\d+)$/);
+        if (match) passaporteReal = match[1];
+      }
+
       return {
         ...m,
         diasInatividade: dias,
-        precisaExonerar: dias >= 7, // REGRA DE 7 DIAS
+        precisaExonerar: dias >= 7,
         discordNick: m.name,
-        discordId: m.id,
-        rpName: m.rpName,
-        cidadeId: m.cidadeId,
+        discordId: m.id, // ID REAL DO DISCORD (usado para mencionar <@...>)
+        cidadeId: passaporteReal || "N/A", // PASSAPORTE (ID da cidade)
+        rpName: m.rpName || m.name,
         lastMsg: m.lastMsg,
       };
     });
 
-    // Filtra visualmente também, só pra garantir
+    // Filtra > 7 dias
     const listaFiltrada = dadosInatividadeGlobal.filter(
       (m) => m.diasInatividade >= 7
     );
@@ -332,6 +332,8 @@ window.carregarInatividade = async function () {
           ? new Date(m.lastMsg).toLocaleDateString("pt-BR")
           : '<span style="color:#ff4d4d; font-size:10px;">SEM LOGS</span>';
 
+      // Na tabela, mostramos o Passaporte na coluna de ID para identificação rápida
+      // Mas o botão de relatório usará o discordId
       tr.innerHTML = `
         <td>
            <div class="user-cell">
@@ -371,7 +373,7 @@ window.carregarInatividade = async function () {
 };
 
 // =========================================================
-// 6. RELATÓRIO E CÓPIA
+// 6. RELATÓRIO E CÓPIA (CORRIGIDO PARA MENCIONAR ID REAL)
 // =========================================================
 
 window.copiarRelatorioDiscord = function () {
@@ -384,7 +386,6 @@ window.copiarRelatorioDiscord = function () {
     return;
   }
 
-  // Filtra apenas quem está marcado para exonerar/revisar
   const exonerados = dadosInatividadeGlobal.filter((m) => m.precisaExonerar);
 
   if (exonerados.length === 0) {
@@ -398,16 +399,19 @@ window.copiarRelatorioDiscord = function () {
   exonerados.forEach((m) => {
     let item = "";
 
+    // AQUI ESTÁ A CORREÇÃO PRINCIPAL:
+    // <@${m.discordId}> -> Menciona o usuário real (fica azul clicável)
+    // ${m.cidadeId} -> Mostra o Passaporte apenas como texto
+
     // MODELO PMERJ
     if (org === "PMERJ") {
-      item = `\`QRA:\` <@${m.discordId}>\n\`ID:\` ${m.cidadeId}\n\`Nome:\` ${m.rpName}\n\`Tempo Off:\` ${m.diasInatividade} dias\n\`Situação:\` INATIVIDADE\n────────────────────────────────\n`;
+      item = `\`QRA:\` <@${m.discordId}>\n\`Passaporte:\` ${m.cidadeId}\n\`Nome:\` ${m.rpName}\n\`Tempo Off:\` ${m.diasInatividade} dias\n\`Situação:\` INATIVIDADE\n────────────────────────────────\n`;
     }
     // MODELO PRF / PCERJ (PADRÃO)
     else {
       item = `**OFICIAL:** <@${m.discordId}>\n**PASSAPORTE:** ${m.cidadeId}\n**NOME:** ${m.rpName}\n**DIAS INATIVO:** ${m.diasInatividade}\n────────────────────────────────\n`;
     }
 
-    // Divide se passar de 1900 caracteres (limite seguro do Discord)
     if ((textoAtual + item).length > 1900) {
       partes.push(textoAtual);
       textoAtual = `📋 **CONTINUAÇÃO RELATÓRIO...**\n\n` + item;
@@ -422,15 +426,13 @@ window.copiarRelatorioDiscord = function () {
 
 function abrirModalRelatorioDividido(partes) {
   let modal = document.getElementById("modal-relatorio");
-  // Se o modal não existe no HTML, cria um alerta simples
   if (!modal) {
-    // Tenta copiar a primeira parte direto
     navigator.clipboard.writeText(partes[0]);
-    mostrarAviso("Relatório copiado (Parte 1). Verifique se há mais partes.");
+    mostrarAviso("Relatório copiado (Parte 1).");
     return;
   }
 
-  const container = document.getElementById("container-botoes-partes"); // Precisa existir no HTML
+  const container = document.getElementById("container-botoes-partes");
   if (container) {
     container.innerHTML = "";
     partes.forEach((texto, index) => {
@@ -459,7 +461,7 @@ window.fecharModalRelatorio = () => {
 };
 
 // =========================================================
-// 7. GESTÃO DE FÉRIAS (PLACEHOLDER)
+// 7. GESTÃO DE FÉRIAS E OUTRAS TELAS
 // =========================================================
 
 window.abrirGestaoFerias = function () {
@@ -474,13 +476,8 @@ window.abrirGestaoFerias = function () {
     "titulo-pagina"
   ).innerText = `GESTÃO DE FÉRIAS - ${label.nome}`;
 
-  // Se tiver função de carregar férias, chama aqui
   if (window.atualizarListaFerias) window.atualizarListaFerias();
 };
-
-// =========================================================
-// 8. METAS E ENSINO
-// =========================================================
 
 window.abrirMetaCore = function () {
   resetarTelas();

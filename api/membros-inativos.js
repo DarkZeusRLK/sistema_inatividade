@@ -1,4 +1,4 @@
-// Usa importação dinâmica para evitar erro de "ESM vs CommonJS"
+// Importação dinâmica para compatibilidade total na Vercel
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
 
@@ -8,7 +8,7 @@ module.exports = async (req, res) => {
     Discord_Bot_Token,
     GUILD_ID,
     FERIAS_ROLE_ID,
-    FERIAS_CHANNEL_ID, // ID do canal de logs de férias
+    FERIAS_CHANNEL_ID, // <--- OBRIGATÓRIO TER NO .ENV
     POLICE_ROLE_ID,
     ADMISSAO_CHANNEL_ID,
     PRF_ROLE_ID,
@@ -21,7 +21,6 @@ module.exports = async (req, res) => {
   const canaisPermitidos = CHAT_ID_BUSCAR
     ? CHAT_ID_BUSCAR.split(",").map((id) => id.trim())
     : [];
-
   const headers = { Authorization: `Bot ${Discord_Bot_Token}` };
 
   try {
@@ -39,16 +38,13 @@ module.exports = async (req, res) => {
 
         if (respFerias.ok) {
           const msgsFerias = await respFerias.json();
-
           msgsFerias.forEach((msg) => {
             let userId = null;
 
-            // Prioridade 1: Menção
+            // Tenta pegar ID pela menção ou pelo texto
             if (msg.mentions && msg.mentions.length > 0) {
               userId = msg.mentions[0].id;
-            }
-            // Prioridade 2: Regex no texto
-            else {
+            } else {
               const content = msg.content + JSON.stringify(msg.embeds || []);
               const matchID =
                 content.match(/<@!?(\d+)>/) || content.match(/(\d{17,20})/);
@@ -56,16 +52,15 @@ module.exports = async (req, res) => {
             }
 
             if (userId) {
-              const textoCompleto = (
+              const texto = (
                 msg.content +
                 " " +
                 JSON.stringify(msg.embeds || [])
               ).toLowerCase();
-
-              // Regex busca datas (dd/mm ou dd/mm/aaaa)
+              // Regex: Procura "Volta", "Até", "Fim" seguido de data DD/MM
               const regexData =
                 /(?:término|volta|retorno|até|fim)[\s\S]*?(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/;
-              const matchData = textoCompleto.match(regexData);
+              const matchData = texto.match(regexData);
 
               if (matchData) {
                 const dia = parseInt(matchData[1]);
@@ -75,7 +70,7 @@ module.exports = async (req, res) => {
                   : new Date().getFullYear();
                 if (ano < 100) ano += 2000;
 
-                // Define data para o FIM do dia (23:59:59)
+                // Define a data para o FIM do dia (23:59:59)
                 const dataTermino = new Date(
                   ano,
                   mes,
@@ -85,193 +80,177 @@ module.exports = async (req, res) => {
                   59
                 ).getTime();
 
+                // Guarda a data mais futura encontrada para o usuário
                 if (!mapaFerias[userId] || dataTermino > mapaFerias[userId]) {
                   mapaFerias[userId] = dataTermino;
                 }
               }
             }
           });
-        } else {
-          console.error(`Erro ao ler férias: Status ${respFerias.status}`);
         }
-      } catch (errFerias) {
-        console.error("Erro ao ler canal de férias:", errFerias);
+      } catch (err) {
+        console.error("Erro ao ler férias:", err);
       }
     }
 
     // =================================================================================
-    // 2. BUSCA DADOS DE ADMISSÃO
+    // 2. BUSCA BANCO DE DADOS DE ADMISSÃO
     // =================================================================================
     let dadosRP = {};
-    const targetAdm =
-      org === "PRF"
-        ? PRF_ADMISSAO_CH
-        : org === "PMERJ"
-        ? PMERJ_ADMISSAO_CH
-        : ADMISSAO_CHANNEL_ID;
+    if (org) {
+      const targetAdm =
+        org === "PRF"
+          ? PRF_ADMISSAO_CH
+          : org === "PMERJ"
+          ? PMERJ_ADMISSAO_CH
+          : ADMISSAO_CHANNEL_ID;
 
-    if (org && targetAdm) {
-      // Loop sequencial aqui é aceitável pois são poucas páginas (5)
-      let ultimoIdAdmissao = null;
-      for (let i = 0; i < 5; i++) {
-        let url = `https://discord.com/api/v10/channels/${targetAdm}/messages?limit=100`;
-        if (ultimoIdAdmissao) url += `&before=${ultimoIdAdmissao}`;
+      if (targetAdm) {
+        let ultimoIdAdmissao = null;
+        // Limita a 5 páginas para não estourar tempo
+        for (let i = 0; i < 5; i++) {
+          let url = `https://discord.com/api/v10/channels/${targetAdm}/messages?limit=100`;
+          if (ultimoIdAdmissao) url += `&before=${ultimoIdAdmissao}`;
 
-        const r = await fetch(url, { headers });
-        if (!r.ok) break;
-
-        const msgs = await r.json();
-        if (!msgs || msgs.length === 0) break;
-
-        msgs.forEach((m) => {
-          const content = m.content;
-          const matchId =
-            content.match(/Passaporte:?\s*(\d+)/i) ||
-            content.match(/ID:?\s*(\d+)/i);
-          const matchNome = content.match(/Nome:?\s*(.+?)(\n|$)/i);
-          const mention = m.mentions && m.mentions[0] ? m.mentions[0].id : null;
-
-          if (mention && (matchId || matchNome)) {
-            if (!dadosRP[mention]) {
-              dadosRP[mention] = {
-                passaporte: matchId ? matchId[1] : "N/A",
-                nome: matchNome ? matchNome[1].trim() : "Sem Nome",
-              };
-            }
-          }
-        });
-        ultimoIdAdmissao = msgs[msgs.length - 1].id;
-      }
-    }
-
-    // =================================================================================
-    // 3. MAPA DE ATIVIDADE (Chat) - OTIMIZADO (PARALELO)
-    // =================================================================================
-    let activityMap = {};
-
-    // Cria uma promessa para cada canal para buscar em paralelo e evitar TIMEOUT
-    const promisesChats = canaisPermitidos.map(async (channelId) => {
-      if (!channelId) return;
-      let ultimoIdBusca = null;
-
-      // Busca 3 páginas (300 msgs)
-      for (let i = 0; i < 3; i++) {
-        let url = `https://discord.com/api/v10/channels/${channelId}/messages?limit=100`;
-        if (ultimoIdBusca) url += `&before=${ultimoIdBusca}`;
-
-        try {
-          const resp = await fetch(url, { headers });
-          if (!resp.ok) break;
-
-          const msgs = await resp.json();
+          const resAdm = await fetch(url, { headers });
+          if (!resAdm.ok) break;
+          const msgs = await resAdm.json();
           if (!msgs || msgs.length === 0) break;
 
           msgs.forEach((msg) => {
-            const userId = msg.author.id;
-            const ts = new Date(msg.timestamp).getTime();
-
-            if (!activityMap[userId]) {
-              activityMap[userId] = {
-                lastMsg: ts,
-                username: msg.author.username,
+            const m = msg.content.match(/<@!?(\d+)>/);
+            if (m && !dadosRP[m[1]]) {
+              const nome = msg.content
+                .replace(/\*/g, "")
+                .match(/NOME\s*(?:DO\s*RP)?:\s*(.*)/i);
+              const idCid = msg.content.match(
+                /ID(?:\s*DA\s*CIDADE)?:\s*(\d+)/i
+              );
+              dadosRP[m[1]] = {
+                nome: nome
+                  ? nome[1].split("\n")[0].trim()
+                  : "Nome não identificado",
+                cidadeId: idCid ? idCid[1].trim() : "---",
               };
-            } else if (ts > activityMap[userId].lastMsg) {
-              activityMap[userId].lastMsg = ts;
             }
-            activityMap[userId].username = msg.author.username;
           });
-          ultimoIdBusca = msgs[msgs.length - 1].id;
-        } catch (e) {
-          console.error(`Erro ao ler chat ${channelId}:`, e);
-          break;
+          ultimoIdAdmissao = msgs[msgs.length - 1].id;
         }
       }
-    });
-
-    // Espera todos os chats serem lidos ao mesmo tempo
-    await Promise.all(promisesChats);
+    }
 
     // =================================================================================
-    // 4. LISTAR MEMBROS E CALCULAR
+    // 3. BUSCA MEMBROS E FILTRA POR CARGO
     // =================================================================================
-    const targetRole =
+    const membersRes = await fetch(
+      `https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`,
+      { headers }
+    );
+
+    if (!membersRes.ok) throw new Error("Erro ao buscar membros do Discord");
+    const members = await membersRes.json();
+
+    const TARGET_ROLE =
       org === "PRF"
         ? PRF_ROLE_ID
         : org === "PMERJ"
         ? PMERJ_ROLE_ID
         : POLICE_ROLE_ID;
 
-    // Busca membros
-    const membersResp = await fetch(
-      `https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`,
-      { headers }
+    // Filtra membros da polícia
+    const oficiaisDaForca = members.filter((m) =>
+      m.roles.includes(TARGET_ROLE)
     );
 
-    if (!membersResp.ok) {
-      const errText = await membersResp.text();
-      throw new Error(
-        `Falha Discord (Status ${membersResp.status}): ${errText}`
-      );
-    }
+    // =================================================================================
+    // 4. VARREDURA DE CHATS (PARALELA PARA EVITAR TIMEOUT)
+    // =================================================================================
+    let chatActivity = {}; // { userId: timestamp }
 
-    const members = await membersResp.json();
-    const inativos = [];
+    // Cria array de promessas para buscar todos canais ao mesmo tempo
+    const promises = canaisPermitidos.map(async (channelId) => {
+      let ultimoId = null;
+      // Busca até 10 páginas (1000 mensagens) por canal
+      for (let p = 0; p < 10; p++) {
+        let url = `https://discord.com/api/v10/channels/${channelId}/messages?limit=100`;
+        if (ultimoId) url += `&before=${ultimoId}`;
+
+        try {
+          const r = await fetch(url, { headers });
+          if (!r.ok) break;
+          const m = await r.json();
+          if (!m || m.length === 0) break;
+
+          m.forEach((msg) => {
+            const ts = new Date(msg.timestamp).getTime();
+            const userId = msg.author.id;
+
+            // Atualiza ultima msg do autor
+            if (!chatActivity[userId] || ts > chatActivity[userId]) {
+              chatActivity[userId] = ts;
+            }
+          });
+          ultimoId = m[m.length - 1].id;
+        } catch (e) {
+          break;
+        }
+      }
+    });
+
+    await Promise.all(promises);
+
+    // =================================================================================
+    // 5. MONTAGEM FINAL DO OBJETO (COM LÓGICA DO LOBO/DATAS)
+    // =================================================================================
+    let resultadoFinal = {};
     const agora = Date.now();
 
-    for (const member of members) {
-      if (member.user.bot) continue;
-      if (!member.roles.includes(targetRole)) continue;
+    oficiaisDaForca.forEach((p) => {
+      const userId = p.user.id;
+      const nick = p.nick || p.user.username;
 
-      // --- LÓGICA DE FÉRIAS ---
-      const temCargoFerias = member.roles.includes(FERIAS_ROLE_ID);
-      const fimFeriasTimestamp = mapaFerias[member.user.id];
-      let protegidoPorFerias = false;
+      // Verifica datas
+      const fimFerias = mapaFerias[userId];
+      let ultimaMensagem = chatActivity[userId] || 0;
 
-      // 1. Cargo protege
-      if (temCargoFerias) protegidoPorFerias = true;
-
-      // 2. Data protege (Se ainda não passou a data de fim)
-      if (fimFeriasTimestamp && agora <= fimFeriasTimestamp) {
-        protegidoPorFerias = true;
+      // LÓGICA DO LOBO:
+      // Se a data de fim das férias for MAIOR que a data da última mensagem,
+      // consideramos que a atividade dele foi no dia que acabou as férias.
+      // Isso impede que ele fique inativo logo após voltar.
+      if (fimFerias && fimFerias > ultimaMensagem) {
+        ultimaMensagem = fimFerias;
       }
 
-      if (protegidoPorFerias) continue;
-
-      // --- CÁLCULO ---
-      let lastActivity = activityMap[member.user.id]?.lastMsg || 0;
-
-      // CORREÇÃO: Se a volta das férias é MAIS RECENTE que a última msg, usa a data das férias
-      if (fimFeriasTimestamp && fimFeriasTimestamp > lastActivity) {
-        lastActivity = fimFeriasTimestamp;
+      // Se a data de fim das férias é HOJE ou FUTURA, ele está protegido (Data no futuro)
+      // Ajustamos a data para agora para o diff ser 0.
+      if (fimFerias && fimFerias >= agora) {
+        ultimaMensagem = agora;
       }
 
-      const diffMs = agora - lastActivity;
-      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      const estaDeFeriasCargo =
+        FERIAS_ROLE_ID && p.roles.includes(FERIAS_ROLE_ID);
 
-      // Se > 3 dias (ajuste conforme necessidade)
-      if (diffDays >= 3) {
-        const dadosUser = dadosRP[member.user.id] || {};
-        inativos.push({
-          id: member.user.id,
-          username: dadosUser.nome || member.user.username || "Desconhecido",
-          nickname: member.nick || member.user.global_name,
-          passaporte: dadosUser.passaporte || "N/A",
-          dias: diffDays,
-          avatar: member.user.avatar
-            ? `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png`
-            : "https://cdn.discordapp.com/embed/avatars/0.png",
-          ultimaData:
-            lastActivity > 0
-              ? new Date(lastActivity).toLocaleDateString("pt-BR")
-              : "Nunca",
-        });
-      }
-    }
+      resultadoFinal[userId] = {
+        id: userId,
+        name: nick,
+        rpName: dadosRP[userId]?.nome || "Não consta em admissão",
+        cidadeId:
+          nick.match(/\|\s*(\d+)/)?.[1] || dadosRP[userId]?.cidadeId || "---",
 
-    inativos.sort((a, b) => b.dias - a.dias);
-    res.status(200).json(inativos);
-  } catch (error) {
-    console.error("Erro Crítico na API:", error);
-    res.status(500).json({ error: error.message });
+        // Aqui enviamos a data "ajustada". Se ele voltou ontem, a data será ontem.
+        lastMsg: ultimaMensagem,
+
+        isFerias: estaDeFeriasCargo || (fimFerias && fimFerias >= agora),
+        joinedAt: new Date(p.joined_at).getTime(),
+        avatar: p.user.avatar
+          ? `https://cdn.discordapp.com/avatars/${userId}/${p.user.avatar}.png`
+          : "https://cdn.discordapp.com/embed/avatars/0.png",
+      };
+    });
+
+    res.status(200).json(Object.values(resultadoFinal));
+  } catch (err) {
+    console.error("Erro API:", err);
+    res.status(500).json({ error: err.message });
   }
 };

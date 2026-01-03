@@ -2,8 +2,10 @@
 // 1. CONFIGURAÇÕES GLOBAIS E SESSÃO
 // =========================================================
 let dadosInatividadeGlobal = [];
-// Define a data base (ex: data do último "limpa" geral ou início da gestão)
-const DATA_BASE_AUDITORIA = new Date("2025-12-08T00:00:00").getTime();
+
+// IMPORTANTE: Coloque uma data no PASSADO para servir de base para quem nunca falou.
+// Se colocar no futuro (2025), o cálculo dá negativo.
+const DATA_BASE_AUDITORIA = new Date("2024-01-01T00:00:00").getTime();
 
 const obterSessao = () => {
   const sessionStr = localStorage.getItem("pc_session");
@@ -303,7 +305,7 @@ window.carregarInatividade = async function () {
     dadosInatividadeGlobal = dados.map((m) => {
       const agora = Date.now();
 
-      // Se lastMsg for 0, usa a data de entrada (joinedAt). Se joinedAt for antigo, usa a DATA_BASE.
+      // Se lastMsg for 0, usa a data de entrada ou a data base antiga
       let dataRef =
         m.lastMsg > 0
           ? m.lastMsg
@@ -311,12 +313,13 @@ window.carregarInatividade = async function () {
 
       // Cálculo de dias
       let dias = Math.floor((agora - dataRef) / (1000 * 60 * 60 * 24));
-      if (dias < 0) dias = 0; // Evita dias negativos se data for hoje
+      if (dias < 0) dias = 0;
 
       return {
         ...m,
         diasInatividade: dias,
-        precisaExonerar: dias >= 3, // Regra de 3 dias (ajuste conforme necessidade)
+        // AQUI MUDAMOS DE 3 PARA 7
+        precisaExonerar: dias >= 7,
         discordNick: m.name || "Sem Nome",
         discordId: m.id,
         rpName: m.rpName || "Não identificado",

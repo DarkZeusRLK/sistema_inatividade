@@ -3,7 +3,8 @@
 // =========================================================
 let dadosInatividadeGlobal = [];
 
-// DATA BASE: 08/12/2025 (Passado recente em relação a 2026 -> Cálculo Positivo)
+// IMPORTANTE: Coloque uma data no PASSADO para servir de base para quem nunca falou.
+// Se colocar no futuro (2025), o cálculo dá negativo.
 const DATA_BASE_AUDITORIA = new Date("2025-12-08T00:00:00").getTime();
 
 const obterSessao = () => {
@@ -57,9 +58,12 @@ function atualizarIdentidadeVisual(org) {
   };
 
   const logoUrl = logos[org] || logos["PCERJ"];
+
+  // Muda a logo da barra lateral
   const logoSidebar = document.getElementById("logo-sidebar");
   if (logoSidebar) logoSidebar.src = logoUrl;
 
+  // Muda o favicon
   let favicon = document.querySelector("link[rel~='icon']");
   if (!favicon) {
     favicon = document.createElement("link");
@@ -69,10 +73,14 @@ function atualizarIdentidadeVisual(org) {
   favicon.href = logoUrl;
 }
 
+/**
+ * Função de Notificação
+ */
 window.mostrarAviso = function (msg, tipo = "success") {
   const aviso = document.getElementById("aviso-global");
   if (!aviso) {
     console.log(`[${tipo}] ${msg}`);
+    // Fallback caso o elemento não exista no HTML
     alert(msg);
     return;
   }
@@ -123,13 +131,15 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   aplicarRestricoes();
-  window.abrirInatividade();
+  window.abrirInatividade(); // Abre por padrão na tela de auditoria
 });
 
 function aplicarRestricoes() {
   const sessao = obterSessao();
   if (!sessao || !sessao.org) return;
+
   const { org } = sessao;
+
   atualizarIdentidadeVisual(org);
 
   const sidebarTitulo = document.querySelector(".sidebar-header h2");
@@ -231,7 +241,7 @@ window.abrirInatividade = function () {
 };
 
 // =========================================================
-// 5. LÓGICA DE AUDITORIA
+// 5. LÓGICA DE AUDITORIA (CORRIGIDA E BLINDADA)
 // =========================================================
 
 window.carregarInatividade = async function () {
@@ -253,6 +263,7 @@ window.carregarInatividade = async function () {
   progLabel.innerText = "LENDO LOGS E CHATS...";
   btn.disabled = true;
 
+  // Animação fake
   let width = 0;
   const interval = setInterval(() => {
     if (width < 90) {
@@ -282,28 +293,27 @@ window.carregarInatividade = async function () {
 
     dadosInatividadeGlobal = dados.map((m) => {
       const agora = Date.now();
+
+      // Se lastMsg vier 0 da API, significa que não achou nada nos chats.
+      // Nesse caso, usamos a data de entrada do membro no servidor (se disponível) ou a Data Base
       let dataReferencia = m.lastMsg > 0 ? m.lastMsg : DATA_BASE_AUDITORIA;
 
       let dias = Math.floor((agora - dataReferencia) / (1000 * 60 * 60 * 24));
       if (dias < 0) dias = 0;
 
-      // GARANTIA DE DADOS:
-      // m.id -> Vem da API como o ID REAL DO DISCORD (Snowflake)
-      // m.cidadeId -> Vem da API como o Passaporte (ou extraído do nick)
-
       return {
         ...m,
         diasInatividade: dias,
-        precisaExonerar: dias >= 7,
+        precisaExonerar: dias >= 7, // REGRA DE 7 DIAS
         discordNick: m.name,
-        discordId: m.id, // ID PARA MENÇÃO <@...>
-        cidadeId: m.cidadeId, // ID PARA TEXTO (PASSAPORTE)
+        discordId: m.id,
         rpName: m.rpName,
+        cidadeId: m.cidadeId,
         lastMsg: m.lastMsg,
       };
     });
 
-    // Filtra apenas inativos > 7 dias
+    // Filtra visualmente também, só pra garantir
     const listaFiltrada = dadosInatividadeGlobal.filter(
       (m) => m.diasInatividade >= 7
     );
@@ -334,7 +344,7 @@ window.carregarInatividade = async function () {
              </div>
            </div>
         </td>
-        <td><code>${m.cidadeId}</code></td>
+        <td><code>${m.id}</code></td>
         <td>${dataStr}</td>
         <td><strong style="color: #ff4d4d">${
           m.diasInatividade
@@ -374,6 +384,7 @@ window.copiarRelatorioDiscord = function () {
     return;
   }
 
+  // Filtra apenas quem está marcado para exonerar/revisar
   const exonerados = dadosInatividadeGlobal.filter((m) => m.precisaExonerar);
 
   if (exonerados.length === 0) {
@@ -387,16 +398,16 @@ window.copiarRelatorioDiscord = function () {
   exonerados.forEach((m) => {
     let item = "";
 
-    // AQUI ESTA A CORREÇÃO:
-    // <@${m.discordId}> -> ID Grande (Azul)
-    // ${m.cidadeId} -> Passaporte (Texto)
-
+    // MODELO PMERJ
     if (org === "PMERJ") {
       item = `\`QRA:\` <@${m.discordId}>\n\`ID:\` ${m.cidadeId}\n\`Nome:\` ${m.rpName}\n\`Tempo Off:\` ${m.diasInatividade} dias\n\`Situação:\` INATIVIDADE\n────────────────────────────────\n`;
-    } else {
+    }
+    // MODELO PRF / PCERJ (PADRÃO)
+    else {
       item = `**OFICIAL:** <@${m.discordId}>\n**PASSAPORTE:** ${m.cidadeId}\n**NOME:** ${m.rpName}\n**DIAS INATIVO:** ${m.diasInatividade}\n────────────────────────────────\n`;
     }
 
+    // Divide se passar de 1900 caracteres (limite seguro do Discord)
     if ((textoAtual + item).length > 1900) {
       partes.push(textoAtual);
       textoAtual = `📋 **CONTINUAÇÃO RELATÓRIO...**\n\n` + item;
@@ -411,13 +422,15 @@ window.copiarRelatorioDiscord = function () {
 
 function abrirModalRelatorioDividido(partes) {
   let modal = document.getElementById("modal-relatorio");
+  // Se o modal não existe no HTML, cria um alerta simples
   if (!modal) {
+    // Tenta copiar a primeira parte direto
     navigator.clipboard.writeText(partes[0]);
-    mostrarAviso("Relatório copiado (Parte 1).");
+    mostrarAviso("Relatório copiado (Parte 1). Verifique se há mais partes.");
     return;
   }
 
-  const container = document.getElementById("container-botoes-partes");
+  const container = document.getElementById("container-botoes-partes"); // Precisa existir no HTML
   if (container) {
     container.innerHTML = "";
     partes.forEach((texto, index) => {
@@ -436,6 +449,7 @@ function abrirModalRelatorioDividido(partes) {
       container.appendChild(btnCopiar);
     });
   }
+
   modal.style.display = "flex";
 }
 
@@ -445,7 +459,7 @@ window.fecharModalRelatorio = () => {
 };
 
 // =========================================================
-// 7. PLACEHOLDERS DE OUTRAS FUNÇÕES
+// 7. GESTÃO DE FÉRIAS (PLACEHOLDER)
 // =========================================================
 
 window.abrirGestaoFerias = function () {
@@ -453,37 +467,55 @@ window.abrirGestaoFerias = function () {
   const label = getOrgLabel(org);
   resetarTelas();
   document.getElementById("secao-gestao-ferias").style.display = "block";
+  document.getElementById("secao-gestao-ferias").style.visibility = "visible";
+  document.getElementById("botoes-ferias").style.display = "block";
   document.getElementById("nav-ferias").classList.add("active");
   document.getElementById(
     "titulo-pagina"
   ).innerText = `GESTÃO DE FÉRIAS - ${label.nome}`;
+
+  // Se tiver função de carregar férias, chama aqui
   if (window.atualizarListaFerias) window.atualizarListaFerias();
 };
+
+// =========================================================
+// 8. METAS E ENSINO
+// =========================================================
 
 window.abrirMetaCore = function () {
   resetarTelas();
   document.getElementById("secao-meta-core").style.display = "block";
+  document.getElementById("secao-meta-core").style.visibility = "visible";
+  document.getElementById("botoes-core").style.display = "block";
   document.getElementById("nav-core").classList.add("active");
-  document.getElementById("titulo-pagina").innerText = "AUDITORIA - METAS CORE";
+  document.getElementById("titulo-pagina").innerText =
+    "AUDITORIA - METAS CORE (PCERJ)";
 };
 
 window.abrirMetaGRR = function () {
   resetarTelas();
   document.getElementById("secao-meta-grr").style.display = "block";
+  document.getElementById("secao-meta-grr").style.visibility = "visible";
+  document.getElementById("botoes-grr").style.display = "block";
   document.getElementById("nav-grr").classList.add("active");
-  document.getElementById("titulo-pagina").innerText = "AUDITORIA - METAS GRR";
+  document.getElementById("titulo-pagina").innerText =
+    "AUDITORIA - METAS GRR (PRF)";
 };
 
 window.abrirMetaBOPE = function () {
   resetarTelas();
   document.getElementById("secao-meta-bope").style.display = "block";
+  document.getElementById("secao-meta-bope").style.visibility = "visible";
+  document.getElementById("botoes-bope").style.display = "block";
   document.getElementById("nav-bope").classList.add("active");
-  document.getElementById("titulo-pagina").innerText = "AUDITORIA - METAS BOPE";
+  document.getElementById("titulo-pagina").innerText =
+    "AUDITORIA - METAS BOPE (PMERJ)";
 };
 
 window.abrirEnsino = function () {
   resetarTelas();
   document.getElementById("secao-ensino").style.display = "block";
+  document.getElementById("botoes-ensino").style.display = "block";
   document.getElementById("nav-ensino").classList.add("active");
   document.getElementById("titulo-pagina").innerText = "SISTEMA DE ENSINO";
 };

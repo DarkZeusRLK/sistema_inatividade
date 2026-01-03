@@ -5,7 +5,7 @@ let dadosInatividadeGlobal = [];
 
 // IMPORTANTE: Coloque uma data no PASSADO para servir de base para quem nunca falou.
 // Se colocar no futuro (2025), o cálculo dá negativo.
-const DATA_BASE_AUDITORIA = new Date("2024-01-01T00:00:00").getTime();
+const DATA_BASE_AUDITORIA = new Date("2025-01-01T00:00:00").getTime();
 
 const obterSessao = () => {
   const sessionStr = localStorage.getItem("pc_session");

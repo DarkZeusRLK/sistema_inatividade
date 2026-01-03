@@ -256,7 +256,7 @@ module.exports = async (req, res) => {
       }
 
       // Só adiciona na lista quem tem > 3 dias inativo
-      if (diffDias >= 3) {
+      if (diffDias >= 7) {
         const dados = dadosRP[uid] || {};
         resultado.push({
           id: uid,

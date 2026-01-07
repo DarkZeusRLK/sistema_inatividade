@@ -1,4 +1,4 @@
-// api/membros-inativos.js - VERSÃO OTIMIZADA E SEGURA
+// api/membros-inativos.js - VERSÃO COM CARGOS IMUNES
 // Usa o motor nativo do Node.js 18+
 
 module.exports = async (req, res) => {
@@ -22,6 +22,7 @@ module.exports = async (req, res) => {
     PMERJ_ROLE_ID,
     PMERJ_ADMISSAO_CH,
     CHAT_ID_BUSCAR,
+    CARGOS_IMUNES, // <--- 1. Nova variável capturada
   } = process.env;
 
   if (!Discord_Bot_Token) {
@@ -35,7 +36,9 @@ module.exports = async (req, res) => {
     "Content-Type": "application/json",
   };
 
-  // Limpa e valida os IDs dos canais de chat/log
+  // 2. Transforma a string de imunes em Array
+  const listaImunes = (CARGOS_IMUNES || "").split(",").map((id) => id.trim());
+
   const canaisScan = CHAT_ID_BUSCAR
     ? CHAT_ID_BUSCAR.split(",")
         .map((id) => id.trim())
@@ -46,10 +49,9 @@ module.exports = async (req, res) => {
     console.log(`🚀 Iniciando auditoria para ${org || "GERAL"}...`);
 
     // =====================================================================
-    // 1. MAPEAMENTO DE FÉRIAS (Leitura Rápida)
+    // 1. MAPEAMENTO DE FÉRIAS (Mantido conforme original)
     // =====================================================================
-    const mapaFerias = {}; // { userId: timestampVolta }
-
+    const mapaFerias = {};
     if (FERIAS_CHANNEL_ID) {
       try {
         const r = await fetch(
@@ -60,7 +62,6 @@ module.exports = async (req, res) => {
           const msgs = await r.json();
           msgs.forEach((msg) => {
             let userId = null;
-            // Pega ID por menção ou regex no texto
             if (msg.mentions && msg.mentions.length > 0)
               userId = msg.mentions[0].id;
             else {
@@ -75,24 +76,17 @@ module.exports = async (req, res) => {
                 " " +
                 JSON.stringify(msg.embeds || [])
               ).toLowerCase();
-              // Regex para: volta, retorno, até, fim + data
               const match = texto.match(
                 /(?:término|volta|retorno|até|fim|férias)[\s\S]*?(\d{1,2})\/(\d{1,2})/
               );
-
               if (match) {
                 const dia = parseInt(match[1]);
                 const mes = parseInt(match[2]) - 1;
                 let ano = new Date().getFullYear();
-                // Se estamos em Dezembro e a data é Janeiro, é ano que vem
                 if (new Date().getMonth() === 11 && mes === 0) ano++;
-
                 const dataVolta = new Date(ano, mes, dia, 23, 59, 59).getTime();
-
-                // Salva a maior data encontrada
-                if (!mapaFerias[userId] || dataVolta > mapaFerias[userId]) {
+                if (!mapaFerias[userId] || dataVolta > mapaFerias[userId])
                   mapaFerias[userId] = dataVolta;
-                }
               }
             }
           });
@@ -103,7 +97,7 @@ module.exports = async (req, res) => {
     }
 
     // =====================================================================
-    // 2. BANCO DE DADOS DE ADMISSÃO (Passaportes e Nomes)
+    // 2. BANCO DE DADOS DE ADMISSÃO (Mantido conforme original)
     // =====================================================================
     const dadosRP = {};
     let canalAdm = ADMISSAO_CHANNEL_ID;
@@ -111,7 +105,6 @@ module.exports = async (req, res) => {
     if (org === "PMERJ") canalAdm = PMERJ_ADMISSAO_CH;
 
     if (canalAdm) {
-      // Lê até 3 páginas (300 msgs) para não pesar
       let last = null;
       for (let i = 0; i < 3; i++) {
         try {
@@ -121,7 +114,6 @@ module.exports = async (req, res) => {
           if (!r.ok) break;
           const m = await r.json();
           if (m.length === 0) break;
-
           m.forEach((msg) => {
             const uidMatch = msg.content.match(/<@!?(\d+)>/);
             if (uidMatch) {
@@ -146,84 +138,53 @@ module.exports = async (req, res) => {
     }
 
     // =====================================================================
-    // 3. DEEP SCAN: CHAT, LOGS, PRISÕES (Otimizado)
+    // 3. DEEP SCAN (Atividade em canais)
     // =====================================================================
-    const mapaAtividade = {}; // { userId: timestamp }
-
+    const mapaAtividade = {};
     if (canaisScan.length > 0) {
-      console.log(`📡 Escaneando ${canaisScan.length} canais...`);
-
-      // Processa canais em PARALELO, mas com tratamento de erro individual
       const promises = canaisScan.map(async (canalId) => {
         let lastId = null;
-        // LER 3 PÁGINAS (300 mensagens) é o equilíbrio ideal entre performance e histórico
-        // Mais que isso causa o Erro 500 na Vercel
         for (let p = 0; p < 3; p++) {
           try {
             let url = `https://discord.com/api/v10/channels/${canalId}/messages?limit=100`;
             if (lastId) url += `&before=${lastId}`;
-
             const r = await fetch(url, { headers });
-            // Se der erro no canal (ex: 403 Forbidden), para esse canal e segue a vida
             if (!r.ok) break;
-
             const msgs = await r.json();
             if (!msgs || msgs.length === 0) break;
-
             msgs.forEach((msg) => {
               const ts = new Date(msg.timestamp).getTime();
               const idsEncontrados = new Set();
-
-              // 1. Autor
               idsEncontrados.add(msg.author.id);
-
-              // 2. Menções do Discord (Campo específico)
               if (msg.mentions)
                 msg.mentions.forEach((u) => idsEncontrados.add(u.id));
-
-              // 3. Regex no Texto (Caso o bot apenas escreva o ID ou <@ID>)
               const content = (
                 msg.content + JSON.stringify(msg.embeds || [])
               ).toLowerCase();
-
-              // Procura padrões de ID do Discord (17 a 20 dígitos)
               const regexIDs = content.match(/(\d{17,20})/g);
-              if (regexIDs) {
-                regexIDs.forEach((id) => idsEncontrados.add(id));
-              }
-
-              // Salva atividade
+              if (regexIDs) regexIDs.forEach((id) => idsEncontrados.add(id));
               idsEncontrados.forEach((uid) => {
-                if (!mapaAtividade[uid] || ts > mapaAtividade[uid]) {
+                if (!mapaAtividade[uid] || ts > mapaAtividade[uid])
                   mapaAtividade[uid] = ts;
-                }
               });
             });
             lastId = msgs[msgs.length - 1].id;
           } catch (err) {
-            console.error(`Erro ao ler canal ${canalId}:`, err.message);
             break;
           }
         }
       });
-
       await Promise.all(promises);
     }
 
     // =====================================================================
-    // 4. PROCESSAMENTO FINAL
+    // 4. PROCESSAMENTO FINAL (Com Filtro de Imunidade)
     // =====================================================================
-
-    // Busca membros do servidor
     const rGuild = await fetch(
       `https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`,
       { headers }
     );
-    if (!rGuild.ok) {
-      throw new Error(
-        `Erro Discord Guild (${rGuild.status}) - Verifique o Token e GUILD_ID`
-      );
-    }
+    if (!rGuild.ok) throw new Error(`Erro Discord Guild (${rGuild.status})`);
     const members = await rGuild.json();
 
     const roleTarget =
@@ -233,8 +194,12 @@ module.exports = async (req, res) => {
         ? PMERJ_ROLE_ID
         : POLICE_ROLE_ID;
 
-    // Filtra quem tem o cargo
-    const oficiais = members.filter((m) => m.roles.includes(roleTarget));
+    // 3. FILTRO MODIFICADO: Remove quem for imune antes de processar
+    const oficiais = members.filter((m) => {
+      const temCargoBase = m.roles.includes(roleTarget);
+      const ehImune = m.roles.some((roleId) => listaImunes.includes(roleId));
+      return temCargoBase && !ehImune; // Só entra se tiver o cargo E não for imune
+    });
 
     const resultado = [];
     const agora = Date.now();
@@ -242,38 +207,24 @@ module.exports = async (req, res) => {
     oficiais.forEach((p) => {
       const uid = p.user.id;
       const fimFerias = mapaFerias[uid];
-
-      // Pega última atividade encontrada no scan
       let ultimaMsg = mapaAtividade[uid] || 0;
 
-      // LÓGICA DO LOBO: Se a volta das férias é mais recente que a mensagem no chat, usa a data das férias
-      if (fimFerias && fimFerias > ultimaMsg) {
-        ultimaMsg = fimFerias;
-      }
+      if (fimFerias && fimFerias > ultimaMsg) ultimaMsg = fimFerias;
 
-      // PROTEÇÃO: Se a data de volta é HOJE ou FUTURO, o oficial está "Ativo hoje"
       let protegido = false;
       if (FERIAS_ROLE_ID && p.roles.includes(FERIAS_ROLE_ID)) protegido = true;
       if (fimFerias && fimFerias >= agora) {
         protegido = true;
-        ultimaMsg = agora; // Zera o contador de inatividade
+        ultimaMsg = agora;
       }
 
       if (!protegido) {
-        // Se nunca falou (0), usa a data de entrada no servidor como base
-        // Mas limitamos a base para não dar 1000 dias (ex: usa 01/01/2024 como teto)
         let baseCalc = ultimaMsg;
-        if (baseCalc === 0) {
-          const joined = new Date(p.joined_at).getTime();
-          // Se entrou antes de 2024, considera 01/01/2024 para não ficar feio
-          // Se entrou semana passada, usa data real
-          baseCalc = joined;
-        }
+        if (baseCalc === 0) baseCalc = new Date(p.joined_at).getTime();
 
         const diffMs = agora - baseCalc;
         const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-        // FILTRO: Retorna apenas quem tem 7 ou mais dias
         if (diffDias >= 7) {
           const dRP = dadosRP[uid] || {};
           resultado.push({
@@ -293,14 +244,8 @@ module.exports = async (req, res) => {
     });
 
     resultado.sort((a, b) => b.dias - a.dias);
-
-    console.log(`✅ Sucesso! ${resultado.length} inativos encontrados.`);
     res.status(200).json(resultado);
   } catch (error) {
-    console.error("🔥 ERRO FATAL API:", error);
-    // Retorna erro formatado para o frontend não dar "Failed to load"
-    res
-      .status(500)
-      .json({ error: error.message || "Erro interno no servidor." });
+    res.status(500).json({ error: error.message || "Erro interno." });
   }
 };

@@ -9,7 +9,6 @@ module.exports = async (req, res) => {
     PMERJ_ROLE_ID,
   } = process.env;
 
-  // 1. Define o cargo da corporação (Segurança para não misturar matrizes)
   let anchorRoleId = "";
   if (org === "PCERJ") anchorRoleId = POLICE_ROLE_ID;
   else if (org === "PRF") anchorRoleId = PRF_ROLE_ID;
@@ -25,17 +24,14 @@ module.exports = async (req, res) => {
 
   const headers = { Authorization: `Bot ${Discord_Bot_Token}` };
 
-  // CORREÇÃO DA DATA: Se não houver data, usamos valores padrão seguros
   const startTs =
     dataInicio && dataInicio !== "" ? new Date(dataInicio).getTime() : 0;
-  // Se não houver data final, usamos o momento atual
   const endTs =
     dataFim && dataFim !== ""
       ? new Date(dataFim).getTime() + 86399999
       : Date.now();
 
   try {
-    // 2. Busca membros e filtra apenas quem é da ORG e é INSTRUTOR
     const membersRes = await fetch(
       `https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`,
       { headers }
@@ -65,9 +61,9 @@ module.exports = async (req, res) => {
       };
     });
 
-    // 3. Varredura de Mensagens
     for (let i = 0; i < canaisEnsino.length; i++) {
       const channelId = canaisEnsino[i];
+      // Define se o canal atual é de recrutamento baseado na posição da lista no .env
       const isRecrutamento =
         (org === "PMERJ" && i === 2) || (org !== "PMERJ" && i === 1);
 
@@ -75,7 +71,6 @@ module.exports = async (req, res) => {
       let stopLoop = false;
 
       for (let p = 0; p < 10; p++) {
-        // Limite de 1000 mensagens por canal para performance
         if (stopLoop) break;
         const url = `https://discord.com/api/v10/channels/${channelId}/messages?limit=100${
           ultimoId ? `&before=${ultimoId}` : ""
@@ -95,11 +90,9 @@ module.exports = async (req, res) => {
 
           if (msgTs <= endTs) {
             const idsMencionados = new Set();
-            // Menções diretas
             if (msg.mentions)
               msg.mentions.forEach((m) => idsMencionados.add(m.id));
 
-            // Menções em embeds (Regex)
             const contentStr = msg.content + JSON.stringify(msg.embeds || {});
             const matches = contentStr.match(/<@!?(\d+)>/g);
             if (matches)
@@ -107,9 +100,13 @@ module.exports = async (req, res) => {
 
             idsMencionados.forEach((id) => {
               if (ensinoMap[id]) {
-                if (isRecrutamento) ensinoMap[id].recs++;
-                else ensinoMap[id].cursos++;
-                ensinoMap[id].total++;
+                if (isRecrutamento) {
+                  ensinoMap[id].recs++;
+                  ensinoMap[id].total += 2; // <--- ALTERAÇÃO AQUI: Recrutamento vale 2 pontos
+                } else {
+                  ensinoMap[id].cursos++;
+                  ensinoMap[id].total += 1; // <--- Cursos normais valem 1 ponto
+                }
               }
             });
           }

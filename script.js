@@ -373,69 +373,94 @@ window.exonerarMembro = async function (discordId, rpName, cargo) {
 // =========================================================
 
 window.abrirGestaoFerias = function () {
-  const { org } = obterSessao();
-  resetarTelas();
+  resetarTelas(); // Função que você já deve ter para esconder outras seções
   document.getElementById("secao-gestao-ferias").style.display = "block";
-  document.getElementById("secao-gestao-ferias").style.visibility = "visible";
-  document.getElementById("botoes-ferias").style.display = "block";
   document.getElementById("nav-ferias").classList.add("active");
-  document.getElementById(
-    "titulo-pagina"
-  ).innerText = `GESTÃO DE FÉRIAS - ${org}`;
+  document.getElementById("titulo-pagina").innerText =
+    "GESTÃO DE FÉRIAS E LICENÇAS";
+  document.getElementById("botoes-ferias").style.display = "block";
 
-  window.atualizarListaFerias();
+  // Inicia a sincronização automática ao abrir
+  atualizarListaFerias();
 };
 
 window.atualizarListaFerias = async function () {
-  const { org } = obterSessao();
-  const corpo = document.getElementById("corpo-ferias");
-  if (!corpo) return;
+  const select = document.getElementById("select-oficiais-ferias");
+  const infoBox = document.getElementById("status-ferias-info");
+  const sessao = JSON.parse(localStorage.getItem("pc_session") || "{}");
+  const org = sessao.org || "PCERJ"; // Pega a org da sessão
 
-  corpo.innerHTML =
-    '<tr><td colspan="4" align="center">Sincronizando férias...</td></tr>';
+  if (!select) return;
+
+  select.innerHTML =
+    '<option value="">🔄 Sincronizando com Discord...</option>';
+  infoBox.innerHTML = "Consultando canal de férias...";
 
   try {
-    const res = await fetch(`/api/verificar-ferias?org=${org}`);
-    const data = await res.json();
-    corpo.innerHTML = "";
+    // Chame sua API passando a organização como query string
+    const response = await fetch(`/api/verificar-ferias?org=${org}`);
+    const data = await response.json();
 
-    if (data.oficiais && data.oficiais.length > 0) {
-      data.oficiais.forEach((o) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td><strong>${o.nome}</strong></td>
-            <td>${o.dataRetorno}</td>
-            <td align="center"><span class="badge-ferias">EM FÉRIAS</span></td>
-            <td align="center">
-                <button onclick="window.anteciparVolta('${o.id}')" class="btn-voltar">Antecipar</button>
-            </td>
-        `;
-        corpo.appendChild(tr);
-      });
-    } else {
-      corpo.innerHTML =
-        '<tr><td colspan="4" align="center">Nenhum oficial em férias.</td></tr>';
+    if (data.error) throw new Error(data.error);
+
+    // Limpa o select
+    select.innerHTML = '<option value="">Selecione um oficial...</option>';
+
+    if (!data.oficiais || data.oficiais.length === 0) {
+      select.innerHTML = '<option value="">Nenhum oficial em férias</option>';
+      infoBox.innerHTML =
+        "✅ Sincronização concluída: Nenhum oficial encontrado com a tag de férias.";
+      return;
     }
-  } catch (e) {
-    corpo.innerHTML =
-      '<tr><td colspan="4" align="center" style="color:red">Erro ao carregar férias.</td></tr>';
+
+    // Preenche os oficiais
+    data.oficiais.forEach((oficial) => {
+      const option = document.createElement("option");
+      option.value = oficial.id;
+      option.textContent = `${oficial.nome} (Retorno: ${oficial.dataRetorno})`;
+      select.appendChild(option);
+    });
+
+    // Mostra logs de quem teve a tag removida automaticamente
+    let logTexto = `✅ ${data.oficiais.length} oficiais em férias encontrados.`;
+    if (data.logs && data.logs.length > 0) {
+      logTexto += `<br><br><b>Tags removidas hoje (Vencidas):</b><br>• ${data.logs.join(
+        "<br>• "
+      )}`;
+    }
+    infoBox.innerHTML = logTexto;
+  } catch (error) {
+    console.error("Erro ao sincronizar férias:", error);
+    select.innerHTML = '<option value="">Erro ao sincronizar</option>';
+    infoBox.innerHTML = `<span style="color: #ff4444;">❌ Erro: ${error.message}</span>`;
   }
 };
+window.executarAntecipacao = async function () {
+  const userId = document.getElementById("select-oficiais-ferias").value;
+  if (!userId) return alert("Selecione um oficial primeiro!");
 
-window.anteciparVolta = async function (userId) {
-  if (!confirm("Deseja remover a tag de férias deste membro agora?")) return;
+  if (
+    !confirm(
+      "Deseja realmente antecipar o retorno deste oficial? A tag de férias será removida agora."
+    )
+  )
+    return;
+
   try {
-    const res = await fetch("/api/verificar-ferias", {
+    const response = await fetch("/api/verificar-ferias", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId }),
     });
-    if (res.ok) {
-      mostrarAviso("Membro retornou das férias!");
-      window.atualizarListaFerias();
+
+    if (response.ok) {
+      alert("Sucesso! O oficial foi removido das férias.");
+      atualizarListaFerias(); // Recarrega a lista
+    } else {
+      alert("Erro ao processar antecipação.");
     }
-  } catch (e) {
-    alert("Erro ao processar retorno.");
+  } catch (error) {
+    alert("Erro de conexão.");
   }
 };
 

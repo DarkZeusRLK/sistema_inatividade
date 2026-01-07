@@ -196,48 +196,24 @@ function resetarTelas() {
     "secao-gestao-ferias",
     "secao-ensino",
   ];
-  const gruposBotoes = [
-    "botoes-inatividade",
-    "botoes-core",
-    "botoes-grr",
-    "botoes-bope",
-    "botoes-ferias",
-    "botoes-ensino",
-  ];
 
   secoes.forEach((id) => {
     const el = document.getElementById(id);
     if (el) {
       el.style.display = "none";
-      el.style.visibility = "hidden";
+      el.style.visibility = "hidden"; // Mantemos o hidden por segurança
     }
   });
-  gruposBotoes.forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = "none";
-  });
+
+  // Esconde todos os grupos de botões de uma vez
+  document
+    .querySelectorAll('[id^="botoes-"]')
+    .forEach((el) => (el.style.display = "none"));
+
   document
     .querySelectorAll(".nav-item")
     .forEach((item) => item.classList.remove("active"));
 }
-
-window.abrirInatividade = function () {
-  const sessao = obterSessao();
-  if (!sessao || !sessao.org) return;
-  const label = getOrgLabel(sessao.org);
-  resetarTelas();
-  document.getElementById("secao-inatividade").style.display = "block";
-  document.getElementById("secao-inatividade").style.visibility = "visible";
-  document.getElementById("botoes-inatividade").style.display = "block";
-  document.getElementById("nav-inatividade").classList.add("active");
-  document.getElementById(
-    "titulo-pagina"
-  ).innerText = `AUDITORIA - ${label.nome}`;
-};
-
-// =========================================================
-// 5. LÓGICA DE AUDITORIA E EXONERAÇÃO (COM FILTRO DE CARGOS)
-// =========================================================
 
 window.carregarInatividade = async function () {
   const { org } = obterSessao();
@@ -245,7 +221,8 @@ window.carregarInatividade = async function () {
   const btn = document.getElementById("btn-sincronizar");
   const progContainer = document.getElementById("progress-container");
 
-  corpo.innerHTML = "";
+  corpo.innerHTML =
+    '<tr><td colspan="6" align="center">🔍 Consultando banco de dados do Discord...</td></tr>';
   progContainer.style.display = "block";
   btn.disabled = true;
 
@@ -259,25 +236,27 @@ window.carregarInatividade = async function () {
       return;
     }
 
-    // 1. Processa os dados e calcula os dias
-    let processados = dados.map((m) => {
-      const agora = Date.now();
-      let ref = m.lastMsg > 0 ? m.lastMsg : DATA_BASE_AUDITORIA;
-      let dias = Math.floor((agora - ref) / (1000 * 60 * 60 * 24));
-      return { ...m, diasInatividade: dias > 0 ? dias : 0 };
-    });
+    // 1. FILTRAGEM: Usamos o 'dias' que já vem da API (que já considera entrada no servidor)
+    // E filtramos pelos cargos protegidos
+    dadosInatividadeGlobal = dados.filter((m) => {
+      // Se a API não mandou 'dias', calculamos aqui usando a DATA_BASE
+      const diasInatividade =
+        m.dias ||
+        Math.floor(
+          (Date.now() - (m.lastMsg || DATA_BASE_AUDITORIA)) /
+            (1000 * 60 * 60 * 24)
+        );
 
-    // 2. FILTRAGEM: Remove quem tem menos de 7 dias OU possui cargo protegido
-    dadosInatividadeGlobal = processados.filter((m) => {
-      const inativoSuficiente = m.diasInatividade >= 7;
+      const inativoSuficiente = diasInatividade >= 7;
       const eCargoProtegido = CARGOS_PROTEGIDOS.includes(m.cargo);
+
       return inativoSuficiente && !eCargoProtegido;
     });
 
     // Ordenar por mais tempo inativo
-    dadosInatividadeGlobal.sort(
-      (a, b) => b.diasInatividade - a.diasInatividade
-    );
+    dadosInatividadeGlobal.sort((a, b) => (b.dias || 0) - (a.dias || 0));
+
+    corpo.innerHTML = ""; // Limpa o carregando
 
     if (dadosInatividadeGlobal.length === 0) {
       corpo.innerHTML =
@@ -288,7 +267,10 @@ window.carregarInatividade = async function () {
     dadosInatividadeGlobal.forEach((m) => {
       const tr = document.createElement("tr");
       const dataStr =
-        m.lastMsg > 0 ? new Date(m.lastMsg).toLocaleDateString("pt-BR") : "---";
+        m.lastMsg > 0
+          ? new Date(m.lastMsg).toLocaleDateString("pt-BR")
+          : "Nunca interagiu";
+      const diasExibir = m.dias || 0;
 
       tr.innerHTML = `
         <td>
@@ -303,15 +285,13 @@ window.carregarInatividade = async function () {
         </td>
         <td><code>${m.id}</code></td>
         <td>${dataStr}</td>
-        <td><strong style="color: #ff4d4d">${
-          m.diasInatividade
-        } Dias</strong></td>
+        <td><strong style="color: #ff4d4d">${diasExibir} Dias</strong></td>
         <td align="center">
             <div style="display: flex; align-items: center; gap: 8px; justify-content: center;">
                 <span class="badge-danger">⚠️ INATIVO</span>
                 <button onclick="window.exonerarMembro('${m.id}', '${
         m.rpName
-      }', '${m.cargo}')" class="btn-exonerar" title="Exonerar por Inatividade">
+      }', '${m.cargo}')" class="btn-exonerar" title="Exonerar">
                     <i class="fa-solid fa-user-slash"></i>
                 </button>
             </div>
@@ -322,6 +302,9 @@ window.carregarInatividade = async function () {
 
     mostrarAviso(`${dadosInatividadeGlobal.length} inativos listados.`);
   } catch (err) {
+    console.error(err);
+    corpo.innerHTML =
+      '<tr><td colspan="6" align="center" style="color:red">Erro ao conectar com a API.</td></tr>';
     mostrarAviso("Erro ao carregar inativos.", "error");
   } finally {
     btn.disabled = false;
@@ -373,14 +356,22 @@ window.exonerarMembro = async function (discordId, rpName, cargo) {
 // =========================================================
 
 window.abrirGestaoFerias = function () {
-  resetarTelas(); // Função que você já deve ter para esconder outras seções
-  document.getElementById("secao-gestao-ferias").style.display = "block";
-  document.getElementById("nav-ferias").classList.add("active");
+  resetarTelas();
+  const secao = document.getElementById("secao-gestao-ferias");
+  if (secao) {
+    secao.style.display = "block";
+    secao.style.visibility = "visible"; // <--- CORREÇÃO AQUI
+  }
+
+  const nav = document.getElementById("nav-ferias");
+  if (nav) nav.classList.add("active");
+
   document.getElementById("titulo-pagina").innerText =
     "GESTÃO DE FÉRIAS E LICENÇAS";
-  document.getElementById("botoes-ferias").style.display = "block";
 
-  // Inicia a sincronização automática ao abrir
+  const botoes = document.getElementById("botoes-ferias");
+  if (botoes) botoes.style.display = "block";
+
   atualizarListaFerias();
 };
 

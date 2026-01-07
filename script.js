@@ -162,11 +162,17 @@ function aplicarRestricoes() {
     },
     PRF: {
       mostrar: ["nav-grr", "nav-ferias", "nav-inatividade"],
-      esconder: ["nav-core", "nav-bope", "nav-porte", "nav-admin"],
+      esconder: [
+        "nav-core",
+        "nav-bope",
+        "nav-porte",
+        "nav-admin",
+        "nav-ensino",
+      ],
     },
     PMERJ: {
       mostrar: ["nav-bope", "nav-ferias", "nav-inatividade"],
-      esconder: ["nav-core", "nav-grr", "nav-porte", "nav-admin"],
+      esconder: ["nav-core", "nav-grr", "nav-porte", "nav-admin", "nav-ensino"],
     },
   };
 
@@ -184,7 +190,7 @@ function aplicarRestricoes() {
 }
 
 // =========================================================
-// 3. GERENCIAMENTO DE TELAS
+// 4. GERENCIAMENTO DE TELAS
 // =========================================================
 
 function resetarTelas() {
@@ -213,7 +219,6 @@ function resetarTelas() {
     .forEach((item) => item.classList.remove("active"));
 }
 
-// FUNÇÃO RESTAURADA: abrirInatividade
 window.abrirInatividade = function () {
   const sessao = obterSessao();
   if (!sessao || !sessao.org) return;
@@ -236,16 +241,26 @@ window.abrirInatividade = function () {
   const titulo = document.getElementById("titulo-pagina");
   if (titulo) titulo.innerText = `AUDITORIA - ${label.nome}`;
 };
+
+// =========================================================
+// 5. LÓGICA DE INATIVIDADE
+// =========================================================
+
 window.carregarInatividade = async function () {
-  const { org } = obterSessao();
+  const sessao = obterSessao();
+  if (!sessao) return;
+  const { org } = sessao;
+
   const corpo = document.getElementById("corpo-inatividade");
   const btn = document.getElementById("btn-sincronizar");
   const progContainer = document.getElementById("progress-container");
 
+  if (!corpo) return;
+
   corpo.innerHTML =
     '<tr><td colspan="6" align="center">🔍 Consultando banco de dados do Discord...</td></tr>';
-  progContainer.style.display = "block";
-  btn.disabled = true;
+  if (progContainer) progContainer.style.display = "block";
+  if (btn) btn.disabled = true;
 
   try {
     const res = await fetch(`/api/membros-inativos?org=${org}`);
@@ -257,27 +272,20 @@ window.carregarInatividade = async function () {
       return;
     }
 
-    // 1. FILTRAGEM: Usamos o 'dias' que já vem da API (que já considera entrada no servidor)
-    // E filtramos pelos cargos protegidos
     dadosInatividadeGlobal = dados.filter((m) => {
-      // Se a API não mandou 'dias', calculamos aqui usando a DATA_BASE
       const diasInatividade =
         m.dias ||
         Math.floor(
           (Date.now() - (m.lastMsg || DATA_BASE_AUDITORIA)) /
             (1000 * 60 * 60 * 24)
         );
-
       const inativoSuficiente = diasInatividade >= 7;
       const eCargoProtegido = CARGOS_PROTEGIDOS.includes(m.cargo);
-
       return inativoSuficiente && !eCargoProtegido;
     });
 
-    // Ordenar por mais tempo inativo
     dadosInatividadeGlobal.sort((a, b) => (b.dias || 0) - (a.dias || 0));
-
-    corpo.innerHTML = ""; // Limpa o carregando
+    corpo.innerHTML = "";
 
     if (dadosInatividadeGlobal.length === 0) {
       corpo.innerHTML =
@@ -311,7 +319,7 @@ window.carregarInatividade = async function () {
             <div style="display: flex; align-items: center; gap: 8px; justify-content: center;">
                 <span class="badge-danger">⚠️ INATIVO</span>
                 <button onclick="window.exonerarMembro('${m.id}', '${
-        m.rpName
+        m.rpName || m.name
       }', '${m.cargo}')" class="btn-exonerar" title="Exonerar">
                     <i class="fa-solid fa-user-slash"></i>
                 </button>
@@ -328,16 +336,16 @@ window.carregarInatividade = async function () {
       '<tr><td colspan="6" align="center" style="color:red">Erro ao conectar com a API.</td></tr>';
     mostrarAviso("Erro ao carregar inativos.", "error");
   } finally {
-    btn.disabled = false;
-    progContainer.style.display = "none";
+    if (btn) btn.disabled = false;
+    if (progContainer) progContainer.style.display = "none";
   }
 };
 
-// --- FUNÇÃO DE EXONERAÇÃO ---
 window.exonerarMembro = async function (discordId, rpName, cargo) {
+  // Melhora na extração do passaporte: Tenta pegar o número após a barra ou pipe
   const idMatch = rpName.match(/(\d+)$/);
   const passaporte = idMatch ? idMatch[1] : "---";
-  const nomeLimpo = rpName.split("|")[0].trim();
+  const nomeLimpo = rpName.split(/[|/]/)[0].trim();
 
   const motivo = prompt(
     `Motivo da exoneração de ${nomeLimpo}:`,
@@ -345,7 +353,11 @@ window.exonerarMembro = async function (discordId, rpName, cargo) {
   );
   if (!motivo) return;
 
-  if (!confirm(`Confirmar envio de relatório de exoneração para o Discord?`))
+  if (
+    !confirm(
+      `Confirmar envio de relatório de exoneração de ${nomeLimpo} para o Discord?`
+    )
+  )
     return;
 
   try {
@@ -365,7 +377,8 @@ window.exonerarMembro = async function (discordId, rpName, cargo) {
       mostrarAviso("Relatório de exoneração enviado!");
       window.carregarInatividade();
     } else {
-      alert("Falha ao enviar relatório.");
+      const erro = await res.json();
+      alert(`Falha ao enviar relatório: ${erro.error || "Erro desconhecido"}`);
     }
   } catch (e) {
     alert("Erro na conexão com a API.");
@@ -381,41 +394,39 @@ window.abrirGestaoFerias = function () {
   const secao = document.getElementById("secao-gestao-ferias");
   if (secao) {
     secao.style.display = "block";
-    secao.style.visibility = "visible"; // <--- CORREÇÃO AQUI
+    secao.style.visibility = "visible";
   }
 
   const nav = document.getElementById("nav-ferias");
   if (nav) nav.classList.add("active");
 
-  document.getElementById("titulo-pagina").innerText =
-    "GESTÃO DE FÉRIAS E LICENÇAS";
+  const titulo = document.getElementById("titulo-pagina");
+  if (titulo) titulo.innerText = "GESTÃO DE FÉRIAS E LICENÇAS";
 
   const botoes = document.getElementById("botoes-ferias");
   if (botoes) botoes.style.display = "block";
 
-  atualizarListaFerias();
+  window.atualizarListaFerias();
 };
 
 window.atualizarListaFerias = async function () {
   const select = document.getElementById("select-oficiais-ferias");
   const infoBox = document.getElementById("status-ferias-info");
-  const sessao = JSON.parse(localStorage.getItem("pc_session") || "{}");
-  const org = sessao.org || "PCERJ"; // Pega a org da sessão
+  const sessao = obterSessao();
+  const org = sessao?.org || "PCERJ";
 
-  if (!select) return;
+  if (!select || !infoBox) return;
 
   select.innerHTML =
     '<option value="">🔄 Sincronizando com Discord...</option>';
   infoBox.innerHTML = "Consultando canal de férias...";
 
   try {
-    // Chame sua API passando a organização como query string
     const response = await fetch(`/api/verificar-ferias?org=${org}`);
     const data = await response.json();
 
     if (data.error) throw new Error(data.error);
 
-    // Limpa o select
     select.innerHTML = '<option value="">Selecione um oficial...</option>';
 
     if (!data.oficiais || data.oficiais.length === 0) {
@@ -425,7 +436,6 @@ window.atualizarListaFerias = async function () {
       return;
     }
 
-    // Preenche os oficiais
     data.oficiais.forEach((oficial) => {
       const option = document.createElement("option");
       option.value = oficial.id;
@@ -433,7 +443,6 @@ window.atualizarListaFerias = async function () {
       select.appendChild(option);
     });
 
-    // Mostra logs de quem teve a tag removida automaticamente
     let logTexto = `✅ ${data.oficiais.length} oficiais em férias encontrados.`;
     if (data.logs && data.logs.length > 0) {
       logTexto += `<br><br><b>Tags removidas hoje (Vencidas):</b><br>• ${data.logs.join(
@@ -447,8 +456,9 @@ window.atualizarListaFerias = async function () {
     infoBox.innerHTML = `<span style="color: #ff4444;">❌ Erro: ${error.message}</span>`;
   }
 };
+
 window.executarAntecipacao = async function () {
-  const userId = document.getElementById("select-oficiais-ferias").value;
+  const userId = document.getElementById("select-oficiais-ferias")?.value;
   if (!userId) return alert("Selecione um oficial primeiro!");
 
   if (
@@ -467,7 +477,7 @@ window.executarAntecipacao = async function () {
 
     if (response.ok) {
       alert("Sucesso! O oficial foi removido das férias.");
-      atualizarListaFerias(); // Recarrega a lista
+      window.atualizarListaFerias();
     } else {
       alert("Erro ao processar antecipação.");
     }
@@ -477,10 +487,18 @@ window.executarAntecipacao = async function () {
 };
 
 // =========================================================
-// 8. METAS E ENSINO
+// 8. METAS E ENSINO (COM TRAVA DE SEGURANÇA)
 // =========================================================
 
 window.abrirMetaCore = function () {
+  const sessao = obterSessao();
+  if (!sessao || sessao.org !== "PCERJ") {
+    window.mostrarAviso(
+      "Acesso negado: Este painel é exclusivo da PCERJ.",
+      "error"
+    );
+    return;
+  }
   resetarTelas();
   document.getElementById("secao-meta-core").style.display = "block";
   document.getElementById("secao-meta-core").style.visibility = "visible";
@@ -491,6 +509,14 @@ window.abrirMetaCore = function () {
 };
 
 window.abrirMetaGRR = function () {
+  const sessao = obterSessao();
+  if (!sessao || sessao.org !== "PRF") {
+    window.mostrarAviso(
+      "Acesso negado: Este painel é exclusivo da PRF.",
+      "error"
+    );
+    return;
+  }
   resetarTelas();
   document.getElementById("secao-meta-grr").style.display = "block";
   document.getElementById("secao-meta-grr").style.visibility = "visible";
@@ -501,6 +527,14 @@ window.abrirMetaGRR = function () {
 };
 
 window.abrirMetaBOPE = function () {
+  const sessao = obterSessao();
+  if (!sessao || sessao.org !== "PMERJ") {
+    window.mostrarAviso(
+      "Acesso negado: Este painel é exclusivo da PMERJ.",
+      "error"
+    );
+    return;
+  }
   resetarTelas();
   document.getElementById("secao-meta-bope").style.display = "block";
   document.getElementById("secao-meta-bope").style.visibility = "visible";
@@ -511,9 +545,17 @@ window.abrirMetaBOPE = function () {
 };
 
 window.abrirEnsino = function () {
+  const sessao = obterSessao();
+  // Se quiser restringir ensino só para PCERJ: if (sessao.org !== "PCERJ") return;
   resetarTelas();
-  document.getElementById("secao-ensino").style.display = "block";
-  document.getElementById("botoes-ensino").style.display = "block";
-  document.getElementById("nav-ensino").classList.add("active");
+  const secao = document.getElementById("secao-ensino");
+  if (secao) {
+    secao.style.display = "block";
+    secao.style.visibility = "visible";
+  }
+  const botoes = document.getElementById("botoes-ensino");
+  if (botoes) botoes.style.display = "block";
+
+  document.getElementById("nav-ensino")?.classList.add("active");
   document.getElementById("titulo-pagina").innerText = "SISTEMA DE ENSINO";
 };

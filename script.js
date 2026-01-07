@@ -184,7 +184,7 @@ function aplicarRestricoes() {
 }
 
 // =========================================================
-// 4. GERENCIAMENTO DE TELAS
+// 3. GERENCIAMENTO DE TELAS
 // =========================================================
 
 function resetarTelas() {
@@ -201,20 +201,41 @@ function resetarTelas() {
     const el = document.getElementById(id);
     if (el) {
       el.style.display = "none";
-      el.style.visibility = "hidden"; // Mantemos o hidden por segurança
+      el.style.visibility = "hidden";
     }
   });
 
-  // Esconde todos os grupos de botões de uma vez
   document
     .querySelectorAll('[id^="botoes-"]')
     .forEach((el) => (el.style.display = "none"));
-
   document
     .querySelectorAll(".nav-item")
     .forEach((item) => item.classList.remove("active"));
 }
 
+// FUNÇÃO RESTAURADA: abrirInatividade
+window.abrirInatividade = function () {
+  const sessao = obterSessao();
+  if (!sessao || !sessao.org) return;
+  const label = getOrgLabel(sessao.org);
+
+  resetarTelas();
+
+  const secao = document.getElementById("secao-inatividade");
+  if (secao) {
+    secao.style.display = "block";
+    secao.style.visibility = "visible";
+  }
+
+  const botoes = document.getElementById("botoes-inatividade");
+  if (botoes) botoes.style.display = "block";
+
+  const nav = document.getElementById("nav-inatividade");
+  if (nav) nav.classList.add("active");
+
+  const titulo = document.getElementById("titulo-pagina");
+  if (titulo) titulo.innerText = `AUDITORIA - ${label.nome}`;
+};
 window.carregarInatividade = async function () {
   const { org } = obterSessao();
   const corpo = document.getElementById("corpo-inatividade");
@@ -354,26 +375,32 @@ window.exonerarMembro = async function (discordId, rpName, cargo) {
 // =========================================================
 // 6. GESTÃO DE FÉRIAS
 // =========================================================
-
 window.abrirGestaoFerias = function () {
   resetarTelas();
   const secao = document.getElementById("secao-gestao-ferias");
   if (secao) {
     secao.style.display = "block";
-    secao.style.visibility = "visible"; // <--- CORREÇÃO AQUI
+    secao.style.visibility = "visible";
   }
-
   const nav = document.getElementById("nav-ferias");
   if (nav) nav.classList.add("active");
 
   document.getElementById("titulo-pagina").innerText =
     "GESTÃO DE FÉRIAS E LICENÇAS";
-
   const botoes = document.getElementById("botoes-ferias");
   if (botoes) botoes.style.display = "block";
 
   atualizarListaFerias();
 };
+
+// Adicione aqui as demais funções (abrirMetaCore, abrirEnsino, etc) seguindo o padrão acima...
+
+function aplicarRestricoes() {
+  const sessao = obterSessao();
+  if (!sessao || !sessao.org) return;
+  const { org } = sessao;
+  atualizarIdentidadeVisual(org);
+}
 
 window.atualizarListaFerias = async function () {
   const select = document.getElementById("select-oficiais-ferias");

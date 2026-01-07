@@ -3,7 +3,6 @@
 // =========================================================
 let dadosInatividadeGlobal = [];
 
-// Lista de cargos que NUNCA devem aparecer na lista de inatividade (Imunidade)
 const CARGOS_PROTEGIDOS = [
   "Delegado PCERJ",
   "Delegado Adj. PCERJ",
@@ -56,27 +55,22 @@ const getOrgLabel = (org) => {
   );
 };
 
-// --- IDENTIDADE VISUAL ---
 function atualizarIdentidadeVisual(org) {
   const logos = {
     PRF: "Imagens/PRF_new.png",
     PMERJ:
       "Imagens/Brasão_da_Polícia_Militar_do_Estado_do_Rio_de_Janeiro_-_PMERJ.png",
     PCERJ: "Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png",
-    POLICE: "Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png",
   };
-
   const logoUrl = logos[org] || logos["PCERJ"];
   const logoSidebar = document.getElementById("logo-sidebar");
   if (logoSidebar) logoSidebar.src = logoUrl;
-
-  let favicon = document.querySelector("link[rel~='icon']");
-  if (!favicon) {
-    favicon = document.createElement("link");
-    favicon.rel = "icon";
-    document.getElementsByTagName("head")[0].appendChild(favicon);
-  }
+  let favicon =
+    document.querySelector("link[rel~='icon']") ||
+    document.createElement("link");
+  favicon.rel = "icon";
   favicon.href = logoUrl;
+  document.getElementsByTagName("head")[0].appendChild(favicon);
 }
 
 window.mostrarAviso = function (msg, tipo = "success") {
@@ -96,7 +90,6 @@ window.mostrarAviso = function (msg, tipo = "success") {
 // =========================================================
 // 2. FUNÇÕES DO COMANDO GERAL
 // =========================================================
-
 window.setPainelComando = function (orgEscolhida) {
   const sessao = obterSessao();
   if (!sessao) return;
@@ -115,13 +108,10 @@ window.abrirSelecaoPainel = function () {
 // =========================================================
 // 3. INICIALIZAÇÃO
 // =========================================================
-
 document.addEventListener("DOMContentLoaded", () => {
   const sessao = obterSessao();
   if (!sessao) return;
-
   if (sessao.tema) document.body.classList.add(sessao.tema);
-
   if (sessao.isComando) {
     const btnTrocar = document.getElementById("wrapper-comando");
     if (btnTrocar) btnTrocar.style.display = "block";
@@ -130,7 +120,6 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
   }
-
   aplicarRestricoes();
   window.abrirInatividade();
 });
@@ -138,10 +127,8 @@ document.addEventListener("DOMContentLoaded", () => {
 function aplicarRestricoes() {
   const sessao = obterSessao();
   if (!sessao || !sessao.org) return;
-
   const { org } = sessao;
   atualizarIdentidadeVisual(org);
-
   const sidebarTitulo = document.querySelector(".sidebar-header h2");
   if (sidebarTitulo)
     sidebarTitulo.innerText = `POLÍCIA ${
@@ -192,7 +179,6 @@ function aplicarRestricoes() {
 // =========================================================
 // 4. GERENCIAMENTO DE TELAS
 // =========================================================
-
 function resetarTelas() {
   const secoes = [
     "secao-inatividade",
@@ -202,7 +188,6 @@ function resetarTelas() {
     "secao-gestao-ferias",
     "secao-ensino",
   ];
-
   secoes.forEach((id) => {
     const el = document.getElementById(id);
     if (el) {
@@ -210,7 +195,6 @@ function resetarTelas() {
       el.style.visibility = "hidden";
     }
   });
-
   document
     .querySelectorAll('[id^="botoes-"]')
     .forEach((el) => (el.style.display = "none"));
@@ -223,29 +207,23 @@ window.abrirInatividade = function () {
   const sessao = obterSessao();
   if (!sessao || !sessao.org) return;
   const label = getOrgLabel(sessao.org);
-
   resetarTelas();
-
   const secao = document.getElementById("secao-inatividade");
   if (secao) {
     secao.style.display = "block";
     secao.style.visibility = "visible";
   }
-
   const botoes = document.getElementById("botoes-inatividade");
   if (botoes) botoes.style.display = "block";
-
   const nav = document.getElementById("nav-inatividade");
   if (nav) nav.classList.add("active");
-
   const titulo = document.getElementById("titulo-pagina");
   if (titulo) titulo.innerText = `AUDITORIA - ${label.nome}`;
 };
 
 // =========================================================
-// 5. LÓGICA DE INATIVIDADE
+// 5. LÓGICA DE INATIVIDADE (BARRA DE PROGRESSO CORRIGIDA)
 // =========================================================
-
 window.carregarInatividade = async function () {
   const sessao = obterSessao();
   if (!sessao) return;
@@ -257,9 +235,14 @@ window.carregarInatividade = async function () {
 
   if (!corpo) return;
 
+  // Ativa Interface de Carregamento
   corpo.innerHTML =
     '<tr><td colspan="6" align="center">🔍 Consultando banco de dados do Discord...</td></tr>';
-  if (progContainer) progContainer.style.display = "block";
+  if (progContainer) {
+    progContainer.style.display = "block";
+    const barra = progContainer.querySelector(".progress-bar");
+    if (barra) barra.style.width = "100%"; // Garante animação se houver
+  }
   if (btn) btn.disabled = true;
 
   try {
@@ -269,80 +252,67 @@ window.carregarInatividade = async function () {
     if (!Array.isArray(dados) || dados.length === 0) {
       corpo.innerHTML =
         '<tr><td colspan="6" align="center">Nenhum inativo encontrado.</td></tr>';
-      return;
+    } else {
+      dadosInatividadeGlobal = dados.filter((m) => {
+        const diasInatividade =
+          m.dias ||
+          Math.floor(
+            (Date.now() - (m.lastMsg || DATA_BASE_AUDITORIA)) /
+              (1000 * 60 * 60 * 24)
+          );
+        const inativoSuficiente = diasInatividade >= 7;
+        const eCargoProtegido = CARGOS_PROTEGIDOS.includes(m.cargo);
+        return inativoSuficiente && !eCargoProtegido;
+      });
+
+      dadosInatividadeGlobal.sort((a, b) => (b.dias || 0) - (a.dias || 0));
+      corpo.innerHTML = "";
+
+      if (dadosInatividadeGlobal.length === 0) {
+        corpo.innerHTML =
+          '<tr><td colspan="6" align="center">Nenhum oficial fora do comando está inativo.</td></tr>';
+      } else {
+        dadosInatividadeGlobal.forEach((m) => {
+          const tr = document.createElement("tr");
+          const dataStr =
+            m.lastMsg > 0
+              ? new Date(m.lastMsg).toLocaleDateString("pt-BR")
+              : "Nunca interagiu";
+          tr.innerHTML = `
+            <td><div class="user-cell"><img src="${
+              m.avatar || "https://cdn.discordapp.com/embed/avatars/0.png"
+            }" class="avatar-img">
+            <div><strong>${m.name}</strong><br><small>${
+            m.cargo || "Oficial"
+          }</small></div></div></td>
+            <td><code>${m.id}</code></td><td>${dataStr}</td>
+            <td><strong style="color: #ff4d4d">${m.dias || 0} Dias</strong></td>
+            <td align="center"><div style="display: flex; gap: 8px; justify-content: center;">
+            <span class="badge-danger">⚠️ INATIVO</span>
+            <button onclick="window.exonerarMembro('${m.id}', '${
+            m.rpName || m.name
+          }', '${
+            m.cargo
+          }')" class="btn-exonerar"><i class="fa-solid fa-user-slash"></i></button>
+            </div></td>`;
+          corpo.appendChild(tr);
+        });
+        mostrarAviso(`${dadosInatividadeGlobal.length} inativos listados.`);
+      }
     }
-
-    dadosInatividadeGlobal = dados.filter((m) => {
-      const diasInatividade =
-        m.dias ||
-        Math.floor(
-          (Date.now() - (m.lastMsg || DATA_BASE_AUDITORIA)) /
-            (1000 * 60 * 60 * 24)
-        );
-      const inativoSuficiente = diasInatividade >= 7;
-      const eCargoProtegido = CARGOS_PROTEGIDOS.includes(m.cargo);
-      return inativoSuficiente && !eCargoProtegido;
-    });
-
-    dadosInatividadeGlobal.sort((a, b) => (b.dias || 0) - (a.dias || 0));
-    corpo.innerHTML = "";
-
-    if (dadosInatividadeGlobal.length === 0) {
-      corpo.innerHTML =
-        '<tr><td colspan="6" align="center">Nenhum oficial fora do comando está inativo.</td></tr>';
-      return;
-    }
-
-    dadosInatividadeGlobal.forEach((m) => {
-      const tr = document.createElement("tr");
-      const dataStr =
-        m.lastMsg > 0
-          ? new Date(m.lastMsg).toLocaleDateString("pt-BR")
-          : "Nunca interagiu";
-      const diasExibir = m.dias || 0;
-
-      tr.innerHTML = `
-        <td>
-           <div class="user-cell">
-             <img src="${
-               m.avatar || "https://cdn.discordapp.com/embed/avatars/0.png"
-             }" class="avatar-img">
-             <div><strong>${m.name}</strong><br><small>${
-        m.cargo || "Oficial"
-      }</small></div>
-           </div>
-        </td>
-        <td><code>${m.id}</code></td>
-        <td>${dataStr}</td>
-        <td><strong style="color: #ff4d4d">${diasExibir} Dias</strong></td>
-        <td align="center">
-            <div style="display: flex; align-items: center; gap: 8px; justify-content: center;">
-                <span class="badge-danger">⚠️ INATIVO</span>
-                <button onclick="window.exonerarMembro('${m.id}', '${
-        m.rpName || m.name
-      }', '${m.cargo}')" class="btn-exonerar" title="Exonerar">
-                    <i class="fa-solid fa-user-slash"></i>
-                </button>
-            </div>
-        </td>
-      `;
-      corpo.appendChild(tr);
-    });
-
-    mostrarAviso(`${dadosInatividadeGlobal.length} inativos listados.`);
   } catch (err) {
     console.error(err);
     corpo.innerHTML =
       '<tr><td colspan="6" align="center" style="color:red">Erro ao conectar com a API.</td></tr>';
     mostrarAviso("Erro ao carregar inativos.", "error");
   } finally {
+    // SEMPRE desativa o carregamento
     if (btn) btn.disabled = false;
     if (progContainer) progContainer.style.display = "none";
   }
 };
 
 window.exonerarMembro = async function (discordId, rpName, cargo) {
-  // Melhora na extração do passaporte: Tenta pegar o número após a barra ou pipe
   const idMatch = rpName.match(/(\d+)$/);
   const passaporte = idMatch ? idMatch[1] : "---";
   const nomeLimpo = rpName.split(/[|/]/)[0].trim();
@@ -378,17 +348,18 @@ window.exonerarMembro = async function (discordId, rpName, cargo) {
       window.carregarInatividade();
     } else {
       const erro = await res.json();
-      alert(`Falha ao enviar relatório: ${erro.error || "Erro desconhecido"}`);
+      alert(
+        `Falha ao enviar relatório: ${erro.error || "Erro no servidor Discord"}`
+      );
     }
   } catch (e) {
-    alert("Erro na conexão com a API.");
+    alert("Erro na conexão com a API de exoneração.");
   }
 };
 
 // =========================================================
-// 6. GESTÃO DE FÉRIAS
+// 6. GESTÃO DE FÉRIAS E METAS
 // =========================================================
-
 window.abrirGestaoFerias = function () {
   resetarTelas();
   const secao = document.getElementById("secao-gestao-ferias");
@@ -396,16 +367,11 @@ window.abrirGestaoFerias = function () {
     secao.style.display = "block";
     secao.style.visibility = "visible";
   }
-
   const nav = document.getElementById("nav-ferias");
   if (nav) nav.classList.add("active");
-
-  const titulo = document.getElementById("titulo-pagina");
-  if (titulo) titulo.innerText = "GESTÃO DE FÉRIAS E LICENÇAS";
-
-  const botoes = document.getElementById("botoes-ferias");
-  if (botoes) botoes.style.display = "block";
-
+  document.getElementById("titulo-pagina").innerText =
+    "GESTÃO DE FÉRIAS E LICENÇAS";
+  document.getElementById("botoes-ferias").style.display = "block";
   window.atualizarListaFerias();
 };
 
@@ -416,146 +382,81 @@ window.atualizarListaFerias = async function () {
   const org = sessao?.org || "PCERJ";
 
   if (!select || !infoBox) return;
-
-  select.innerHTML =
-    '<option value="">🔄 Sincronizando com Discord...</option>';
-  infoBox.innerHTML = "Consultando canal de férias...";
+  select.innerHTML = '<option value="">🔄 Sincronizando...</option>';
 
   try {
     const response = await fetch(`/api/verificar-ferias?org=${org}`);
     const data = await response.json();
-
     if (data.error) throw new Error(data.error);
 
     select.innerHTML = '<option value="">Selecione um oficial...</option>';
-
     if (!data.oficiais || data.oficiais.length === 0) {
       select.innerHTML = '<option value="">Nenhum oficial em férias</option>';
       infoBox.innerHTML =
-        "✅ Sincronização concluída: Nenhum oficial encontrado com a tag de férias.";
+        "✅ Sincronização concluída: Nenhum oficial em férias.";
       return;
     }
-
-    data.oficiais.forEach((oficial) => {
-      const option = document.createElement("option");
-      option.value = oficial.id;
-      option.textContent = `${oficial.nome} (Retorno: ${oficial.dataRetorno})`;
-      select.appendChild(option);
+    data.oficiais.forEach((o) => {
+      const opt = document.createElement("option");
+      opt.value = o.id;
+      opt.textContent = `${o.nome} (Retorno: ${o.dataRetorno})`;
+      select.appendChild(opt);
     });
-
-    let logTexto = `✅ ${data.oficiais.length} oficiais em férias encontrados.`;
-    if (data.logs && data.logs.length > 0) {
-      logTexto += `<br><br><b>Tags removidas hoje (Vencidas):</b><br>• ${data.logs.join(
-        "<br>• "
-      )}`;
-    }
-    infoBox.innerHTML = logTexto;
+    infoBox.innerHTML = `✅ ${data.oficiais.length} oficiais em férias encontrados.`;
   } catch (error) {
-    console.error("Erro ao sincronizar férias:", error);
     select.innerHTML = '<option value="">Erro ao sincronizar</option>';
     infoBox.innerHTML = `<span style="color: #ff4444;">❌ Erro: ${error.message}</span>`;
   }
 };
 
-window.executarAntecipacao = async function () {
-  const userId = document.getElementById("select-oficiais-ferias")?.value;
-  if (!userId) return alert("Selecione um oficial primeiro!");
-
-  if (
-    !confirm(
-      "Deseja realmente antecipar o retorno deste oficial? A tag de férias será removida agora."
-    )
-  )
-    return;
-
-  try {
-    const response = await fetch("/api/verificar-ferias", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId }),
-    });
-
-    if (response.ok) {
-      alert("Sucesso! O oficial foi removido das férias.");
-      window.atualizarListaFerias();
-    } else {
-      alert("Erro ao processar antecipação.");
-    }
-  } catch (error) {
-    alert("Erro de conexão.");
-  }
-};
-
-// =========================================================
-// 8. METAS E ENSINO (COM TRAVA DE SEGURANÇA)
-// =========================================================
-
-window.abrirMetaCore = function () {
+// Funções de Metas (Simplificadas)
+const abrirMetaGen = (idSecao, idBotoes, idNav, titulo, orgReq) => {
   const sessao = obterSessao();
-  if (!sessao || sessao.org !== "PCERJ") {
-    window.mostrarAviso(
-      "Acesso negado: Este painel é exclusivo da PCERJ.",
-      "error"
-    );
+  if (!sessao || sessao.org !== orgReq) {
+    mostrarAviso(`Acesso negado ao painel da ${orgReq}.`, "error");
     return;
   }
   resetarTelas();
-  document.getElementById("secao-meta-core").style.display = "block";
-  document.getElementById("secao-meta-core").style.visibility = "visible";
-  document.getElementById("botoes-core").style.display = "block";
-  document.getElementById("nav-core").classList.add("active");
-  document.getElementById("titulo-pagina").innerText =
-    "AUDITORIA - METAS CORE (PCERJ)";
+  document.getElementById(idSecao).style.display = "block";
+  document.getElementById(idSecao).style.visibility = "visible";
+  document.getElementById(idBotoes).style.display = "block";
+  document.getElementById(idNav).classList.add("active");
+  document.getElementById("titulo-pagina").innerText = titulo;
 };
 
-window.abrirMetaGRR = function () {
-  const sessao = obterSessao();
-  if (!sessao || sessao.org !== "PRF") {
-    window.mostrarAviso(
-      "Acesso negado: Este painel é exclusivo da PRF.",
-      "error"
-    );
-    return;
-  }
-  resetarTelas();
-  document.getElementById("secao-meta-grr").style.display = "block";
-  document.getElementById("secao-meta-grr").style.visibility = "visible";
-  document.getElementById("botoes-grr").style.display = "block";
-  document.getElementById("nav-grr").classList.add("active");
-  document.getElementById("titulo-pagina").innerText =
-    "AUDITORIA - METAS GRR (PRF)";
-};
-
-window.abrirMetaBOPE = function () {
-  const sessao = obterSessao();
-  if (!sessao || sessao.org !== "PMERJ") {
-    window.mostrarAviso(
-      "Acesso negado: Este painel é exclusivo da PMERJ.",
-      "error"
-    );
-    return;
-  }
-  resetarTelas();
-  document.getElementById("secao-meta-bope").style.display = "block";
-  document.getElementById("secao-meta-bope").style.visibility = "visible";
-  document.getElementById("botoes-bope").style.display = "block";
-  document.getElementById("nav-bope").classList.add("active");
-  document.getElementById("titulo-pagina").innerText =
-    "AUDITORIA - METAS BOPE (PMERJ)";
-};
+window.abrirMetaCore = () =>
+  abrirMetaGen(
+    "secao-meta-core",
+    "botoes-core",
+    "nav-core",
+    "AUDITORIA - METAS CORE (PCERJ)",
+    "PCERJ"
+  );
+window.abrirMetaGRR = () =>
+  abrirMetaGen(
+    "secao-meta-grr",
+    "botoes-grr",
+    "nav-grr",
+    "AUDITORIA - METAS GRR (PRF)",
+    "PRF"
+  );
+window.abrirMetaBOPE = () =>
+  abrirMetaGen(
+    "secao-meta-bope",
+    "botoes-bope",
+    "nav-bope",
+    "AUDITORIA - METAS BOPE (PMERJ)",
+    "PMERJ"
+  );
 
 window.abrirEnsino = function () {
-  const sessao = obterSessao();
-  // Se quiser restringir ensino só para PCERJ: if (sessao.org !== "PCERJ") return;
   resetarTelas();
   const secao = document.getElementById("secao-ensino");
   if (secao) {
     secao.style.display = "block";
     secao.style.visibility = "visible";
   }
-  const botoes = document.getElementById("botoes-ensino");
-  if (botoes) botoes.style.display = "block";
-
+  document.getElementById("botoes-ensino").style.display = "block";
   document.getElementById("nav-ensino")?.classList.add("active");
   document.getElementById("titulo-pagina").innerText = "SISTEMA DE ENSINO";
 };

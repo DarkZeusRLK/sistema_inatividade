@@ -3,7 +3,17 @@
 // =========================================================
 let dadosInatividadeGlobal = [];
 
-// IMPORTANTE: Coloque uma data no PASSADO para servir de base para quem nunca falou.
+// Lista de cargos que NUNCA devem aparecer na lista de inatividade (Imunidade)
+const CARGOS_PROTEGIDOS = [
+  "Delegado PCERJ",
+  "Delegado Adj. PCERJ",
+  "Comando CGPC",
+  "Comando SAER",
+  "Comando GEM",
+  "Comando CORE",
+  "Coordenador Civil",
+];
+
 const DATA_BASE_AUDITORIA = new Date("2024-12-08T00:00:00").getTime();
 
 const obterSessao = () => {
@@ -226,7 +236,7 @@ window.abrirInatividade = function () {
 };
 
 // =========================================================
-// 5. LÓGICA DE AUDITORIA E EXONERAÇÃO
+// 5. LÓGICA DE AUDITORIA E EXONERAÇÃO (COM FILTRO DE CARGOS)
 // =========================================================
 
 window.carregarInatividade = async function () {
@@ -234,8 +244,6 @@ window.carregarInatividade = async function () {
   const corpo = document.getElementById("corpo-inatividade");
   const btn = document.getElementById("btn-sincronizar");
   const progContainer = document.getElementById("progress-container");
-  const progBar = document.getElementById("progress-bar");
-  const progPercent = document.getElementById("progress-percentage");
 
   corpo.innerHTML = "";
   progContainer.style.display = "block";
@@ -251,16 +259,31 @@ window.carregarInatividade = async function () {
       return;
     }
 
-    dadosInatividadeGlobal = dados.map((m) => {
+    // 1. Processa os dados e calcula os dias
+    let processados = dados.map((m) => {
       const agora = Date.now();
       let ref = m.lastMsg > 0 ? m.lastMsg : DATA_BASE_AUDITORIA;
       let dias = Math.floor((agora - ref) / (1000 * 60 * 60 * 24));
       return { ...m, diasInatividade: dias > 0 ? dias : 0 };
     });
 
+    // 2. FILTRAGEM: Remove quem tem menos de 7 dias OU possui cargo protegido
+    dadosInatividadeGlobal = processados.filter((m) => {
+      const inativoSuficiente = m.diasInatividade >= 7;
+      const eCargoProtegido = CARGOS_PROTEGIDOS.includes(m.cargo);
+      return inativoSuficiente && !eCargoProtegido;
+    });
+
+    // Ordenar por mais tempo inativo
     dadosInatividadeGlobal.sort(
       (a, b) => b.diasInatividade - a.diasInatividade
     );
+
+    if (dadosInatividadeGlobal.length === 0) {
+      corpo.innerHTML =
+        '<tr><td colspan="6" align="center">Nenhum oficial fora do comando está inativo.</td></tr>';
+      return;
+    }
 
     dadosInatividadeGlobal.forEach((m) => {
       const tr = document.createElement("tr");
@@ -274,7 +297,7 @@ window.carregarInatividade = async function () {
                m.avatar || "https://cdn.discordapp.com/embed/avatars/0.png"
              }" class="avatar-img">
              <div><strong>${m.name}</strong><br><small>${
-        m.rpName || "Não registrado"
+        m.cargo || "Oficial"
       }</small></div>
            </div>
         </td>
@@ -297,7 +320,7 @@ window.carregarInatividade = async function () {
       corpo.appendChild(tr);
     });
 
-    mostrarAviso("Sincronização concluída.");
+    mostrarAviso(`${dadosInatividadeGlobal.length} inativos listados.`);
   } catch (err) {
     mostrarAviso("Erro ao carregar inativos.", "error");
   } finally {
@@ -308,7 +331,6 @@ window.carregarInatividade = async function () {
 
 // --- FUNÇÃO DE EXONERAÇÃO ---
 window.exonerarMembro = async function (discordId, rpName, cargo) {
-  // Tenta extrair ID do nome se estiver no formato "Nome | 123"
   const idMatch = rpName.match(/(\d+)$/);
   const passaporte = idMatch ? idMatch[1] : "---";
   const nomeLimpo = rpName.split("|")[0].trim();
@@ -337,7 +359,7 @@ window.exonerarMembro = async function (discordId, rpName, cargo) {
 
     if (res.ok) {
       mostrarAviso("Relatório de exoneração enviado!");
-      window.carregarInatividade(); // Recarrega a lista
+      window.carregarInatividade();
     } else {
       alert("Falha ao enviar relatório.");
     }
@@ -347,7 +369,7 @@ window.exonerarMembro = async function (discordId, rpName, cargo) {
 };
 
 // =========================================================
-// 6. GESTÃO DE FÉRIAS (CORREÇÃO DO ERRO)
+// 6. GESTÃO DE FÉRIAS
 // =========================================================
 
 window.abrirGestaoFerias = function () {
@@ -361,10 +383,9 @@ window.abrirGestaoFerias = function () {
     "titulo-pagina"
   ).innerText = `GESTÃO DE FÉRIAS - ${org}`;
 
-  window.atualizarListaFerias(); // Agora a função existe abaixo
+  window.atualizarListaFerias();
 };
 
-// FUNÇÃO QUE ESTAVA FALTANDO E CAUSAVA O ERRO:
 window.atualizarListaFerias = async function () {
   const { org } = obterSessao();
   const corpo = document.getElementById("corpo-ferias");
@@ -376,20 +397,19 @@ window.atualizarListaFerias = async function () {
   try {
     const res = await fetch(`/api/verificar-ferias?org=${org}`);
     const data = await res.json();
-
     corpo.innerHTML = "";
 
     if (data.oficiais && data.oficiais.length > 0) {
       data.oficiais.forEach((o) => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-                    <td><strong>${o.nome}</strong></td>
-                    <td>${o.dataRetorno}</td>
-                    <td align="center"><span class="badge-ferias">EM FÉRIAS</span></td>
-                    <td align="center">
-                        <button onclick="window.anteciparVolta('${o.id}')" class="btn-voltar">Antecipar</button>
-                    </td>
-                `;
+            <td><strong>${o.nome}</strong></td>
+            <td>${o.dataRetorno}</td>
+            <td align="center"><span class="badge-ferias">EM FÉRIAS</span></td>
+            <td align="center">
+                <button onclick="window.anteciparVolta('${o.id}')" class="btn-voltar">Antecipar</button>
+            </td>
+        `;
         corpo.appendChild(tr);
       });
     } else {
@@ -418,6 +438,7 @@ window.anteciparVolta = async function (userId) {
     alert("Erro ao processar retorno.");
   }
 };
+
 // =========================================================
 // 8. METAS E ENSINO
 // =========================================================

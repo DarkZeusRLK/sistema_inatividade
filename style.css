@@ -596,3 +596,21 @@ body {
 #wrapper-comando .nav-item:hover {
   background: rgba(212, 175, 55, 0.15);
 }
+.btn-exonerar {
+  background: #ff4444;
+  color: white;
+  border: none;
+  padding: 5px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.btn-exonerar:hover {
+  background: #cc0000;
+  transform: scale(1.1);
+}
+
+.status-alert {
+  /* seu estilo de status atual */
+}

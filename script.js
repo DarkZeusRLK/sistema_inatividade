@@ -375,32 +375,26 @@ window.exonerarMembro = async function (discordId, rpName, cargo) {
 // =========================================================
 // 6. GESTÃO DE FÉRIAS
 // =========================================================
+
 window.abrirGestaoFerias = function () {
   resetarTelas();
   const secao = document.getElementById("secao-gestao-ferias");
   if (secao) {
     secao.style.display = "block";
-    secao.style.visibility = "visible";
+    secao.style.visibility = "visible"; // <--- CORREÇÃO AQUI
   }
+
   const nav = document.getElementById("nav-ferias");
   if (nav) nav.classList.add("active");
 
   document.getElementById("titulo-pagina").innerText =
     "GESTÃO DE FÉRIAS E LICENÇAS";
+
   const botoes = document.getElementById("botoes-ferias");
   if (botoes) botoes.style.display = "block";
 
   atualizarListaFerias();
 };
-
-// Adicione aqui as demais funções (abrirMetaCore, abrirEnsino, etc) seguindo o padrão acima...
-
-function aplicarRestricoes() {
-  const sessao = obterSessao();
-  if (!sessao || !sessao.org) return;
-  const { org } = sessao;
-  atualizarIdentidadeVisual(org);
-}
 
 window.atualizarListaFerias = async function () {
   const select = document.getElementById("select-oficiais-ferias");

@@ -1,24 +1,54 @@
-require("dotenv").config();
+// =========================================================
+// API DE AUTENTICAÇÃO (CORRIGIDA)
+// =========================================================
 const express = require("express");
 const app = express();
 
+// Garante que o fetch funcione em qualquer versão do Node
+const fetch = global.fetch || require("node-fetch");
+
 app.use(express.json());
+
+// --- 1. CONFIGURAÇÃO DE CORS (CRUCIAL PARA O LOGIN FUNCIONAR) ---
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  // Se o navegador fizer uma pré-verificação (OPTIONS), respondemos OK imediatamente
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+  next();
+});
 
 app.post("*", async (req, res) => {
   const { token } = req.body;
 
+  if (!token) {
+    return res.status(400).json({ error: "Token não fornecido." });
+  }
+
   try {
+    // Busca os dados do membro no Discord
     const memberRes = await fetch(
       `https://discord.com/api/users/@me/guilds/${process.env.GUILD_ID?.trim()}/member`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
+    if (!memberRes.ok) {
+      const errData = await memberRes.json().catch(() => ({}));
+      console.error("Erro Discord API:", errData);
+      return res
+        .status(401)
+        .json({ error: "Membro não encontrado ou Token inválido." });
+    }
+
     const memberData = await memberRes.json();
-    if (!memberRes.ok)
-      return res.status(401).json({ error: "Membro não encontrado." });
 
     // 1. PROCESSAMENTO DOS CARGOS DE COMANDO (Múltiplos IDs separados por vírgula)
     const comandoRolesStr = process.env.COMANDO_GERAL_ROLE_ID || "";
+    // Limpa espaços e cria array
     const listaComandoIds = comandoRolesStr.split(",").map((id) => id.trim());
 
     // Verifica se o usuário possui qualquer um dos IDs de comando listados
@@ -34,7 +64,7 @@ app.post("*", async (req, res) => {
     let userOrg = null;
 
     // 3. LÓGICA DE ATRIBUIÇÃO
-    // Se for COMANDO, não atribuímos organização automática para que ele possa escolher no frontend
+    // Se for COMANDO, não atribuímos organização automática (null) para ativar o menu de escolha
     if (!isComando) {
       if (memberData.roles.includes(rolePMERJ)) {
         userOrg = { id: "PMERJ", tema: "tema-pmerj" };
@@ -47,21 +77,26 @@ app.post("*", async (req, res) => {
       // Se não for comando e não tiver nenhum cargo de força, nega o acesso
       if (!userOrg) {
         return res.status(403).json({
-          error: "Você não tem um cargo autorizado para este painel.",
+          error: "Você não tem um cargo autorizado para acessar o painel.",
         });
       }
     }
 
     // 4. RESPOSTA PARA O FRONTEND
     res.json({
-      org: userOrg ? userOrg.id : null, // Comando recebe null para ativar o seletor
-      tema: userOrg ? userOrg.tema : "tema-pcerj", // Tema padrão inicial para comando
+      org: userOrg ? userOrg.id : null, // Comando recebe null
+      tema: userOrg ? userOrg.tema : "tema-pcerj", // Tema padrão
       isComando: isComando,
       nome: memberData.nick || memberData.user.username,
+      avatar: memberData.user.avatar
+        ? `https://cdn.discordapp.com/avatars/${memberData.user.id}/${memberData.user.avatar}.png`
+        : null,
     });
   } catch (err) {
-    console.error("Erro no Auth:", err);
-    res.status(500).json({ error: "Falha na comunicação com o servidor." });
+    console.error("Erro Crítico Auth:", err);
+    res
+      .status(500)
+      .json({ error: "Erro interno no servidor de autenticação." });
   }
 });
 

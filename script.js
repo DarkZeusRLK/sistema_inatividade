@@ -1,14 +1,14 @@
 // =========================================================
-// 1. CONFIGURAÇÕES GLOBAIS
+// 1. CONFIGURAÇÕES GLOBAIS (VERSÃO VERCEL)
 // =========================================================
 
-// ⚠️ SE O SITE ESTIVER SEPARADO DO BOT, COLE O LINK DA DISCLOUD AQUI.
-// Exemplo: ""
-// Se estiverem na mesma pasta/projeto, deixe vazio: ""
-const API_BASE = "https://discloud.com/dashboard/app/1767832130457";
+// ✅ ADAPTAÇÃO VERCEL: Deixamos vazio.
+// O navegador buscará automaticamente na pasta /api do próprio site.
+const API_BASE = "";
 
 let dadosInatividadeGlobal = [];
 
+// Lista de cargos que o sistema ignora (não cobra inatividade)
 const CARGOS_PROTEGIDOS = [
   "Delegado PCERJ",
   "Delegado Adj. PCERJ",
@@ -23,7 +23,7 @@ const CARGOS_PROTEGIDOS = [
   "Suporte",
 ];
 
-// Data base para cálculo (Corrigido para o passado para funcionar o cálculo)
+// Data base para cálculo
 const DATA_BASE_AUDITORIA = new Date("2025-12-08T00:00:00").getTime();
 
 const obterSessao = () => {
@@ -256,7 +256,7 @@ window.abrirInatividade = function () {
 };
 
 // =========================================================
-// 4. LÓGICA DE INATIVIDADE (CONEXÃO COM BOT)
+// 4. LÓGICA DE INATIVIDADE (CONEXÃO COM BACKEND VERCEL)
 // =========================================================
 window.carregarInatividade = async function () {
   const sessao = obterSessao();
@@ -272,7 +272,7 @@ window.carregarInatividade = async function () {
   if (!corpo) return;
 
   corpo.innerHTML =
-    '<tr><td colspan="6" align="center">🤖 Conectando ao Bot na Discloud...</td></tr>';
+    '<tr><td colspan="6" align="center">🤖 Conectando ao Sistema (Vercel)...</td></tr>';
   if (progContainer) progContainer.style.display = "block";
   if (btn) btn.disabled = true;
 
@@ -287,11 +287,12 @@ window.carregarInatividade = async function () {
   }, 300);
 
   try {
+    // Busca direta na API local da Vercel
     const res = await fetch(
       `${API_BASE}/api/membros-inativos?org=${sessao.org}`
     );
 
-    if (!res.ok) throw new Error(`Erro API Bot: ${res.status}`);
+    if (!res.ok) throw new Error(`Erro API: ${res.status}`);
 
     const dados = await res.json();
     clearInterval(fakeProgress);
@@ -370,7 +371,7 @@ window.carregarInatividade = async function () {
                  <button onclick="window.prepararExoneracao('${m.id}', '${
             m.rpName || m.name
           }', '${cargoExibicao}', '${passaporte}')" class="btn-exonerar" title="Exonerar e Remover">
-                   <i class="fa-solid fa-user-slash"></i>
+                    <i class="fa-solid fa-user-slash"></i>
                  </button>
                </div>
             </td>`;
@@ -383,8 +384,8 @@ window.carregarInatividade = async function () {
     clearInterval(fakeProgress);
     console.error(err);
     corpo.innerHTML =
-      '<tr><td colspan="6" align="center" style="color:#ff4d4d">❌ Erro ao conectar com o Bot (Discloud).</td></tr>';
-    mostrarAviso("Bot Offline ou Link Incorreto.", "error");
+      '<tr><td colspan="6" align="center" style="color:#ff4d4d">❌ Erro ao conectar com o Servidor.</td></tr>';
+    mostrarAviso("Erro de conexão.", "error");
   } finally {
     if (btn) btn.disabled = false;
     setTimeout(() => {
@@ -393,7 +394,7 @@ window.carregarInatividade = async function () {
   }
 };
 
-// --- PREPARAR E EXECUTAR EXONERAÇÃO (BOT REAL) ---
+// --- PREPARAR E EXECUTAR EXONERAÇÃO (BOT VIA VERCEL API) ---
 window.prepararExoneracao = function (discordId, rpName, cargo, passaporte) {
   const nomeLimpo = rpName.replace(/[\d|]/g, "").trim();
   const motivoFixo = "Inatividade superior a 7 dias (Audit System)";
@@ -431,9 +432,10 @@ async function executarExoneracaoBot(
   motivo
 ) {
   const sessao = obterSessao();
-  mostrarAviso("Enviando comando para o Bot...", "info");
+  mostrarAviso("Enviando comando...", "info");
 
   try {
+    // Chama a API local (/api/exonerar.js)
     const res = await fetch(`${API_BASE}/api/exonerar`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -453,13 +455,10 @@ async function executarExoneracaoBot(
       window.carregarInatividade();
     } else {
       const erro = await res.json();
-      mostrarAviso(
-        `Erro do Bot: ${erro.error || "Falha desconhecida"}`,
-        "error"
-      );
+      mostrarAviso(`Erro: ${erro.error || "Falha desconhecida"}`, "error");
     }
   } catch (e) {
-    mostrarAviso("Erro de conexão com o Bot.", "error");
+    mostrarAviso("Erro de conexão.", "error");
   }
 }
 

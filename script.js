@@ -61,7 +61,7 @@ const getOrgLabel = (org) => {
     PF: {
       unidade: "COT",
       nome: "POLÍCIA FEDERAL",
-      logo: "Imagens/Brasão_da_Polícia_Federal.png", // Certifique-se de que a imagem existe
+      logo: "Imagens/Policia-federal-logo.png", // Certifique-se de que a imagem existe
     },
   };
   return labels[org] || labels["PCERJ"];

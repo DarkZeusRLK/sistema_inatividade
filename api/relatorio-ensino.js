@@ -1,3 +1,4 @@
+// Atualização Forçada
 module.exports = async (req, res) => {
   const { org, dataInicio, dataFim } = req.query;
   const {

@@ -256,6 +256,8 @@ function resetarTelas() {
   document
     .querySelectorAll('[id^="botoes-"]')
     .forEach((el) => (el.style.display = "none"));
+  const btnMassa = document.getElementById("btn-exonerar-todos");
+  if (btnMassa) btnMassa.style.display = "none";
 
   document
     .querySelectorAll(".nav-item")
@@ -366,6 +368,11 @@ window.carregarInatividade = async function () {
           corpo.appendChild(tr);
         });
         mostrarAviso(`${dadosInatividadeGlobal.length} inativos carregados.`);
+        const btnMassa = document.getElementById("btn-exonerar-todos");
+        if (btnMassa) {
+          btnMassa.style.display =
+            dadosInatividadeGlobal.length > 0 ? "inline-flex" : "none";
+        }
       }
     }
   } catch (err) {
@@ -451,7 +458,49 @@ async function executarExoneracaoBot(
     mostrarAviso("Erro de conexão.", "error");
   }
 }
+window.exonerarTodosInativos = async function () {
+  if (!dadosInatividadeGlobal || dadosInatividadeGlobal.length === 0) {
+    return mostrarAviso("Nenhum oficial para exonerar.", "error");
+  }
 
+  const inativosParaProcessar = dadosInatividadeGlobal.map((m) => ({
+    discordUser: m.id,
+    nomeCidade: m.name.replace(/[\d|]/g, "").trim(),
+    idPassaporte: m.passaporte || "---",
+    cargo: m.cargo || "Oficial",
+    action: "kick",
+  }));
+
+  const msgConfirm = `Você está prestes a exonerar <b>${inativosParaProcessar.length} oficiais</b> por inatividade.<br><br>Deseja continuar?`;
+
+  exibirModalConfirmacao("CONFIRMAR LIMPEZA EM MASSA", msgConfirm, async () => {
+    const btnMassa = document.getElementById("btn-exonerar-todos");
+    if (btnMassa) btnMassa.disabled = true;
+    mostrarAviso("Iniciando processamento em massa...", "info");
+
+    try {
+      const res = await fetch(`${API_BASE}/api/exonerar.js`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ users: inativosParaProcessar, action: "kick" }),
+      });
+
+      if (res.ok) {
+        mostrarAviso(
+          `Sucesso! ${inativosParaProcessar.length} oficiais processados.`,
+          "success"
+        );
+        window.carregarInatividade(); // Recarrega a lista
+      } else {
+        mostrarAviso("Erro ao processar lista em massa.", "error");
+      }
+    } catch (e) {
+      mostrarAviso("Erro de conexão.", "error");
+    } finally {
+      if (btnMassa) btnMassa.disabled = false;
+    }
+  });
+};
 // =========================================================
 // 5. OUTRAS TELAS
 // =========================================================

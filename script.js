@@ -2,12 +2,11 @@
 // 1. CONFIGURAÇÕES GLOBAIS (VERSÃO VERCEL)
 // =========================================================
 
-// ✅ ADAPTAÇÃO VERCEL: Deixamos vazio.
-const API_BASE = "";
+const API_BASE = ""; // Vercel usa caminho relativo
 
 let dadosInatividadeGlobal = [];
 
-// Lista de cargos que o sistema ignora
+// Lista de cargos que o sistema ignora visualmente na tabela (Backup do frontend)
 const CARGOS_PROTEGIDOS = [
   "Delegado PCERJ",
   "Delegado Adj. PCERJ",
@@ -22,7 +21,6 @@ const CARGOS_PROTEGIDOS = [
   "Suporte",
 ];
 
-// Data base para cálculo
 const DATA_BASE_AUDITORIA = new Date("2025-12-08T00:00:00").getTime();
 
 const obterSessao = () => {
@@ -78,9 +76,12 @@ window.mostrarAviso = function (msg, tipo = "success") {
   if (!aviso) return console.log(`[${tipo}] ${msg}`);
 
   const icon = tipo === "success" ? "✅ " : tipo === "error" ? "❌ " : "⚠️ ";
+  // Aqui garantimos que o CSS do aviso fique visível
   aviso.innerHTML = `<strong>${icon}</strong> ${msg}`;
   aviso.className = `aviso-toast ${tipo}`;
   aviso.style.display = "block";
+
+  // Oculta após 4 segundos
   setTimeout(() => {
     aviso.style.display = "none";
   }, 4000);
@@ -107,13 +108,8 @@ function exibirModalConfirmacao(titulo, htmlMensagem, onConfirmar) {
   const btnCancel = document.getElementById("btn-cancelar-modal");
   const btnConfirm = document.getElementById("btn-confirmar-modal");
 
-  btnCancel.onmouseover = () => (btnCancel.style.borderColor = "#fff");
-  btnCancel.onmouseout = () => (btnCancel.style.borderColor = "#555");
   btnCancel.onclick = () =>
     document.getElementById("custom-modal-confirm").remove();
-
-  btnConfirm.onmouseover = () => (btnConfirm.style.background = "#b71c1c");
-  btnConfirm.onmouseout = () => (btnConfirm.style.background = "#d32f2f");
   btnConfirm.onclick = () => {
     onConfirmar();
     document.getElementById("custom-modal-confirm").remove();
@@ -268,7 +264,7 @@ window.carregarInatividade = async function () {
   if (!corpo) return;
 
   corpo.innerHTML =
-    '<tr><td colspan="6" align="center"> Conectando ao Sistema ...</td></tr>';
+    '<tr><td colspan="6" align="center">🤖 Conectando ao Sistema (Vercel)...</td></tr>';
   if (progContainer) progContainer.style.display = "block";
   if (btn) btn.disabled = true;
 
@@ -295,22 +291,8 @@ window.carregarInatividade = async function () {
       corpo.innerHTML =
         '<tr><td colspan="6" align="center">✅ Nenhum membro inativo encontrado.</td></tr>';
     } else {
-      dadosInatividadeGlobal = dados
-        .filter((m) => {
-          const cargoAtual =
-            m.cargo && m.cargo !== "undefined" ? m.cargo : "Oficial";
-          const isProtegido = CARGOS_PROTEGIDOS.some((protegido) =>
-            cargoAtual.includes(protegido)
-          );
-          const diasInatividade =
-            m.dias ||
-            Math.floor(
-              (Date.now() - (m.lastMsg || DATA_BASE_AUDITORIA)) /
-                (1000 * 60 * 60 * 24)
-            );
-          return diasInatividade >= 7 && !isProtegido;
-        })
-        .sort((a, b) => (b.dias || 0) - (a.dias || 0));
+      dadosInatividadeGlobal = dados;
+      // O filtro de férias e org já foi feito no Backend, então apenas exibimos
 
       corpo.innerHTML = "";
       if (dadosInatividadeGlobal.length === 0) {
@@ -318,14 +300,9 @@ window.carregarInatividade = async function () {
           '<tr><td colspan="6" align="center">Todos os oficiais estão ativos! ✅</td></tr>';
       } else {
         dadosInatividadeGlobal.forEach((m) => {
-          let passaporte = m.passaporte; // Passaporte (ID Cidade)
-
-          const cargoExibicao =
-            m.cargo && m.cargo !== "undefined" ? m.cargo : "Oficial";
-          const dataStr =
-            m.lastMsg > 0
-              ? new Date(m.lastMsg).toLocaleDateString("pt-BR")
-              : "Nunca";
+          let passaporte = m.passaporte;
+          const cargoExibicao = m.cargo || "Oficial";
+          // m.dias já vem calculado do backend
 
           const tr = document.createElement("tr");
           tr.innerHTML = `
@@ -335,14 +312,16 @@ window.carregarInatividade = async function () {
                   m.avatar || "https://cdn.discordapp.com/embed/avatars/0.png"
                 }" class="avatar-img">
                 <div>
-                   <strong>${
-                     m.name
-                   }</strong> <br><small style="color: #bbb;">${cargoExibicao}</small>
+                   <strong>${m.name}</strong> 
+                   <br><small style="color: #bbb;">${cargoExibicao}</small>
                 </div>
               </div>
             </td>
-            <td><code>${m.id}</code></td>
-            <td>${dataStr}</td>
+            <td><code>${m.id}</code></td> <td>${
+            m.joined_at
+              ? new Date(m.joined_at).toLocaleDateString("pt-BR")
+              : "---"
+          }</td>
             <td><strong style="color: #ff4d4d">${m.dias || 0} Dias</strong></td>
             <td align="center">
                <div style="display: flex; gap: 8px; justify-content: center;">
@@ -406,6 +385,7 @@ window.prepararExoneracao = function (discordId, rpName, cargo, passaporte) {
   });
 };
 
+// --- FUNÇÃO ATUALIZADA COM O ALERTA DE SUCESSO ---
 async function executarExoneracaoBot(
   discordId,
   nome,
@@ -432,7 +412,10 @@ async function executarExoneracaoBot(
     });
 
     if (res.ok) {
-      mostrarAviso("✅ Usuário exonerado e removido com sucesso!");
+      // ✅ AQUI ESTÁ A MENSAGEM QUE VOCÊ PEDIU
+      mostrarAviso("Sucesso! Oficial exonerado com sucesso.", "success");
+
+      // Recarrega a lista para sumir com o usuário exonerado
       window.carregarInatividade();
     } else {
       const erro = await res.json();

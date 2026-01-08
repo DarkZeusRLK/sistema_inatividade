@@ -237,10 +237,10 @@ function aplicarRestricoes() {
 function resetarTelas() {
   const secoes = [
     "secao-inatividade",
-    "secao-meta-core",
-    "secao-meta-grr",
-    "secao-meta-bope",
-    "secao-meta-cot",
+    "secao-meta-core", // PCERJ
+    "secao-meta-grr", // PRF
+    "secao-meta-bope", // PMERJ
+    "secao-meta-cot", // PF
     "secao-gestao-ferias",
     "secao-ensino",
   ];
@@ -249,18 +249,13 @@ function resetarTelas() {
     const el = document.getElementById(id);
     if (el) {
       el.style.display = "none";
-      // el.style.visibility = "hidden"; // Remova esta linha para evitar bugs de layout
+      el.style.visibility = "hidden";
     }
   });
 
-  // Esconde todos os containers de botões que começam com "botoes-"
-  document.querySelectorAll('[id^="botoes-"]').forEach((el) => {
-    el.style.display = "none";
-  });
-
-  // RESET DO BOTÃO DE MASSA (IMPORTANTE)
-  const btnMassa = document.getElementById("btn-exonerar-todos");
-  if (btnMassa) btnMassa.style.display = "none";
+  document
+    .querySelectorAll('[id^="botoes-"]')
+    .forEach((el) => (el.style.display = "none"));
 
   document
     .querySelectorAll(".nav-item")
@@ -270,21 +265,14 @@ function resetarTelas() {
 window.abrirInatividade = function () {
   const sessao = obterSessao();
   if (!sessao) return;
-
   resetarTelas();
-
   const secao = document.getElementById("secao-inatividade");
-  const containerBotoes = document.getElementById("botoes-inatividade");
-
   if (secao) {
-    secao.style.display = "block"; // Força o aparecimento
+    secao.style.display = "block";
     secao.style.visibility = "visible";
   }
-  if (containerBotoes) {
-    containerBotoes.style.display = "flex"; // Alinha os botões lado a lado
-  }
-
-  document.getElementById("nav-inatividade")?.classList.add("active");
+  document.getElementById("botoes-inatividade").style.display = "block";
+  document.getElementById("nav-inatividade").classList.add("active");
   document.getElementById("titulo-pagina").innerText = `AUDITORIA - ${
     getOrgLabel(sessao.org).nome
   }`;
@@ -378,11 +366,6 @@ window.carregarInatividade = async function () {
           corpo.appendChild(tr);
         });
         mostrarAviso(`${dadosInatividadeGlobal.length} inativos carregados.`);
-        const btnMassa = document.getElementById("btn-exonerar-todos");
-        if (btnMassa) {
-          btnMassa.style.display =
-            dadosInatividadeGlobal.length > 0 ? "inline-flex" : "none";
-        }
       }
     }
   } catch (err) {
@@ -468,49 +451,7 @@ async function executarExoneracaoBot(
     mostrarAviso("Erro de conexão.", "error");
   }
 }
-window.exonerarTodosInativos = async function () {
-  if (!dadosInatividadeGlobal || dadosInatividadeGlobal.length === 0) {
-    return mostrarAviso("Nenhum oficial para exonerar.", "error");
-  }
 
-  const inativosParaProcessar = dadosInatividadeGlobal.map((m) => ({
-    discordUser: m.id,
-    nomeCidade: m.name.replace(/[\d|]/g, "").trim(),
-    idPassaporte: m.passaporte || "---",
-    cargo: m.cargo || "Oficial",
-    action: "kick",
-  }));
-
-  const msgConfirm = `Você está prestes a exonerar <b>${inativosParaProcessar.length} oficiais</b> por inatividade.<br><br>Deseja continuar?`;
-
-  exibirModalConfirmacao("CONFIRMAR LIMPEZA EM MASSA", msgConfirm, async () => {
-    const btnMassa = document.getElementById("btn-exonerar-todos");
-    if (btnMassa) btnMassa.disabled = true;
-    mostrarAviso("Iniciando processamento em massa...", "info");
-
-    try {
-      const res = await fetch(`${API_BASE}/api/exonerar.js`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ users: inativosParaProcessar, action: "kick" }),
-      });
-
-      if (res.ok) {
-        mostrarAviso(
-          `Sucesso! ${inativosParaProcessar.length} oficiais processados.`,
-          "success"
-        );
-        window.carregarInatividade(); // Recarrega a lista
-      } else {
-        mostrarAviso("Erro ao processar lista em massa.", "error");
-      }
-    } catch (e) {
-      mostrarAviso("Erro de conexão.", "error");
-    } finally {
-      if (btnMassa) btnMassa.disabled = false;
-    }
-  });
-};
 // =========================================================
 // 5. OUTRAS TELAS
 // =========================================================
@@ -599,9 +540,8 @@ window.abrirEnsino = function () {
     secao.style.display = "block";
     secao.style.visibility = "visible";
   }
-  // Remova ou comente a linha abaixo se o container "botoes-ensino" não estiver no header
-  // document.getElementById("botoes-ensino").style.display = "block";
-
+  document.getElementById("botoes-ensino").style.display = "block";
+  // O nav-ensino agora fica ativo para todas as orgs
   document.getElementById("nav-ensino")?.classList.add("active");
   document.getElementById("titulo-pagina").innerText = "SISTEMA DE ENSINO";
 };

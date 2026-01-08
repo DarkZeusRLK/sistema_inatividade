@@ -5,16 +5,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login - Sistema Unificado de Auditoria</title>
-  <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
   <link rel="shortcut icon" href="Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png" type="image/x-icon">
+
   <style>
     body {
-      background: radial-gradient(circle, #1a1a1e 0%, #0a0a0c 100%);
+      background: radial-gradient(circle at center, #1a1a1e 0%, #0a0a0c 100%);
       display: flex;
       align-items: center;
       justify-content: center;
       height: 100vh;
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      color: #fff;
     }
 
     .login-card {
@@ -26,6 +31,7 @@
       width: 100%;
       max-width: 400px;
       box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+      position: relative;
     }
 
     .login-card img {
@@ -39,6 +45,7 @@
       font-size: 1.5rem;
       letter-spacing: 2px;
       margin-bottom: 5px;
+      text-transform: uppercase;
     }
 
     .login-card p {
@@ -62,11 +69,50 @@
       border: none;
       width: 100%;
       cursor: pointer;
+      font-size: 1rem;
     }
 
     .btn-discord:hover {
       background: #4752c4;
       transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(88, 101, 242, 0.4);
+    }
+
+    /* Estado de Carregamento */
+    .loading-overlay {
+      display: none;
+      /* Oculto por padrão */
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(22, 22, 26, 0.95);
+      border-radius: 12px;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .spinner {
+      border: 4px solid rgba(255, 255, 255, 0.1);
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border-left-color: #d4af37;
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
     }
   </style>
 </head>
@@ -74,6 +120,11 @@
 <body>
 
   <div class="login-card">
+    <div id="loading-overlay" class="loading-overlay">
+      <div class="spinner"></div>
+      <span style="color: #d4af37; font-weight: 600;">Validando Acesso...</span>
+    </div>
+
     <img src="Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png" id="img-login" alt="Logo">
     <h1 id="titulo-login">AUTENTICAÇÃO</h1>
     <p>Acesso restrito à Administração das Forças</p>
@@ -84,30 +135,40 @@
   </div>
 
   <script>
-    // Configuração Pública
+    // ==========================================
+    // CONFIGURAÇÃO
+    // ==========================================
     const CLIENT_ID = '1453204169661087794';
+    // Garante que a URL não tenha barra no final para evitar erros de redirect
+    const BASE_URL = window.location.origin.replace(/\/$/, "");
+    const REDIRECT_URI = `${BASE_URL}/login.html`;
 
     // 1. Redireciona para o Discord
     function iniciarLogin() {
-      const REDIRECT_URI = window.location.origin + '/login.html';
       const scope = encodeURIComponent('identify guilds guilds.members.read');
       const redirect = encodeURIComponent(REDIRECT_URI);
       const url = `https://discord.com/api/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${redirect}&response_type=token&scope=${scope}`;
       window.location.href = url;
     }
 
-    // 2. Valida o retorno do Discord com o seu Servidor
+    // 2. Valida o retorno do Discord
     async function validarAcesso() {
       const hash = window.location.hash;
+
+      // Se tiver token na URL, significa que o usuário acabou de voltar do Discord
       if (hash.includes("access_token")) {
+
+        // Ativa o visual de "Carregando"
+        document.getElementById('loading-overlay').style.display = 'flex';
+
         const params = new URLSearchParams(hash.replace("#", "?"));
         const token = params.get("access_token");
 
-        // Limpa o token da URL por segurança
+        // Limpa a URL visualmente
         window.history.replaceState({}, document.title, window.location.pathname);
 
         try {
-          // CHAMA O SEU SERVER.JS
+          // Faz a requisição para a nossa API (agora corrigida com CORS)
           const res = await fetch('/api/auth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -117,20 +178,23 @@
           if (res.ok) {
             const dadosSessao = await res.json();
 
-            // Salva a sessão no navegador (incluindo o tema escolhido pelo server)
+            // Salva sessão (24 horas)
             const sessao = {
               ...dadosSessao,
               expira: Date.now() + (24 * 60 * 60 * 1000)
             };
 
             localStorage.setItem("pc_session", JSON.stringify(sessao));
-            window.location.href = "index.html";
+            window.location.href = "index.html"; // Sucesso! Redireciona
           } else {
             const erro = await res.json();
             alert(erro.error || "Acesso negado.");
+            document.getElementById('loading-overlay').style.display = 'none';
           }
         } catch (error) {
+          console.error(error);
           alert("Não foi possível conectar ao servidor de autenticação.");
+          document.getElementById('loading-overlay').style.display = 'none';
         }
       }
     }

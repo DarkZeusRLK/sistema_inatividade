@@ -1,13 +1,14 @@
-// Tenta usar o fetch nativo ou o node-fetch se necessário
+// =========================================================
+// API DE RELATÓRIO DE ENSINO - VERSÃO FINAL PF
+// =========================================================
 const fetch = global.fetch || require("node-fetch");
 
 module.exports = async (req, res) => {
-  // --- 1. CABEÇALHOS CORS (OBRIGATÓRIO) ---
+  // --- 1. CABEÇALHOS CORS ---
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  // Responde rápido se for verificação do navegador
   if (req.method === "OPTIONS") return res.status(200).end();
 
   const { org, dataInicio, dataFim } = req.query;
@@ -15,26 +16,30 @@ module.exports = async (req, res) => {
     Discord_Bot_Token,
     GUILD_ID,
     ENSINO_ROLES_MATRIZES_ID,
-    POLICE_ROLE_ID,
+    POLICE_ROLE_ID, // PCERJ
     PRF_ROLE_ID,
     PMERJ_ROLE_ID,
+    PF_ROLE_ID, // Cargo Geral da PF
+    PF_ENSINO_ROLE_ID, // <--- Seu cargo específico de Instrutor PF
   } = process.env;
 
   // --- 2. VALIDAÇÃO BÁSICA ---
   if (!Discord_Bot_Token) {
     return res
       .status(500)
-      .json({ error: "ERRO CRÍTICO: Token do Bot não configurado no .env" });
+      .json({ error: "ERRO: Token do Bot não configurado." });
   }
 
-  // Lógica de Cargo
+  // Lógica de Cargo Base por Org (Para filtrar quem pertence a qual polícia)
   let anchorRoleId = "";
   if (org === "PCERJ") anchorRoleId = POLICE_ROLE_ID;
   else if (org === "PRF") anchorRoleId = PRF_ROLE_ID;
   else if (org === "PMERJ") anchorRoleId = PMERJ_ROLE_ID;
+  else if (org === "PF") anchorRoleId = PF_ROLE_ID;
 
-  // Busca canais do .env dinamicamente
+  // Busca canais do .env dinamicamente (Ex: PF_ENSINO_CH)
   const CHANNELS_ENV = process.env[`${org}_ENSINO_CH`];
+
   if (!CHANNELS_ENV) {
     return res.status(500).json({
       error: `ERRO: Variável ${org}_ENSINO_CH não encontrada no .env`,
@@ -42,9 +47,15 @@ module.exports = async (req, res) => {
   }
 
   const canaisEnsino = CHANNELS_ENV.split(",").map((id) => id.trim());
-  const instructorRoles = ENSINO_ROLES_MATRIZES_ID
+
+  // Lista de Cargos de Instrutores (Matrizes Gerais + Cargo Específico da PF se for PF)
+  let instructorRoles = ENSINO_ROLES_MATRIZES_ID
     ? ENSINO_ROLES_MATRIZES_ID.split(",").map((id) => id.trim())
     : [];
+
+  if (org === "PF" && PF_ENSINO_ROLE_ID) {
+    instructorRoles.push(PF_ENSINO_ROLE_ID.trim());
+  }
 
   const headers = { Authorization: `Bot ${Discord_Bot_Token}` };
 
@@ -55,7 +66,7 @@ module.exports = async (req, res) => {
     : Date.now();
 
   try {
-    // --- 3. LÓGICA DE BUSCA ---
+    // --- 3. BUSCA DE MEMBROS ---
     const membersRes = await fetch(
       `https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`,
       { headers }
@@ -67,7 +78,7 @@ module.exports = async (req, res) => {
 
     let ensinoMap = {};
 
-    // Filtra Instrutores da Org
+    // Filtra Instrutores: Deve ter o cargo da ORG + um dos cargos de Instrutor
     const instrutores = members.filter(
       (m) =>
         m.roles.includes(anchorRoleId) &&
@@ -87,17 +98,17 @@ module.exports = async (req, res) => {
       };
     });
 
-    // Loop nos canais
+    // --- 4. VARREDURA DE CANAIS ---
     for (let i = 0; i < canaisEnsino.length; i++) {
       const channelId = canaisEnsino[i];
-      // Define Recrutamento: PMERJ index 2, Outros index 1
+
+      // Define se é canal de Recrutamento (Index 1 para PF/PRF/PCERJ)
       const isRecrutamento =
         (org === "PMERJ" && i === 2) || (org !== "PMERJ" && i === 1);
 
       let ultimoId = null;
       let stopLoop = false;
 
-      // Limite de 5 páginas (500 msgs) para não estourar tempo da Vercel
       for (let p = 0; p < 5; p++) {
         if (stopLoop) break;
 
@@ -113,7 +124,6 @@ module.exports = async (req, res) => {
 
         msgs.forEach((msg) => {
           const msgTs = new Date(msg.timestamp).getTime();
-
           if (msgTs < startTs) {
             stopLoop = true;
             return;

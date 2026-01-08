@@ -272,7 +272,7 @@ window.carregarInatividade = async function () {
   if (!corpo) return;
 
   corpo.innerHTML =
-    '<tr><td colspan="6" align="center">🤖 Conectando ao Sistema (Vercel)...</td></tr>';
+    '<tr><td colspan="6" align="center"> Conectando ao Sistema ...</td></tr>';
   if (progContainer) progContainer.style.display = "block";
   if (btn) btn.disabled = true;
 
@@ -357,9 +357,10 @@ window.carregarInatividade = async function () {
                 <img src="${
                   m.avatar || "https://cdn.discordapp.com/embed/avatars/0.png"
                 }" class="avatar-img">
-                <div><strong>${
-                  m.rpName || m.name
-                }</strong><br><small style="color: #bbb;">${cargoExibicao}</small></div>
+                <div>
+                    <strong>${m.name}</strong>
+                    <br><small style="color: #bbb;">${cargoExibicao}</small>
+                </div>
               </div>
             </td>
             <td><code>${passaporte}</code></td>
@@ -369,7 +370,7 @@ window.carregarInatividade = async function () {
                <div style="display: flex; gap: 8px; justify-content: center;">
                  <span class="badge-danger">⚠️ INATIVO</span>
                  <button onclick="window.prepararExoneracao('${m.id}', '${
-            m.rpName || m.name
+            m.rpName
           }', '${cargoExibicao}', '${passaporte}')" class="btn-exonerar" title="Exonerar e Remover">
                     <i class="fa-solid fa-user-slash"></i>
                  </button>

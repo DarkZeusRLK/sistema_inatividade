@@ -3,7 +3,7 @@
 // =========================================================
 
 // ⚠️ SE O SITE ESTIVER SEPARADO DO BOT, COLE O LINK DA DISCLOUD AQUI.
-// Exemplo: "https://meu-bot.discloud.app"
+// Exemplo: ""
 // Se estiverem na mesma pasta/projeto, deixe vazio: ""
 const API_BASE = "";
 

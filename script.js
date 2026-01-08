@@ -249,7 +249,7 @@ function resetarTelas() {
     const el = document.getElementById(id);
     if (el) {
       el.style.display = "none";
-      el.style.visibility = "hidden";
+      // el.style.visibility = "hidden"; // Remova esta linha para evitar bugs de layout
     }
   });
 

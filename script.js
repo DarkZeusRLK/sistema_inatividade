@@ -287,9 +287,9 @@ window.carregarInatividade = async function () {
   }, 300);
 
   try {
-    // Busca direta na API local da Vercel
+    // ✅ CORREÇÃO AQUI: Adicionado .js ao final da URL
     const res = await fetch(
-      `${API_BASE}/api/membros-inativos?org=${sessao.org}`
+      `${API_BASE}/api/membros-inativos.js?org=${sessao.org}`
     );
 
     if (!res.ok) throw new Error(`Erro API: ${res.status}`);
@@ -435,8 +435,8 @@ async function executarExoneracaoBot(
   mostrarAviso("Enviando comando...", "info");
 
   try {
-    // Chama a API local (/api/exonerar.js)
-    const res = await fetch(`${API_BASE}/api/exonerar`, {
+    // ✅ CORREÇÃO AQUI: Adicionado .js ao final da URL
+    const res = await fetch(`${API_BASE}/api/exonerar.js`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -483,8 +483,9 @@ window.atualizarListaFerias = async function () {
 
   select.innerHTML = "<option>🔄 Carregando...</option>";
   try {
+    // ✅ CORREÇÃO AQUI: Adicionado .js ao final da URL
     const res = await fetch(
-      `${API_BASE}/api/verificar-ferias?org=${sessao.org}`
+      `${API_BASE}/api/verificar-ferias.js?org=${sessao.org}`
     );
     const data = await res.json();
     select.innerHTML = '<option value="">Selecione...</option>';
@@ -568,7 +569,8 @@ window.executarAntecipacao = async function () {
   mostrarAviso("Processando retorno...", "info");
 
   try {
-    const res = await fetch(`${API_BASE}/api/verificar-ferias`, {
+    // ✅ CORREÇÃO AQUI: Adicionado .js ao final da URL
+    const res = await fetch(`${API_BASE}/api/verificar-ferias.js`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId: userId }),

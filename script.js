@@ -599,8 +599,9 @@ window.abrirEnsino = function () {
     secao.style.display = "block";
     secao.style.visibility = "visible";
   }
-  document.getElementById("botoes-ensino").style.display = "block";
-  // O nav-ensino agora fica ativo para todas as orgs
+  // Remova ou comente a linha abaixo se o container "botoes-ensino" não estiver no header
+  // document.getElementById("botoes-ensino").style.display = "block";
+
   document.getElementById("nav-ensino")?.classList.add("active");
   document.getElementById("titulo-pagina").innerText = "SISTEMA DE ENSINO";
 };

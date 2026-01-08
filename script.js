@@ -5,7 +5,7 @@
 // ⚠️ SE O SITE ESTIVER SEPARADO DO BOT, COLE O LINK DA DISCLOUD AQUI.
 // Exemplo: ""
 // Se estiverem na mesma pasta/projeto, deixe vazio: ""
-const API_BASE = "";
+const API_BASE = "https://discloud.com/dashboard/app/1767832130457";
 
 let dadosInatividadeGlobal = [];
 

@@ -268,7 +268,7 @@ window.carregarInatividade = async function () {
   if (!corpo) return;
 
   corpo.innerHTML =
-    '<tr><td colspan="6" align="center">🤖 Conectando ao Sistema (Vercel)...</td></tr>';
+    '<tr><td colspan="6" align="center"> Conectando ao Sistema ...</td></tr>';
   if (progContainer) progContainer.style.display = "block";
   if (btn) btn.disabled = true;
 

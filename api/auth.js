@@ -73,7 +73,7 @@ app.post("*", async (req, res) => {
         userOrg = { id: "PRF", tema: "tema-prf" };
       } else if (memberData.roles.includes(rolePCERJ)) {
         userOrg = { id: "PCERJ", tema: "tema-pcerj" };
-      } else if (roles.includes(rolePF)) {
+      } else if (memberData.roles.includes(rolePF)) {
         // AQUI ESTÁ A MUDANÇA
         userOrg = { id: "PF", tema: "tema-pf" };
       }

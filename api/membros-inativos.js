@@ -1,30 +1,37 @@
 // api/membros-inativos.js
-// VERSÃO FINAL CORRIGIDA:
-// 1. Busca estrita por "Nome" ou "Nome RP" (Ignora Codinome)
-// 2. Filtra por Org
-// 3. Verifica atividade real (Chat/Menção)
-// 4. Ignora Férias
+// VERSÃO FINAL ADAPTADA (COM PF)
 module.exports = async (req, res) => {
+  // Configuração de CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
   if (req.method === "OPTIONS") return res.status(200).end();
 
   const { org } = req.query;
+
+  // Extrai todas as variáveis de ambiente necessárias
   const {
     Discord_Bot_Token,
     GUILD_ID,
     FERIAS_ROLE_ID,
-    ADMISSAO_CHANNEL_ID,
-    PRF_ADMISSAO_CH,
-    PMERJ_ADMISSAO_CH,
-    POLICE_ROLE_ID,
-    PRF_ROLE_ID,
-    PMERJ_ROLE_ID,
+
+    // Canais de Admissão
+    ADMISSAO_CHANNEL_ID, // PCERJ (Padrão)
+    PRF_ADMISSAO_CH, // PRF
+    PMERJ_ADMISSAO_CH, // PMERJ
+    PF_ADMISSAO_CH, // PF (NOVO)
+
+    // Cargos Base (Quem é da org)
+    POLICE_ROLE_ID, // PCERJ
+    PRF_ROLE_ID, // PRF
+    PMERJ_ROLE_ID, // PMERJ
+    PF_ROLE_ID, // PF (NOVO)
+
+    // Outros
     CARGOS_IMUNES,
-    POLICE_ROLE_IDS,
-    CHAT_ID_BUSCAR,
+    POLICE_ROLE_IDS, // IDs dos cargos de patente (Soldado, Cabo, etc)
+    CHAT_ID_BUSCAR, // Canais para ler atividade (Bate-ponto, Chat geral)
   } = process.env;
 
   if (!Discord_Bot_Token) {
@@ -37,17 +44,23 @@ module.exports = async (req, res) => {
   };
 
   try {
-    // 1. DEFINIÇÕES DE ORG
+    // Garante compatibilidade do fetch
+    const fetch = global.fetch || require("node-fetch");
+
+    // 1. DEFINIÇÕES DE ORG (Lógica de Seleção)
     let canalAdmissaoId = ADMISSAO_CHANNEL_ID;
     let cargoBaseOrg = POLICE_ROLE_ID;
 
     if (org === "PRF") {
       canalAdmissaoId = PRF_ADMISSAO_CH;
       cargoBaseOrg = PRF_ROLE_ID;
-    }
-    if (org === "PMERJ") {
+    } else if (org === "PMERJ") {
       canalAdmissaoId = PMERJ_ADMISSAO_CH;
       cargoBaseOrg = PMERJ_ROLE_ID;
+    } else if (org === "PF") {
+      // --- ADAPTAÇÃO PF ---
+      canalAdmissaoId = PF_ADMISSAO_CH;
+      cargoBaseOrg = PF_ROLE_ID;
     }
 
     // 2. PREPARAR LISTA DE CANAIS DE ATIVIDADE
@@ -55,7 +68,7 @@ module.exports = async (req, res) => {
       ? CHAT_ID_BUSCAR.split(",").map((id) => id.trim())
       : [];
 
-    // 3. FETCHS EM PARALELO
+    // 3. FETCHS EM PARALELO (Busca tudo ao mesmo tempo para ser rápido)
     const promisesAtividade = canaisAtividadeIds.map((id) =>
       fetch(`https://discord.com/api/v10/channels/${id}/messages?limit=100`, {
         headers,
@@ -66,19 +79,23 @@ module.exports = async (req, res) => {
 
     const [membersRes, admissaoRes, rolesRes, ...mensagensAtividadeArrays] =
       await Promise.all([
+        // A. Busca Membros
         fetch(
           `https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`,
           { headers }
         ),
+        // B. Busca Mensagens de Admissão (se houver canal configurado)
         canalAdmissaoId
           ? fetch(
               `https://discord.com/api/v10/channels/${canalAdmissaoId}/messages?limit=100`,
               { headers }
             )
           : Promise.resolve(null),
+        // C. Busca Cargos do Servidor (para saber nome das patentes)
         fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/roles`, {
           headers,
         }),
+        // D. Busca Mensagens de Atividade
         ...promisesAtividade,
       ]);
 
@@ -95,30 +112,31 @@ module.exports = async (req, res) => {
     const mapRolesNames = {};
     serverRoles.forEach((r) => (mapRolesNames[r.id] = r.name));
 
-    // 5. MAPEAR NOMES RP (ADMISSÃO) - CORREÇÃO DO REGEX AQUI
+    // 5. MAPEAR NOMES RP (ADMISSÃO)
     const mapaNomesRP = {};
     if (admissaoRes && admissaoRes.ok) {
       const mensagens = await admissaoRes.json();
       if (Array.isArray(mensagens)) {
         mensagens.forEach((msg) => {
           let userIdEncontrado = null;
+
+          // Tenta pegar pela menção (@Usuario)
           if (msg.mentions && msg.mentions.length > 0)
             userIdEncontrado = msg.mentions[0].id;
           else {
+            // Tenta pegar se tiver ID escrito no texto
             const matchId = msg.content.match(/(\d{17,20})/);
             if (matchId) userIdEncontrado = matchId[0];
           }
 
           if (userIdEncontrado) {
-            // REGEX NOVO: Busca especificamente por "Nome:", "Nome RP:", "Nome Civil:"
-            // O (?:\n|^) garante que pegamos no começo da linha, evitando pegar meio de frase
-            // O [^\n]* garante que pegamos o resto da linha
+            // Regex robusto para pegar "Nome:", "Nome RP:", etc
             const matchNome = msg.content.match(
               /(?:\n|^|\*)(?:Nome|Nome\s+RP|Nome\s+Civil|Identidade)[\s]*:[\s]*(.+?)(?:\n|$)/i
             );
 
             if (matchNome) {
-              // Limpa negrito (**), itálico (*), código (`) e espaços extras
+              // Limpa formatação markdown (**_`)
               mapaNomesRP[userIdEncontrado] = matchNome[1]
                 .replace(/[*_`]/g, "")
                 .trim();
@@ -128,7 +146,7 @@ module.exports = async (req, res) => {
       }
     }
 
-    // 6. MAPEAR ATIVIDADE REAL (AUTOR + MENÇÕES)
+    // 6. MAPEAR ATIVIDADE REAL (AUTOR + MENÇÕES NOS CHATS DE OPERAÇÃO)
     const mapaUltimaAtividade = {};
     const atualizarAtividade = (userId, timestamp) => {
       const time = new Date(timestamp).getTime();
@@ -140,7 +158,9 @@ module.exports = async (req, res) => {
     mensagensAtividadeArrays.forEach((listaMensagens) => {
       if (Array.isArray(listaMensagens)) {
         listaMensagens.forEach((msg) => {
+          // Se o oficial mandou mensagem
           atualizarAtividade(msg.author.id, msg.timestamp);
+          // Se o oficial foi mencionado (ex: num batedeponto)
           if (msg.mentions && msg.mentions.length > 0) {
             msg.mentions.forEach((usuarioMarcado) => {
               atualizarAtividade(usuarioMarcado.id, msg.timestamp);
@@ -150,20 +170,27 @@ module.exports = async (req, res) => {
       }
     });
 
-    // 7. PROCESSAMENTO FINAL
+    // 7. PROCESSAMENTO FINAL DOS DADOS
     const agora = Date.now();
     const resultado = [];
     const listaImunes = CARGOS_IMUNES ? CARGOS_IMUNES.split(",") : [];
 
     oficiais.forEach((p) => {
+      // Ignora Bots
       if (p.user.bot) return;
+
+      // Verifica se o usuário tem o cargo da Organização selecionada
       if (cargoBaseOrg && !p.roles.includes(cargoBaseOrg)) return;
 
       const uid = p.user.id;
 
+      // Ignora Imunes (Comando Geral, etc)
       if (p.roles.some((roleId) => listaImunes.includes(roleId))) return;
+
+      // Ignora quem está de Férias
       if (FERIAS_ROLE_ID && p.roles.includes(FERIAS_ROLE_ID)) return;
 
+      // Define a data base para cálculo (Última atividade ou Data de Entrada)
       let baseData;
       if (mapaUltimaAtividade[uid]) {
         baseData = mapaUltimaAtividade[uid];
@@ -174,6 +201,8 @@ module.exports = async (req, res) => {
       const diffMs = agora - baseData;
       const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
+      // Só adiciona na lista se tiver mais de 7 dias de inatividade
+      // (Você pode ajustar esse número se quiser mostrar todos)
       if (diffDias >= 7) {
         const apelido = p.nick || p.user.username;
         const matchPassaporte = apelido.match(/(\d+)/);
@@ -184,12 +213,13 @@ module.exports = async (req, res) => {
           nomeRpFinal = "Não consta na aba de admissão";
         }
 
+        // Tenta achar a patente do usuário
         const idPatenteEncontrada = idsPatentes.find((id) =>
           p.roles.includes(id)
         );
         const nomePatente = idPatenteEncontrada
           ? mapRolesNames[idPatenteEncontrada]
-          : "Oficial";
+          : "Oficial"; // Nome genérico se não tiver patente definida
 
         resultado.push({
           id: uid,
@@ -206,10 +236,12 @@ module.exports = async (req, res) => {
       }
     });
 
+    // Ordena: Mais inativos no topo
     resultado.sort((a, b) => b.dias - a.dias);
+
     res.status(200).json(resultado);
   } catch (error) {
-    console.error(error);
+    console.error("Erro Inativos:", error);
     res.status(500).json({ error: "Erro interno no servidor API" });
   }
 };

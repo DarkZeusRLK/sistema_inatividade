@@ -60,6 +60,7 @@ app.post("*", async (req, res) => {
     const rolePCERJ = process.env.POLICE_ROLE_ID?.trim();
     const rolePRF = process.env.PRF_ROLE_ID?.trim();
     const rolePMERJ = process.env.PMERJ_ROLE_ID?.trim();
+    const rolePF = process.env.PF_ROLE_ID?.trim();
 
     let userOrg = null;
 
@@ -72,6 +73,9 @@ app.post("*", async (req, res) => {
         userOrg = { id: "PRF", tema: "tema-prf" };
       } else if (memberData.roles.includes(rolePCERJ)) {
         userOrg = { id: "PCERJ", tema: "tema-pcerj" };
+      } else if (roles.includes(rolePF)) {
+        // AQUI ESTÁ A MUDANÇA
+        userOrg = { id: "PF", tema: "tema-pf" };
       }
 
       // Se não for comando e não tiver nenhum cargo de força, nega o acesso

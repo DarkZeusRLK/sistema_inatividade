@@ -40,6 +40,7 @@ const obterSessao = () => {
   return sessao;
 };
 
+// --- CONFIGURAÇÃO DE ORGS E UNIDADES ---
 const getOrgLabel = (org) => {
   const labels = {
     PCERJ: {
@@ -47,11 +48,20 @@ const getOrgLabel = (org) => {
       nome: "PCERJ",
       logo: "Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png",
     },
-    PRF: { unidade: "GRR", nome: "PRF", logo: "Imagens/PRF_new.png" },
     PMERJ: {
       unidade: "BOPE",
       nome: "PMERJ",
       logo: "Imagens/Brasão_da_Polícia_Militar_do_Estado_do_Rio_de_Janeiro_-_PMERJ.png",
+    },
+    PRF: {
+      unidade: "GRR",
+      nome: "PRF",
+      logo: "Imagens/PRF_new.png",
+    },
+    PF: {
+      unidade: "COT",
+      nome: "POLÍCIA FEDERAL",
+      logo: "Imagens/Brasão_da_Polícia_Federal.png", // Certifique-se de que a imagem existe
     },
   };
   return labels[org] || labels["PCERJ"];
@@ -60,7 +70,14 @@ const getOrgLabel = (org) => {
 function atualizarIdentidadeVisual(org) {
   const info = getOrgLabel(org);
   const logoSidebar = document.getElementById("logo-sidebar");
-  if (logoSidebar) logoSidebar.src = info.logo;
+
+  if (logoSidebar) {
+    logoSidebar.src = info.logo;
+    // Fallback se a imagem da PF não existir
+    logoSidebar.onerror = () => {
+      logoSidebar.src = "Imagens/PRF_new.png";
+    };
+  }
 
   let favicon =
     document.querySelector("link[rel~='icon']") ||
@@ -76,12 +93,10 @@ window.mostrarAviso = function (msg, tipo = "success") {
   if (!aviso) return console.log(`[${tipo}] ${msg}`);
 
   const icon = tipo === "success" ? "✅ " : tipo === "error" ? "❌ " : "⚠️ ";
-  // Aqui garantimos que o CSS do aviso fique visível
   aviso.innerHTML = `<strong>${icon}</strong> ${msg}`;
   aviso.className = `aviso-toast ${tipo}`;
   aviso.style.display = "block";
 
-  // Oculta após 4 segundos
   setTimeout(() => {
     aviso.style.display = "none";
   }, 4000);
@@ -136,9 +151,15 @@ window.setPainelComando = function (orgEscolhida) {
   const sessao = obterSessao();
   if (!sessao) return;
   sessao.org = orgEscolhida;
-  sessao.tema = { PCERJ: "tema-pcerj", PRF: "tema-prf", PMERJ: "tema-pmerj" }[
-    orgEscolhida
-  ];
+
+  // Definição de Temas (Incluindo PF)
+  sessao.tema = {
+    PCERJ: "tema-pcerj",
+    PRF: "tema-prf",
+    PMERJ: "tema-pmerj",
+    PF: "tema-pf",
+  }[orgEscolhida];
+
   localStorage.setItem("pc_session", JSON.stringify(sessao));
   window.location.reload();
 };
@@ -148,23 +169,28 @@ window.abrirSelecaoPainel = function () {
   if (modal) modal.style.display = "flex";
 };
 
+// --- CONTROLE DE PERMISSÕES POR ORG ---
 function aplicarRestricoes() {
   const sessao = obterSessao();
   if (!sessao || !sessao.org) return;
 
   atualizarIdentidadeVisual(sessao.org);
   const sidebarTitulo = document.querySelector(".sidebar-header h2");
-  if (sidebarTitulo)
-    sidebarTitulo.innerText = `POLÍCIA ${
-      sessao.org === "PCERJ"
-        ? "CIVIL"
-        : sessao.org === "PMERJ"
-        ? "MILITAR"
-        : "RODOVIÁRIA"
-    }`;
 
+  // Ajuste do título da Sidebar
+  if (sidebarTitulo) {
+    if (sessao.org === "PCERJ") sidebarTitulo.innerText = "POLÍCIA CIVIL";
+    else if (sessao.org === "PMERJ")
+      sidebarTitulo.innerText = "POLÍCIA MILITAR";
+    else if (sessao.org === "PRF")
+      sidebarTitulo.innerText = "POLÍCIA RODOVIÁRIA";
+    else if (sessao.org === "PF") sidebarTitulo.innerText = "POLÍCIA FEDERAL";
+  }
+
+  // --- REGRAS DE VISIBILIDADE ---
   const permissoes = {
     PCERJ: {
+      // Vê: CORE, Porte, Admin, Férias, Inatividade, Ensino
       mostrar: [
         "nav-core",
         "nav-porte",
@@ -173,21 +199,22 @@ function aplicarRestricoes() {
         "nav-inatividade",
         "nav-ensino",
       ],
-      esconder: ["nav-grr", "nav-bope"],
+      esconder: ["nav-grr", "nav-bope", "nav-cot"],
     },
     PRF: {
-      mostrar: ["nav-grr", "nav-ferias", "nav-inatividade"],
-      esconder: [
-        "nav-core",
-        "nav-bope",
-        "nav-porte",
-        "nav-admin",
-        "nav-ensino",
-      ],
+      // Vê: GRR, Férias, Inatividade, Ensino
+      mostrar: ["nav-grr", "nav-ferias", "nav-inatividade", "nav-ensino"],
+      esconder: ["nav-core", "nav-bope", "nav-cot", "nav-porte", "nav-admin"],
     },
     PMERJ: {
-      mostrar: ["nav-bope", "nav-ferias", "nav-inatividade"],
-      esconder: ["nav-core", "nav-grr", "nav-porte", "nav-admin", "nav-ensino"],
+      // Vê: BOPE, Férias, Inatividade, Ensino
+      mostrar: ["nav-bope", "nav-ferias", "nav-inatividade", "nav-ensino"],
+      esconder: ["nav-core", "nav-grr", "nav-cot", "nav-porte", "nav-admin"],
+    },
+    PF: {
+      // Vê: COT, Férias, Inatividade, Ensino
+      mostrar: ["nav-cot", "nav-ferias", "nav-inatividade", "nav-ensino"],
+      esconder: ["nav-core", "nav-grr", "nav-bope", "nav-porte", "nav-admin"],
     },
   };
 
@@ -210,12 +237,14 @@ function aplicarRestricoes() {
 function resetarTelas() {
   const secoes = [
     "secao-inatividade",
-    "secao-meta-core",
-    "secao-meta-grr",
-    "secao-meta-bope",
+    "secao-meta-core", // PCERJ
+    "secao-meta-grr", // PRF
+    "secao-meta-bope", // PMERJ
+    "secao-meta-cot", // PF
     "secao-gestao-ferias",
     "secao-ensino",
   ];
+
   secoes.forEach((id) => {
     const el = document.getElementById(id);
     if (el) {
@@ -223,9 +252,11 @@ function resetarTelas() {
       el.style.visibility = "hidden";
     }
   });
+
   document
     .querySelectorAll('[id^="botoes-"]')
     .forEach((el) => (el.style.display = "none"));
+
   document
     .querySelectorAll(".nav-item")
     .forEach((item) => item.classList.remove("active"));
@@ -292,9 +323,8 @@ window.carregarInatividade = async function () {
         '<tr><td colspan="6" align="center">✅ Nenhum membro inativo encontrado.</td></tr>';
     } else {
       dadosInatividadeGlobal = dados;
-      // O filtro de férias e org já foi feito no Backend, então apenas exibimos
-
       corpo.innerHTML = "";
+
       if (dadosInatividadeGlobal.length === 0) {
         corpo.innerHTML =
           '<tr><td colspan="6" align="center">Todos os oficiais estão ativos! ✅</td></tr>';
@@ -302,7 +332,6 @@ window.carregarInatividade = async function () {
         dadosInatividadeGlobal.forEach((m) => {
           let passaporte = m.passaporte;
           const cargoExibicao = m.cargo || "Oficial";
-          // m.dias já vem calculado do backend
 
           const tr = document.createElement("tr");
           tr.innerHTML = `
@@ -317,11 +346,12 @@ window.carregarInatividade = async function () {
                 </div>
               </div>
             </td>
-            <td><code>${m.id}</code></td> <td>${
-            m.joined_at
-              ? new Date(m.joined_at).toLocaleDateString("pt-BR")
-              : "---"
-          }</td>
+            <td><code>${m.id}</code></td> 
+            <td>${
+              m.joined_at
+                ? new Date(m.joined_at).toLocaleDateString("pt-BR")
+                : "---"
+            }</td>
             <td><strong style="color: #ff4d4d">${m.dias || 0} Dias</strong></td>
             <td align="center">
                <div style="display: flex; gap: 8px; justify-content: center;">
@@ -385,7 +415,6 @@ window.prepararExoneracao = function (discordId, rpName, cargo, passaporte) {
   });
 };
 
-// --- FUNÇÃO ATUALIZADA COM O ALERTA DE SUCESSO ---
 async function executarExoneracaoBot(
   discordId,
   nome,
@@ -412,10 +441,7 @@ async function executarExoneracaoBot(
     });
 
     if (res.ok) {
-      // ✅ AQUI ESTÁ A MENSAGEM QUE VOCÊ PEDIU
       mostrarAviso("Sucesso! Oficial exonerado com sucesso.", "success");
-
-      // Recarrega a lista para sumir com o usuário exonerado
       window.carregarInatividade();
     } else {
       const erro = await res.json();
@@ -483,6 +509,7 @@ const abrirMetaGen = (idSecao, idBotoes, idNav, titulo, orgReq) => {
   document.getElementById("titulo-pagina").innerText = titulo;
 };
 
+// --- ROTAS DAS UNIDADES ESPECIAIS ---
 window.abrirMetaCore = () =>
   abrirMetaGen(
     "secao-meta-core",
@@ -502,6 +529,10 @@ window.abrirMetaBOPE = () =>
     "PMERJ"
   );
 
+// ADIÇÃO: Rota do COT para a PF
+window.abrirMetaCOT = () =>
+  abrirMetaGen("secao-meta-cot", "botoes-cot", "nav-cot", "METAS COT", "PF");
+
 window.abrirEnsino = function () {
   resetarTelas();
   const secao = document.getElementById("secao-ensino");
@@ -510,6 +541,7 @@ window.abrirEnsino = function () {
     secao.style.visibility = "visible";
   }
   document.getElementById("botoes-ensino").style.display = "block";
+  // O nav-ensino agora fica ativo para todas as orgs
   document.getElementById("nav-ensino")?.classList.add("active");
   document.getElementById("titulo-pagina").innerText = "SISTEMA DE ENSINO";
 };

@@ -614,3 +614,60 @@ body {
 .status-alert {
   /* seu estilo de status atual */
 }
+/* =========================================
+   TEMA: POLÍCIA FEDERAL (PF)
+   Cores: Preto (#111) e Dourado (#F3C74E)
+   ========================================= */
+body.tema-pf {
+  background: radial-gradient(circle at center, #2c2c2c 0%, #000000 100%);
+}
+
+.tema-pf .sidebar {
+  background: #0a0a0a;
+  border-right: 1px solid #333;
+}
+
+.tema-pf .nav-item.active {
+  background: linear-gradient(
+    90deg,
+    rgba(243, 199, 78, 0.15) 0%,
+    transparent 100%
+  );
+  border-left: 4px solid #f3c74e; /* Dourado PF */
+  color: #f3c74e;
+}
+
+.tema-pf .card-dashboard {
+  background: #111;
+  border: 1px solid #333;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+}
+
+.tema-pf h1,
+.tema-pf h2,
+.tema-pf h3 {
+  color: #f3c74e; /* Títulos em Dourado */
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.tema-pf button.btn-principal {
+  background: #f3c74e;
+  color: #000; /* Texto preto no fundo dourado para contraste */
+  font-weight: 800;
+}
+
+.tema-pf button.btn-principal:hover {
+  background: #d4a017;
+  box-shadow: 0 0 15px rgba(243, 199, 78, 0.4);
+}
+
+/* Status de Inatividade */
+.status-danger {
+  color: #ff4444;
+  font-weight: bold;
+} /* Crítico */
+.status-warning {
+  color: #f3c74e;
+  font-weight: bold;
+} /* Alerta */

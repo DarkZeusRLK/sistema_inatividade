@@ -549,3 +549,40 @@ window.abrirEnsino = function () {
   document.getElementById("nav-ensino")?.classList.add("active");
   document.getElementById("titulo-pagina").innerText = "SISTEMA DE ENSINO";
 };
+// =========================================================
+// 6. FUNÇÃO DE ANTECIPAÇÃO DE FÉRIAS (Faltava no script)
+// =========================================================
+window.executarAntecipacao = async function () {
+  const select = document.getElementById("select-oficiais-ferias");
+  const userId = select.value;
+
+  if (!userId) {
+    return mostrarAviso("Selecione um oficial primeiro.", "error");
+  }
+
+  const confirmacao = confirm(
+    "Tem certeza que deseja remover as férias deste oficial e trazê-lo de volta?"
+  );
+  if (!confirmacao) return;
+
+  mostrarAviso("Processando retorno...", "info");
+
+  try {
+    const res = await fetch(`${API_BASE}/api/verificar-ferias`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: userId }),
+    });
+
+    if (res.ok) {
+      mostrarAviso("✅ Oficial retornado com sucesso!");
+      // Recarrega a lista
+      setTimeout(() => window.atualizarListaFerias(), 1000);
+    } else {
+      mostrarAviso("Erro ao processar.", "error");
+    }
+  } catch (e) {
+    console.error(e);
+    mostrarAviso("Erro de conexão.", "error");
+  }
+};

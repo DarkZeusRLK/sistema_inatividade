@@ -6,7 +6,7 @@
       "use": "@vercel/node"
     },
     {
-      "src": "*.{html,css,js,png,jpg,jpeg,svg,ico}",
+      "src": "**/*.{html,css,js,png,jpg,jpeg,svg,ico}",
       "use": "@vercel/static"
     }
   ],
@@ -18,12 +18,6 @@
     {
       "src": "/(.*)",
       "dest": "/$1"
-    }
-  ],
-  "crons": [
-    {
-      "path": "/api/verificar-ferias",
-      "schedule": "0 0 * * *"
     }
   ]
 }

@@ -11,10 +11,13 @@ const CARGOS_PROTEGIDOS = [
   "Comando GEM",
   "Comando CORE",
   "Coordenador Civil",
+  "Comando",
+  "Staff",
+  "Admin",
 ];
 
-// Data base para cálculo (se nunca falou)
-const DATA_BASE_AUDITORIA = new Date("2024-12-08T00:00:00").getTime();
+// Data base para cálculo de segurança
+const DATA_BASE_AUDITORIA = new Date("2025-12-08T00:00:00").getTime();
 
 const obterSessao = () => {
   const sessionStr = localStorage.getItem("pc_session");
@@ -25,6 +28,7 @@ const obterSessao = () => {
     return null;
   }
   const sessao = JSON.parse(sessionStr);
+  // Verifica expiração simples
   if (sessao.expira && Date.now() > sessao.expira) {
     localStorage.removeItem("pc_session");
     window.location.href = "login.html";
@@ -47,13 +51,7 @@ const getOrgLabel = (org) => {
       logo: "Imagens/Brasão_da_Polícia_Militar_do_Estado_do_Rio_de_Janeiro_-_PMERJ.png",
     },
   };
-  return (
-    labels[org] || {
-      unidade: "---",
-      nome: "SISTEMA",
-      logo: "Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png",
-    }
-  );
+  return labels[org] || labels["PCERJ"];
 };
 
 function atualizarIdentidadeVisual(org) {
@@ -72,38 +70,31 @@ function atualizarIdentidadeVisual(org) {
 // --- SISTEMA DE NOTIFICAÇÃO (TOAST) ---
 window.mostrarAviso = function (msg, tipo = "success") {
   const aviso = document.getElementById("aviso-global");
-  if (!aviso) {
-    console.log(msg); // Fallback se não houver elemento
-    return;
-  }
+  if (!aviso) return console.log(`[${tipo}] ${msg}`);
 
-  // Ícones baseados no tipo
   const icon = tipo === "success" ? "✅ " : tipo === "error" ? "❌ " : "⚠️ ";
-
   aviso.innerHTML = `<strong>${icon}</strong> ${msg}`;
-  aviso.className = `aviso-toast ${tipo}`; // Define a cor via CSS
+  aviso.className = `aviso-toast ${tipo}`;
   aviso.style.display = "block";
 
-  // Auto-hide após 4 segundos
   setTimeout(() => {
     aviso.style.display = "none";
   }, 4000);
 };
 
-// --- SISTEMA DE MODAL (SUBSTITUI CONFIRM/PROMPT) ---
+// --- SISTEMA DE MODAL ---
 function exibirModalConfirmacao(titulo, htmlMensagem, onConfirmar) {
-  // Remove modal anterior se existir
   const antigo = document.getElementById("custom-modal-confirm");
   if (antigo) antigo.remove();
 
   const modalHtml = `
-    <div id="custom-modal-confirm" style="position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); display:flex; justify-content:center; align-items:center; z-index: 9999;">
-      <div style="background: #1e1e24; padding: 25px; border-radius: 8px; width: 90%; max-width: 400px; border: 1px solid #444; color: #fff; text-align: center; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
-        <h3 style="margin-top:0; color: #ff4d4d; border-bottom: 1px solid #333; padding-bottom: 10px;">${titulo}</h3>
-        <div style="margin: 20px 0; font-size: 1.1em; line-height: 1.5;">${htmlMensagem}</div>
-        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 25px;">
-          <button id="btn-cancelar-modal" style="padding: 10px 20px; background: #444; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancelar</button>
-          <button id="btn-confirmar-modal" style="padding: 10px 20px; background: #d32f2f; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">CONFIRMAR</button>
+    <div id="custom-modal-confirm" style="position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); display:flex; justify-content:center; align-items:center; z-index: 9999; backdrop-filter: blur(2px);">
+      <div style="background: #1e1e24; padding: 25px; border-radius: 8px; width: 90%; max-width: 450px; border: 1px solid #444; color: #fff; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+        <h3 style="margin-top:0; color: #ff4d4d; border-bottom: 1px solid #333; padding-bottom: 15px;">${titulo}</h3>
+        <div style="margin: 20px 0; font-size: 1rem; line-height: 1.6; text-align: left; color: #ddd;">${htmlMensagem}</div>
+        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 25px;">
+          <button id="btn-cancelar-modal" style="padding: 10px 20px; background: transparent; border: 1px solid #555; color: #ccc; border-radius: 4px; cursor: pointer;">Cancelar</button>
+          <button id="btn-confirmar-modal" style="padding: 10px 20px; background: #d32f2f; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">CONFIRMAR AÇÃO</button>
         </div>
       </div>
     </div>
@@ -111,10 +102,8 @@ function exibirModalConfirmacao(titulo, htmlMensagem, onConfirmar) {
 
   document.body.insertAdjacentHTML("beforeend", modalHtml);
 
-  document.getElementById("btn-cancelar-modal").onclick = () => {
+  document.getElementById("btn-cancelar-modal").onclick = () =>
     document.getElementById("custom-modal-confirm").remove();
-  };
-
   document.getElementById("btn-confirmar-modal").onclick = () => {
     onConfirmar();
     document.getElementById("custom-modal-confirm").remove();
@@ -122,7 +111,7 @@ function exibirModalConfirmacao(titulo, htmlMensagem, onConfirmar) {
 }
 
 // =========================================================
-// 2. FUNÇÕES DO COMANDO GERAL
+// 2. FUNÇÕES DE COMANDO E SELEÇÃO
 // =========================================================
 window.setPainelComando = function (orgEscolhida) {
   const sessao = obterSessao();
@@ -140,12 +129,14 @@ window.abrirSelecaoPainel = function () {
 };
 
 // =========================================================
-// 3. INICIALIZAÇÃO
+// 3. INICIALIZAÇÃO E RESTRIÇÕES
 // =========================================================
 document.addEventListener("DOMContentLoaded", () => {
   const sessao = obterSessao();
   if (!sessao) return;
+
   if (sessao.tema) document.body.classList.add(sessao.tema);
+
   if (sessao.isComando) {
     const btnTrocar = document.getElementById("wrapper-comando");
     if (btnTrocar) btnTrocar.style.display = "block";
@@ -161,15 +152,20 @@ document.addEventListener("DOMContentLoaded", () => {
 function aplicarRestricoes() {
   const sessao = obterSessao();
   if (!sessao || !sessao.org) return;
-  const { org } = sessao;
-  atualizarIdentidadeVisual(org);
+
+  atualizarIdentidadeVisual(sessao.org);
 
   const sidebarTitulo = document.querySelector(".sidebar-header h2");
   if (sidebarTitulo)
     sidebarTitulo.innerText = `POLÍCIA ${
-      org === "PCERJ" ? "CIVIL" : org === "PMERJ" ? "MILITAR" : "RODOVIÁRIA"
+      sessao.org === "PCERJ"
+        ? "CIVIL"
+        : sessao.org === "PMERJ"
+        ? "MILITAR"
+        : "RODOVIÁRIA"
     }`;
 
+  // Definição de visibilidade das abas
   const permissoes = {
     PCERJ: {
       mostrar: [
@@ -198,7 +194,7 @@ function aplicarRestricoes() {
     },
   };
 
-  const config = permissoes[org];
+  const config = permissoes[sessao.org];
   if (config) {
     config.esconder.forEach((id) => {
       const el = document.getElementById(id);
@@ -212,7 +208,7 @@ function aplicarRestricoes() {
 }
 
 // =========================================================
-// 4. GERENCIAMENTO DE TELAS
+// 4. GERENCIAMENTO DE TELAS (NAVEGAÇÃO)
 // =========================================================
 function resetarTelas() {
   const secoes = [
@@ -240,29 +236,28 @@ function resetarTelas() {
 
 window.abrirInatividade = function () {
   const sessao = obterSessao();
-  if (!sessao || !sessao.org) return;
-  const label = getOrgLabel(sessao.org);
+  if (!sessao) return;
   resetarTelas();
+
   const secao = document.getElementById("secao-inatividade");
   if (secao) {
     secao.style.display = "block";
     secao.style.visibility = "visible";
   }
-  const botoes = document.getElementById("botoes-inatividade");
-  if (botoes) botoes.style.display = "block";
-  const nav = document.getElementById("nav-inatividade");
-  if (nav) nav.classList.add("active");
-  const titulo = document.getElementById("titulo-pagina");
-  if (titulo) titulo.innerText = `AUDITORIA - ${label.nome}`;
+
+  document.getElementById("botoes-inatividade").style.display = "block";
+  document.getElementById("nav-inatividade").classList.add("active");
+  document.getElementById("titulo-pagina").innerText = `AUDITORIA - ${
+    getOrgLabel(sessao.org).nome
+  }`;
 };
 
 // =========================================================
-// 5. LÓGICA DE INATIVIDADE (COM BARRA ANIMADA)
+// 5. LÓGICA DE INATIVIDADE (CARREGAMENTO E WEBHOOK)
 // =========================================================
 window.carregarInatividade = async function () {
   const sessao = obterSessao();
   if (!sessao) return;
-  const { org } = sessao;
 
   const corpo = document.getElementById("corpo-inatividade");
   const btn = document.getElementById("btn-sincronizar");
@@ -274,43 +269,50 @@ window.carregarInatividade = async function () {
   if (!corpo) return;
 
   corpo.innerHTML =
-    '<tr><td colspan="6" align="center">🔍 Consultando banco de dados do Discord...</td></tr>';
+    '<tr><td colspan="6" align="center">📡 Conectando ao Banco de Dados...</td></tr>';
   if (progContainer) progContainer.style.display = "block";
   if (btn) btn.disabled = true;
 
-  if (barra) barra.style.width = "0%";
-  let width = 0;
-  // Animação falsa para feedback visual
+  // Animação fake da barra
+  if (barra) barra.style.width = "5%";
+  let width = 5;
   const fakeProgress = setInterval(() => {
     if (width < 90) {
-      width += Math.random() * 15;
-      if (barra) barra.style.width = Math.min(width, 90) + "%";
+      width += Math.random() * 10;
+      if (barra) barra.style.width = width + "%";
     }
-  }, 250);
+  }, 300);
 
   try {
-    const res = await fetch(`/api/membros-inativos?org=${org}`);
+    const res = await fetch(`/api/membros-inativos?org=${sessao.org}`);
 
-    // Verifica status HTTP antes de processar
-    if (!res.ok) throw new Error(`Status ${res.status}`);
+    if (!res.ok) throw new Error(`Erro API: ${res.status}`);
 
     const dados = await res.json();
-
     clearInterval(fakeProgress);
     if (barra) barra.style.width = "100%";
 
     if (!Array.isArray(dados) || dados.length === 0) {
       corpo.innerHTML =
-        '<tr><td colspan="6" align="center">Nenhum inativo encontrado.</td></tr>';
+        '<tr><td colspan="6" align="center">✅ Nenhum membro inativo encontrado.</td></tr>';
     } else {
       dadosInatividadeGlobal = dados.filter((m) => {
+        // Fallback e proteção de Cargo
+        const cargoAtual =
+          m.cargo && m.cargo !== "undefined" ? m.cargo : "Oficial";
         const diasInatividade =
           m.dias ||
           Math.floor(
             (Date.now() - (m.lastMsg || DATA_BASE_AUDITORIA)) /
               (1000 * 60 * 60 * 24)
           );
-        return diasInatividade >= 7 && !CARGOS_PROTEGIDOS.includes(m.cargo);
+
+        // Verifica se é cargo protegido
+        const isProtegido = CARGOS_PROTEGIDOS.some((protegido) =>
+          cargoAtual.includes(protegido)
+        );
+
+        return diasInatividade >= 7 && !isProtegido;
       });
 
       dadosInatividadeGlobal.sort((a, b) => (b.dias || 0) - (a.dias || 0));
@@ -321,68 +323,61 @@ window.carregarInatividade = async function () {
           '<tr><td colspan="6" align="center">Todos os oficiais estão ativos! ✅</td></tr>';
       } else {
         dadosInatividadeGlobal.forEach((m) => {
-          // --- LÓGICA DE EXTRAÇÃO DE PASSAPORTE ---
-          // 1. Tenta pegar direto do objeto (se o banco da admissão enviou)
-          // 2. Tenta Regex " | 123"
-          // 3. Tenta Regex "123" no final
-          let passaporte = m.passaporte;
-          if (!passaporte) {
-            const matchPipe = (m.rpName || "").match(/\|\s*(\d+)/);
-            if (matchPipe) passaporte = matchPipe[1];
-            else {
-              const matchEnd = (m.rpName || "").match(/(\d+)$/);
-              passaporte = matchEnd ? matchEnd[1] : "---";
-            }
+          // --- LÓGICA DE PASSAPORTE OTIMIZADA (REGEX) ---
+          // Tenta pegar do banco, se não, procura QUALQUER número no nome/apelido
+          let passaporte = "---";
+          if (m.passaporte && m.passaporte !== "undefined") {
+            passaporte = m.passaporte;
+          } else {
+            const texto = m.rpName || m.name || "";
+            const match = texto.match(/(\d+)/); // Pega a primeira sequência de números encontrada
+            if (match) passaporte = match[0];
           }
 
-          m.idPassaporteFinal = passaporte; // Salva para uso no botão
-
-          const tr = document.createElement("tr");
+          const cargoExibicao =
+            m.cargo && m.cargo !== "undefined" ? m.cargo : "Oficial";
           const dataStr =
             m.lastMsg > 0
               ? new Date(m.lastMsg).toLocaleDateString("pt-BR")
-              : "Nunca interagiu";
+              : "Nunca";
 
+          const tr = document.createElement("tr");
           tr.innerHTML = `
             <td>
               <div class="user-cell">
                 <img src="${
                   m.avatar || "https://cdn.discordapp.com/embed/avatars/0.png"
                 }" class="avatar-img">
-                <div><strong>${m.name}</strong><br><small>${
-            m.cargo || "Oficial"
-          }</small></div>
+                <div>
+                    <strong>${m.rpName || m.name}</strong><br>
+                    <small style="color: #bbb;">${cargoExibicao}</small>
+                </div>
               </div>
             </td>
-            <td><code>${m.id}</code></td>
+            <td><code>${passaporte}</code></td>
             <td>${dataStr}</td>
             <td><strong style="color: #ff4d4d">${m.dias || 0} Dias</strong></td>
             <td align="center">
-              <div style="display: flex; gap: 8px; justify-content: center;">
-                <span class="badge-danger">⚠️ INATIVO</span>
-                <button onclick="window.prepararExoneracao('${m.id}', '${
+               <div style="display: flex; gap: 8px; justify-content: center;">
+                 <span class="badge-danger">⚠️ INATIVO</span>
+                 <button onclick="window.prepararExoneracao('${m.id}', '${
             m.rpName || m.name
-          }', '${
-            m.cargo
-          }', '${passaporte}')" class="btn-exonerar" title="Exonerar">
-                  <i class="fa-solid fa-user-slash"></i>
-                </button>
-              </div>
+          }', '${cargoExibicao}', '${passaporte}')" class="btn-exonerar" title="Exonerar">
+                   <i class="fa-solid fa-user-slash"></i>
+                 </button>
+               </div>
             </td>`;
           corpo.appendChild(tr);
         });
-        mostrarAviso(`${dadosInatividadeGlobal.length} inativos encontrados.`);
+        mostrarAviso(`${dadosInatividadeGlobal.length} inativos carregados.`);
       }
     }
   } catch (err) {
     clearInterval(fakeProgress);
     console.error(err);
     corpo.innerHTML =
-      '<tr><td colspan="6" align="center" style="color: #ff4d4d; font-weight: bold;">❌ Erro de conexão com o Bot. Verifique o console.</td></tr>';
-    mostrarAviso(
-      "Erro de conexão. Verifique se o Bot está online e as variáveis .env configuradas.",
-      "error"
-    );
+      '<tr><td colspan="6" align="center" style="color:#ff4d4d">❌ Erro ao conectar com a API.</td></tr>';
+    mostrarAviso("Erro de conexão.", "error");
   } finally {
     if (btn) btn.disabled = false;
     setTimeout(() => {
@@ -391,75 +386,79 @@ window.carregarInatividade = async function () {
   }
 };
 
-// Nova função intermediária para chamar o modal
+// --- PREPARAR E EXECUTAR EXONERAÇÃO (VIA WEBHOOK) ---
 window.prepararExoneracao = function (discordId, rpName, cargo, passaporte) {
-  const nomeLimpo = rpName.split(/[|/]/)[0].trim();
-  const motivoFixo = "Inatividade superior a 7 dias";
+  const nomeLimpo = rpName.replace(/[\d|]/g, "").trim(); // Remove números e pipes para o nome ficar limpo
+  const motivoFixo = "Inatividade superior a 7 dias (Audit System)";
 
-  const msgHtml = `
-      <p>Você está prestes a exonerar:</p>
-      <ul style="text-align: left; background: #333; padding: 10px; border-radius: 4px; list-style: none;">
-         <li>👤 <strong>Nome:</strong> ${nomeLimpo}</li>
-         <li>🆔 <strong>Passaporte:</strong> ${passaporte}</li>
-         <li>💼 <strong>Cargo:</strong> ${cargo}</li>
-         <li>📜 <strong>Motivo:</strong> ${motivoFixo}</li>
-      </ul>
-      <p style="font-size: 0.9em; color: #ccc;">Essa ação enviará um relatório para o Discord e removerá o usuário do sistema.</p>
+  const htmlMsg = `
+        <ul style="list-style: none; padding: 0; margin: 0; text-align: left;">
+            <li style="margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 5px;">
+                👤 <strong>Oficial:</strong> <span style="color: #fff">${nomeLimpo}</span>
+            </li>
+            <li style="margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 5px;">
+                🆔 <strong>Passaporte:</strong> <span style="color: #4db8ff">${passaporte}</span>
+            </li>
+            <li style="margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 5px;">
+                💼 <strong>Cargo:</strong> <span style="color: #ffd700">${cargo}</span>
+            </li>
+            <li style="color: #ff4d4d;">
+                📜 <strong>Motivo:</strong> ${motivoFixo}
+            </li>
+        </ul>
+        <p style="margin-top: 15px; font-size: 0.9em; color: #888;">
+           Essa ação enviará um relatório via Webhook para o Discord.
+        </p>
     `;
 
-  exibirModalConfirmacao("CONFIRMAR EXONERAÇÃO", msgHtml, () => {
+  exibirModalConfirmacao("CONFIRMAR EXONERAÇÃO", htmlMsg, () => {
     executarExoneracao(discordId, nomeLimpo, passaporte, cargo, motivoFixo);
   });
 };
 
-async function executarExoneracao(
-  discordId,
-  nomeLimpo,
-  passaporte,
-  cargo,
-  motivo
-) {
-  try {
-    mostrarAviso("Enviando solicitação...", "info");
+async function executarExoneracao(discordId, nome, passaporte, cargo, motivo) {
+  const sessao = obterSessao();
+  mostrarAviso("Enviando Webhook...", "info");
 
+  try {
+    // Envia para o backend, que vai disparar o Webhook correspondente à ORG
     const res = await fetch("/api/exonerar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        org: sessao.org, // Importante para saber qual webhook usar
         discordUser: discordId,
-        nomeCidade: nomeLimpo,
+        nomeCidade: nome,
         idPassaporte: passaporte,
-        cargo: cargo || "Oficial",
+        cargo: cargo,
         motivo: motivo,
       }),
     });
 
     if (res.ok) {
-      mostrarAviso("✅ Exoneração realizada com sucesso!");
-      window.carregarInatividade(); // Recarrega a tabela
+      mostrarAviso("✅ Relatório enviado com sucesso!");
+      window.carregarInatividade(); // Atualiza a lista
     } else {
       const erro = await res.json();
-      mostrarAviso(`Erro: ${erro.error || "Falha no servidor"}`, "error");
+      mostrarAviso(
+        `Erro no envio: ${erro.error || "Falha desconhecida"}`,
+        "error"
+      );
     }
   } catch (e) {
-    mostrarAviso("Erro fatal: Não foi possível conectar ao servidor.", "error");
+    mostrarAviso("Erro de conexão com o servidor.", "error");
   }
 }
 
 // =========================================================
-// 6. GESTÃO DE FÉRIAS E METAS
+// 6. OUTRAS TELAS (FÉRIAS / METAS / ENSINO)
 // =========================================================
 window.abrirGestaoFerias = function () {
   resetarTelas();
-  const secao = document.getElementById("secao-gestao-ferias");
-  if (secao) {
-    secao.style.display = "block";
-    secao.style.visibility = "visible";
-  }
-  const nav = document.getElementById("nav-ferias");
-  if (nav) nav.classList.add("active");
-  document.getElementById("titulo-pagina").innerText =
-    "GESTÃO DE FÉRIAS E LICENÇAS";
+  document.getElementById("secao-gestao-ferias").style.display = "block";
+  document.getElementById("secao-gestao-ferias").style.visibility = "visible";
+  document.getElementById("nav-ferias").classList.add("active");
+  document.getElementById("titulo-pagina").innerText = "GESTÃO DE FÉRIAS";
   document.getElementById("botoes-ferias").style.display = "block";
   window.atualizarListaFerias();
 };
@@ -468,46 +467,40 @@ window.atualizarListaFerias = async function () {
   const select = document.getElementById("select-oficiais-ferias");
   const infoBox = document.getElementById("status-ferias-info");
   const sessao = obterSessao();
-  const org = sessao?.org || "PCERJ";
 
   if (!select || !infoBox) return;
-  select.innerHTML = '<option value="">🔄 Sincronizando...</option>';
 
+  select.innerHTML = "<option>🔄 Carregando...</option>";
   try {
-    const response = await fetch(`/api/verificar-ferias?org=${org}`);
+    const res = await fetch(`/api/verificar-ferias?org=${sessao.org}`);
+    const data = await res.json();
 
-    if (!response.ok) throw new Error("Falha na API");
+    select.innerHTML = '<option value="">Selecione...</option>';
 
-    const data = await response.json();
-    if (data.error) throw new Error(data.error);
-
-    select.innerHTML = '<option value="">Selecione um oficial...</option>';
-    if (!data.oficiais || data.oficiais.length === 0) {
-      select.innerHTML = '<option value="">Nenhum oficial em férias</option>';
-      infoBox.innerHTML =
-        "✅ Sincronização concluída: Nenhum oficial em férias.";
-      return;
+    if (data.oficiais && data.oficiais.length > 0) {
+      data.oficiais.forEach((o) => {
+        const opt = document.createElement("option");
+        opt.value = o.id;
+        opt.textContent = `${o.nome} (Retorno: ${o.dataRetorno})`;
+        select.appendChild(opt);
+      });
+      infoBox.innerHTML = `✅ ${data.oficiais.length} oficiais em férias.`;
+    } else {
+      select.innerHTML = '<option value="">Ninguém em férias</option>';
+      infoBox.innerHTML = "Nenhum oficial de férias no momento.";
     }
-    data.oficiais.forEach((o) => {
-      const opt = document.createElement("option");
-      opt.value = o.id;
-      opt.textContent = `${o.nome} (Retorno: ${o.dataRetorno})`;
-      select.appendChild(opt);
-    });
-    infoBox.innerHTML = `✅ ${data.oficiais.length} oficiais em férias encontrados.`;
-  } catch (error) {
-    select.innerHTML = '<option value="">Erro ao sincronizar</option>';
-    infoBox.innerHTML = `<span style="color: #ff4444;">❌ Erro de conexão: Verifique o Bot.</span>`;
+  } catch (e) {
+    select.innerHTML = "<option>Erro ao carregar</option>";
+    infoBox.innerHTML = "❌ Falha na conexão.";
   }
 };
 
-// Função Genérica para Abrir Metas
+// Funções de Metas Genéricas
 const abrirMetaGen = (idSecao, idBotoes, idNav, titulo, orgReq) => {
   const sessao = obterSessao();
-  if (!sessao || sessao.org !== orgReq) {
-    mostrarAviso(`Acesso negado. Painel exclusivo da ${orgReq}.`, "error");
-    return;
-  }
+  if (sessao.org !== orgReq)
+    return mostrarAviso(`Acesso exclusivo ${orgReq}`, "error");
+
   resetarTelas();
   document.getElementById(idSecao).style.display = "block";
   document.getElementById(idSecao).style.visibility = "visible";
@@ -516,29 +509,22 @@ const abrirMetaGen = (idSecao, idBotoes, idNav, titulo, orgReq) => {
   document.getElementById("titulo-pagina").innerText = titulo;
 };
 
-// Wrappers Específicos
 window.abrirMetaCore = () =>
   abrirMetaGen(
     "secao-meta-core",
     "botoes-core",
     "nav-core",
-    "METAS CORE (PCERJ)",
+    "METAS CORE",
     "PCERJ"
   );
 window.abrirMetaGRR = () =>
-  abrirMetaGen(
-    "secao-meta-grr",
-    "botoes-grr",
-    "nav-grr",
-    "METAS GRR (PRF)",
-    "PRF"
-  );
+  abrirMetaGen("secao-meta-grr", "botoes-grr", "nav-grr", "METAS GRR", "PRF");
 window.abrirMetaBOPE = () =>
   abrirMetaGen(
     "secao-meta-bope",
     "botoes-bope",
     "nav-bope",
-    "METAS BOPE (PMERJ)",
+    "METAS BOPE",
     "PMERJ"
   );
 

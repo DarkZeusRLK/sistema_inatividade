@@ -237,10 +237,10 @@ function aplicarRestricoes() {
 function resetarTelas() {
   const secoes = [
     "secao-inatividade",
-    "secao-meta-core", // PCERJ
-    "secao-meta-grr", // PRF
-    "secao-meta-bope", // PMERJ
-    "secao-meta-cot", // PF
+    "secao-meta-core",
+    "secao-meta-grr",
+    "secao-meta-bope",
+    "secao-meta-cot",
     "secao-gestao-ferias",
     "secao-ensino",
   ];
@@ -253,9 +253,12 @@ function resetarTelas() {
     }
   });
 
-  document
-    .querySelectorAll('[id^="botoes-"]')
-    .forEach((el) => (el.style.display = "none"));
+  // Esconde todos os containers de botões que começam com "botoes-"
+  document.querySelectorAll('[id^="botoes-"]').forEach((el) => {
+    el.style.display = "none";
+  });
+
+  // RESET DO BOTÃO DE MASSA (IMPORTANTE)
   const btnMassa = document.getElementById("btn-exonerar-todos");
   if (btnMassa) btnMassa.style.display = "none";
 
@@ -267,14 +270,21 @@ function resetarTelas() {
 window.abrirInatividade = function () {
   const sessao = obterSessao();
   if (!sessao) return;
+
   resetarTelas();
+
   const secao = document.getElementById("secao-inatividade");
+  const containerBotoes = document.getElementById("botoes-inatividade");
+
   if (secao) {
-    secao.style.display = "block";
+    secao.style.display = "block"; // Força o aparecimento
     secao.style.visibility = "visible";
   }
-  document.getElementById("botoes-inatividade").style.display = "block";
-  document.getElementById("nav-inatividade").classList.add("active");
+  if (containerBotoes) {
+    containerBotoes.style.display = "flex"; // Alinha os botões lado a lado
+  }
+
+  document.getElementById("nav-inatividade")?.classList.add("active");
   document.getElementById("titulo-pagina").innerText = `AUDITORIA - ${
     getOrgLabel(sessao.org).nome
   }`;

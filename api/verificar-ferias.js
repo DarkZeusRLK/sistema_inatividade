@@ -1,12 +1,18 @@
+// =========================================================
+// API DE VERIFICAÇÃO DE FÉRIAS (FILTRO POR MATRIZ)
+// =========================================================
+const fetch = global.fetch || require("node-fetch");
+
 module.exports = async (req, res) => {
   const {
     Discord_Bot_Token,
     GUILD_ID,
     FERIAS_ROLE_ID,
     FERIAS_CHANNEL_ID,
-    POLICE_ROLE_ID,
+    POLICE_ROLE_ID, // PCERJ
     PRF_ROLE_ID,
     PMERJ_ROLE_ID,
+    PF_ROLE_ID, // <--- Adicionado
   } = process.env;
 
   const { org } = req.query;
@@ -16,12 +22,18 @@ module.exports = async (req, res) => {
     "Content-Type": "application/json",
   };
 
-  const OFFICER_ROLE_TO_CHECK =
-    org === "PRF"
-      ? PRF_ROLE_ID
-      : org === "PMERJ"
-      ? PMERJ_ROLE_ID
-      : POLICE_ROLE_ID;
+  // --- CORREÇÃO DA LÓGICA DE FILTRO POR MATRIZ ---
+  let OFFICER_ROLE_TO_CHECK = "";
+
+  if (org === "PRF") {
+    OFFICER_ROLE_TO_CHECK = PRF_ROLE_ID;
+  } else if (org === "PMERJ") {
+    OFFICER_ROLE_TO_CHECK = PMERJ_ROLE_ID;
+  } else if (org === "PF") {
+    OFFICER_ROLE_TO_CHECK = PF_ROLE_ID;
+  } else if (org === "PCERJ") {
+    OFFICER_ROLE_TO_CHECK = POLICE_ROLE_ID;
+  }
 
   try {
     // MÉTODO POST: Antecipação de volta
@@ -34,8 +46,7 @@ module.exports = async (req, res) => {
       return res.status(200).json({ message: "Sucesso" });
     }
 
-    // 1. BUSCA TODOS OS MEMBROS DE UMA VEZ (Otimização principal)
-    // Isso evita fazer um fetch por usuário dentro do loop
+    // 1. Busca todos os membros
     const membersRes = await fetch(
       `https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`,
       { headers }
@@ -46,11 +57,10 @@ module.exports = async (req, res) => {
       throw new Error("Não foi possível carregar a lista de membros.");
     }
 
-    // Criamos um mapa para busca rápida por ID
     const membersMap = new Map();
     allGuildMembers.forEach((m) => membersMap.set(m.user.id, m));
 
-    // 2. Busca mensagens do canal de férias (últimas 300 mensagens costumam bastar)
+    // 2. Busca mensagens do canal de férias
     let allMessages = [];
     let lastId = null;
     for (let i = 0; i < 3; i++) {
@@ -94,15 +104,18 @@ module.exports = async (req, res) => {
         const [d, m, a] = matchData[1].split("/");
         const dataFim = new Date(a, m - 1, d);
 
-        // 3. BUSCA NO MAPA EM MEMÓRIA (Instantâneo)
         const membro = membersMap.get(userId);
 
-        if (membro && membro.roles.includes(OFFICER_ROLE_TO_CHECK)) {
+        // --- VERIFICAÇÃO RIGOROSA: Deve pertencer à ROLE da organização selecionada ---
+        if (
+          membro &&
+          OFFICER_ROLE_TO_CHECK &&
+          membro.roles.includes(OFFICER_ROLE_TO_CHECK)
+        ) {
           const temTagFerias = membro.roles.includes(FERIAS_ROLE_ID);
 
           if (hoje > dataFim) {
             if (temTagFerias) {
-              // Remove a tag de quem já venceu
               await fetch(
                 `https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userId}/roles/${FERIAS_ROLE_ID}`,
                 { method: "DELETE", headers }

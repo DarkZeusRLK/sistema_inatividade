@@ -8,13 +8,11 @@ module.exports = async (req, res) => {
     Discord_Bot_Token,
     GUILD_ID,
     PF_COT_ROLE_ID, // Cargo principal do COT
-    PF_ENSINO_BASICO_ROLE_ID, // Cargo Instrutor Cursos Básicos/Investigação
-    PF_ENSINO_TATICO_ROLE_ID, // Cargo Instrutor Cursos Táticos
+    PF_ENSINO_ACOES_ROLE_ID, // Cargo Instrutor Cursos Básicos/Investigação
     PF_ENSINO_RECRUT_ROLE_ID, // Cargo Instrutor Recrutamento (ANP)
     FERIAS_ROLE_ID,
     CH_PF_ACOES_ID, // Canal de Operações/Missões
-    CH_PF_CURSO_BASICO_ID, // Canal de Instruções Básicas
-    CH_PF_CURSO_TATICO_ID, // Canal de Instruções Táticas
+    CH_PF_CURSO_ACOES_ID, // Canal de Instruções Básicas
     CH_PF_RECRUTAMENTO_ID, // Canal de Recrutamento (Formação)
   } = process.env;
 
@@ -53,8 +51,7 @@ module.exports = async (req, res) => {
           : null,
         isFerias: m.roles.includes(FERIAS_ROLE_ID),
         // Verificação de cargos de instrutor
-        temBasico: m.roles.includes(PF_ENSINO_BASICO_ROLE_ID),
-        temTatico: m.roles.includes(PF_ENSINO_TATICO_ROLE_ID),
+        temAcoes: m.roles.includes(PF_ENSINO_ACOES_ROLE_ID),
         temRecrut: m.roles.includes(PF_ENSINO_RECRUT_ROLE_ID),
         acoes: 0,
         ensino_basico: 0,
@@ -88,11 +85,8 @@ module.exports = async (req, res) => {
           const user = metaMap[msg.author.id];
           if (!user) return;
 
-          if (tipo === "ENSINO_BASICO" && user.temBasico) {
+          if (tipo === "ENSINO_ACOES" && user.temBasico) {
             user.ensino_basico++;
-            user.ensino++;
-          } else if (tipo === "ENSINO_TATICO" && user.temTatico) {
-            user.ensino_acoes_curso++;
             user.ensino++;
           } else if (tipo === "ENSINO_RECRUT" && user.temRecrut) {
             user.ensino_recrut++;
@@ -105,7 +99,7 @@ module.exports = async (req, res) => {
     // 4. Executa a varredura em paralelo
     await Promise.all([
       processarCanal(CH_PF_ACOES_ID, "ACOES"),
-      processarCanal(CH_PF_CURSO_BASICO_ID, "ENSINO_BASICO"),
+      processarCanal(CH_PF_CURSO_ACOES_ID, "ENSINO_ACOES"),
       processarCanal(CH_PF_RECRUTAMENTO_ID, "ENSINO_RECRUT"),
     ]);
 

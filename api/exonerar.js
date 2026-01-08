@@ -61,16 +61,26 @@ module.exports = async (req, res) => {
     }
 
     // -----------------------------------------------------------
-    // 2. MONTAGEM DA MENSAGEM (TEXTO NORMAL)
+    // 2. MONTAGEM DA MENSAGEM (TEXTO NORMAL COM DATA COMPLETA)
     // -----------------------------------------------------------
-    const dataAtual = new Date().toLocaleDateString("pt-BR"); // Ex: 08/01/2026
+
+    // Configura a data para o Fuso de Brasília com formato longo
+    const dataFormatada = new Date().toLocaleString("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
     // Monta a string exatamente como pedido
     const mensagemTexto = `**Discord:** <@${discordUser}>
 **Nome na cidade:** ${nomeCidade || "---"}
 **ID:** ${idPassaporte || "---"}
 **Patente/Cargo:** ${cargoExibicao}
-**Data:** ${dataAtual}
+**Data e hora:** ${dataFormatada}
 **Motivo:** Inatividade`;
 
     // Envia para o canal de Logs (usando 'content' em vez de 'embeds')

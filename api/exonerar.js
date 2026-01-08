@@ -24,18 +24,22 @@ module.exports = async (req, res) => {
     GUILD_ID,
     POLICE_ROLE_IDS,
   } = process.env;
-  const { discordUser, nomeCidade, idPassaporte, cargo, action } = req.body;
 
-  try {
-    // -----------------------------------------------------------
-    // 1. DETECÇÃO AUTOMÁTICA DE CARGO (PATENTE) VIA ENV
-    // -----------------------------------------------------------
-    let cargoExibicao = cargo || "Oficial"; // Valor padrão
+  // Captura os dados da requisição
+  const { users, discordUser, nomeCidade, idPassaporte, cargo, action } =
+    req.body;
 
-    if (discordUser && POLICE_ROLE_IDS) {
+  // -----------------------------------------------------------
+  // FUNÇÃO AUXILIAR: PROCESSA UMA ÚNICA EXONERAÇÃO
+  // -----------------------------------------------------------
+  async function processarExoneracao(idDiscord, nome, passaporte, cargoBase) {
+    let cargoExibicao = cargoBase || "Oficial";
+
+    // 1. Detecção de Patente via Discord
+    if (idDiscord && POLICE_ROLE_IDS) {
       try {
         const memberRes = await fetch(
-          `https://discord.com/api/v10/guilds/${GUILD_ID}/members/${discordUser}`,
+          `https://discord.com/api/v10/guilds/${GUILD_ID}/members/${idDiscord}`,
           { headers: { Authorization: `Bot ${Discord_Bot_Token}` } }
         );
 
@@ -46,13 +50,12 @@ module.exports = async (req, res) => {
             id.trim()
           );
 
-          // Encontra a primeira role da lista que o usuário possui
           const cargoEncontrado = listaCargosPolicia.find((roleId) =>
             rolesDoUsuario.includes(roleId)
           );
 
           if (cargoEncontrado) {
-            cargoExibicao = `<@&${cargoEncontrado}>`; // Menciona o cargo
+            cargoExibicao = `<@&${cargoEncontrado}>`;
           }
         }
       } catch (err) {
@@ -60,11 +63,7 @@ module.exports = async (req, res) => {
       }
     }
 
-    // -----------------------------------------------------------
-    // 2. MONTAGEM DA MENSAGEM (TEXTO NORMAL COM DATA COMPLETA)
-    // -----------------------------------------------------------
-
-    // Configura a data para o Fuso de Brasília com formato longo
+    // 2. Formatação da Mensagem
     const dataFormatada = new Date().toLocaleString("pt-BR", {
       timeZone: "America/Sao_Paulo",
       weekday: "long",
@@ -75,16 +74,15 @@ module.exports = async (req, res) => {
       minute: "2-digit",
     });
 
-    // Monta a string exatamente como pedido
-    const mensagemTexto = `**Discord:** <@${discordUser}>
-**Nome na cidade:** ${nomeCidade || "---"}
-**ID:** ${idPassaporte || "---"}
+    const mensagemTexto = `**Discord:** <@${idDiscord}>
+**Nome na cidade:** ${nome || "---"}
+**ID:** ${passaporte || "---"}
 **Patente/Cargo:** ${cargoExibicao}
 **Data e hora:** ${dataFormatada}
-**Motivo:** Inatividade`;
+**Motivo:** Inatividade (Auditoria Automática)`;
 
-    // Envia para o canal de Logs (usando 'content' em vez de 'embeds')
-    const logResponse = await fetch(
+    // 3. Envio de Log
+    await fetch(
       `https://discord.com/api/v10/channels/${EXONERACAO_CHANNEL_ID}/messages`,
       {
         method: "POST",
@@ -96,40 +94,61 @@ module.exports = async (req, res) => {
       }
     );
 
-    if (!logResponse.ok) {
-      console.error(`❌ Erro log: ${await logResponse.text()}`);
-    }
-
-    // -----------------------------------------------------------
-    // 3. KICK DO USUÁRIO
-    // -----------------------------------------------------------
-    if (action === "kick" && discordUser) {
-      const kickResponse = await fetch(
-        `https://discord.com/api/v10/guilds/${GUILD_ID}/members/${discordUser}`,
+    // 4. Execução do Kick
+    if (action === "kick" && idDiscord) {
+      await fetch(
+        `https://discord.com/api/v10/guilds/${GUILD_ID}/members/${idDiscord}`,
         {
           method: "DELETE",
           headers: {
             Authorization: `Bot ${Discord_Bot_Token}`,
-            "Content-Type": "application/json",
             "X-Audit-Log-Reason": `Inatividade - Auditoria Automática`,
           },
         }
       );
-
-      if (kickResponse.ok) {
-        return res
-          .status(200)
-          .json({ success: true, msg: "Exonerado e removido." });
-      } else if (kickResponse.status === 404) {
-        return res
-          .status(200)
-          .json({ success: true, msg: "Relatório enviado (Usuário já saiu)." });
-      }
     }
 
-    return res.status(200).json({ success: true });
+    return true;
+  }
+
+  // -----------------------------------------------------------
+  // LÓGICA DE EXECUÇÃO (INDIVIDUAL OU MASSA)
+  // -----------------------------------------------------------
+  try {
+    // Caso receba um array de usuários (Exoneração em Massa)
+    if (Array.isArray(users) && users.length > 0) {
+      console.log(`Iniciando exoneração em massa: ${users.length} usuários.`);
+
+      // Processa um por um (Sequencial para evitar spam block da API do Discord)
+      for (const u of users) {
+        await processarExoneracao(
+          u.discordUser,
+          u.nomeCidade,
+          u.idPassaporte,
+          u.cargo
+        );
+        // Pequeno delay opcional para segurança
+        await new Promise((r) => setTimeout(r, 300));
+      }
+
+      return res
+        .status(200)
+        .json({ success: true, msg: `${users.length} oficiais processados.` });
+    }
+
+    // Caso receba apenas um usuário (Exoneração Individual antigo)
+    else if (discordUser) {
+      await processarExoneracao(discordUser, nomeCidade, idPassaporte, cargo);
+      return res
+        .status(200)
+        .json({ success: true, msg: "Oficial processado individualmente." });
+    }
+
+    return res
+      .status(400)
+      .json({ error: "Dados insuficientes para processar." });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: "Erro interno." });
+    console.error("Erro no processo de exoneração:", error);
+    return res.status(500).json({ error: "Erro interno no servidor." });
   }
 };

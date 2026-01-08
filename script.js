@@ -3,12 +3,11 @@
 // =========================================================
 
 // ✅ ADAPTAÇÃO VERCEL: Deixamos vazio.
-// O navegador buscará automaticamente na pasta /api do próprio site.
 const API_BASE = "";
 
 let dadosInatividadeGlobal = [];
 
-// Lista de cargos que o sistema ignora (não cobra inatividade)
+// Lista de cargos que o sistema ignora
 const CARGOS_PROTEGIDOS = [
   "Delegado PCERJ",
   "Delegado Adj. PCERJ",
@@ -104,10 +103,7 @@ function exibirModalConfirmacao(titulo, htmlMensagem, onConfirmar) {
       </div>
     </div>
   `;
-
   document.body.insertAdjacentHTML("beforeend", modalHtml);
-
-  // Estilização interativa dos botões
   const btnCancel = document.getElementById("btn-cancelar-modal");
   const btnConfirm = document.getElementById("btn-confirmar-modal");
 
@@ -256,7 +252,7 @@ window.abrirInatividade = function () {
 };
 
 // =========================================================
-// 4. LÓGICA DE INATIVIDADE (CONEXÃO COM BACKEND VERCEL)
+// 4. LÓGICA DE INATIVIDADE
 // =========================================================
 window.carregarInatividade = async function () {
   const sessao = obterSessao();
@@ -272,11 +268,10 @@ window.carregarInatividade = async function () {
   if (!corpo) return;
 
   corpo.innerHTML =
-    '<tr><td colspan="6" align="center"> Conectando ao Sistema ...</td></tr>';
+    '<tr><td colspan="6" align="center">🤖 Conectando ao Sistema (Vercel)...</td></tr>';
   if (progContainer) progContainer.style.display = "block";
   if (btn) btn.disabled = true;
 
-  // Animação de progresso
   if (barra) barra.style.width = "5%";
   let width = 5;
   const fakeProgress = setInterval(() => {
@@ -287,11 +282,9 @@ window.carregarInatividade = async function () {
   }, 300);
 
   try {
-    // ✅ CORREÇÃO AQUI: Adicionado .js ao final da URL
     const res = await fetch(
       `${API_BASE}/api/membros-inativos.js?org=${sessao.org}`
     );
-
     if (!res.ok) throw new Error(`Erro API: ${res.status}`);
 
     const dados = await res.json();
@@ -304,21 +297,17 @@ window.carregarInatividade = async function () {
     } else {
       dadosInatividadeGlobal = dados
         .filter((m) => {
-          // Tratamento de cargo e proteção
           const cargoAtual =
             m.cargo && m.cargo !== "undefined" ? m.cargo : "Oficial";
           const isProtegido = CARGOS_PROTEGIDOS.some((protegido) =>
             cargoAtual.includes(protegido)
           );
-
-          // Cálculo de dias com fallback para a data base
           const diasInatividade =
             m.dias ||
             Math.floor(
               (Date.now() - (m.lastMsg || DATA_BASE_AUDITORIA)) /
                 (1000 * 60 * 60 * 24)
             );
-
           return diasInatividade >= 7 && !isProtegido;
         })
         .sort((a, b) => (b.dias || 0) - (a.dias || 0));
@@ -329,19 +318,7 @@ window.carregarInatividade = async function () {
           '<tr><td colspan="6" align="center">Todos os oficiais estão ativos! ✅</td></tr>';
       } else {
         dadosInatividadeGlobal.forEach((m) => {
-          // Extração Inteligente de Passaporte
-          let passaporte = "---";
-          if (
-            m.passaporte &&
-            m.passaporte !== "undefined" &&
-            m.passaporte !== "null"
-          ) {
-            passaporte = m.passaporte;
-          } else {
-            const texto = m.rpName || m.name || "";
-            const match = texto.match(/(\d+)/);
-            if (match) passaporte = match[0];
-          }
+          let passaporte = m.passaporte; // Passaporte (ID Cidade)
 
           const cargoExibicao =
             m.cargo && m.cargo !== "undefined" ? m.cargo : "Oficial";
@@ -358,12 +335,13 @@ window.carregarInatividade = async function () {
                   m.avatar || "https://cdn.discordapp.com/embed/avatars/0.png"
                 }" class="avatar-img">
                 <div>
-                    <strong>${m.name}</strong>
-                    <br><small style="color: #bbb;">${cargoExibicao}</small>
+                   <strong>${
+                     m.name
+                   }</strong> <br><small style="color: #bbb;">${cargoExibicao}</small>
                 </div>
               </div>
             </td>
-            <td><code>${passaporte}</code></td>
+            <td><code>${m.id}</code></td>
             <td>${dataStr}</td>
             <td><strong style="color: #ff4d4d">${m.dias || 0} Dias</strong></td>
             <td align="center">
@@ -395,7 +373,7 @@ window.carregarInatividade = async function () {
   }
 };
 
-// --- PREPARAR E EXECUTAR EXONERAÇÃO (BOT VIA VERCEL API) ---
+// --- PREPARAR E EXECUTAR EXONERAÇÃO ---
 window.prepararExoneracao = function (discordId, rpName, cargo, passaporte) {
   const nomeLimpo = rpName.replace(/[\d|]/g, "").trim();
   const motivoFixo = "Inatividade superior a 7 dias (Audit System)";
@@ -407,6 +385,9 @@ window.prepararExoneracao = function (discordId, rpName, cargo, passaporte) {
             </li>
             <li style="margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 5px;">
                 🆔 <strong>Passaporte:</strong> <span style="color: #4db8ff">${passaporte}</span>
+            </li>
+            <li style="margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 5px;">
+                🆔 <strong>ID Discord:</strong> <span style="color: #aaa">${discordId}</span>
             </li>
             <li style="margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 5px;">
                 💼 <strong>Cargo:</strong> <span style="color: #ffd700">${cargo}</span>
@@ -436,7 +417,6 @@ async function executarExoneracaoBot(
   mostrarAviso("Enviando comando...", "info");
 
   try {
-    // ✅ CORREÇÃO AQUI: Adicionado .js ao final da URL
     const res = await fetch(`${API_BASE}/api/exonerar.js`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -447,7 +427,7 @@ async function executarExoneracaoBot(
         idPassaporte: passaporte,
         cargo: cargo,
         motivo: motivo,
-        action: "kick", // Sinaliza pro backend que deve remover
+        action: "kick",
       }),
     });
 
@@ -464,7 +444,7 @@ async function executarExoneracaoBot(
 }
 
 // =========================================================
-// 5. OUTRAS TELAS (FÉRIAS / METAS / ENSINO)
+// 5. OUTRAS TELAS
 // =========================================================
 window.abrirGestaoFerias = function () {
   resetarTelas();
@@ -484,7 +464,6 @@ window.atualizarListaFerias = async function () {
 
   select.innerHTML = "<option>🔄 Carregando...</option>";
   try {
-    // ✅ CORREÇÃO AQUI: Adicionado .js ao final da URL
     const res = await fetch(
       `${API_BASE}/api/verificar-ferias.js?org=${sessao.org}`
     );
@@ -551,16 +530,11 @@ window.abrirEnsino = function () {
   document.getElementById("nav-ensino")?.classList.add("active");
   document.getElementById("titulo-pagina").innerText = "SISTEMA DE ENSINO";
 };
-// =========================================================
-// 6. FUNÇÃO DE ANTECIPAÇÃO DE FÉRIAS (Faltava no script)
-// =========================================================
+
 window.executarAntecipacao = async function () {
   const select = document.getElementById("select-oficiais-ferias");
   const userId = select.value;
-
-  if (!userId) {
-    return mostrarAviso("Selecione um oficial primeiro.", "error");
-  }
+  if (!userId) return mostrarAviso("Selecione um oficial primeiro.", "error");
 
   const confirmacao = confirm(
     "Tem certeza que deseja remover as férias deste oficial e trazê-lo de volta?"
@@ -568,9 +542,7 @@ window.executarAntecipacao = async function () {
   if (!confirmacao) return;
 
   mostrarAviso("Processando retorno...", "info");
-
   try {
-    // ✅ CORREÇÃO AQUI: Adicionado .js ao final da URL
     const res = await fetch(`${API_BASE}/api/verificar-ferias.js`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -579,7 +551,6 @@ window.executarAntecipacao = async function () {
 
     if (res.ok) {
       mostrarAviso("✅ Oficial retornado com sucesso!");
-      // Recarrega a lista
       setTimeout(() => window.atualizarListaFerias(), 1000);
     } else {
       mostrarAviso("Erro ao processar.", "error");

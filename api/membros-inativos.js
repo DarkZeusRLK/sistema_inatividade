@@ -1,5 +1,5 @@
 // api/membros-inativos.js
-// ATUALIZADO: Busca o nome real do Cargo/Patente
+// ATUALIZADO: "Não consta na aba de admissão" se não achar nome.
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
@@ -19,7 +19,7 @@ module.exports = async (req, res) => {
     PRF_ROLE_ID,
     PMERJ_ROLE_ID,
     CARGOS_IMUNES,
-    POLICE_ROLE_IDS, // <--- Importante: Lista de IDs de patentes
+    POLICE_ROLE_IDS, // Lista de IDs de patentes para exibir o nome correto
   } = process.env;
 
   if (!Discord_Bot_Token) {
@@ -59,7 +59,7 @@ module.exports = async (req, res) => {
         : Promise.resolve(null),
       fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/roles`, {
         headers,
-      }), // <--- Nova busca
+      }),
     ]);
 
     if (!membersRes.ok)
@@ -69,12 +69,9 @@ module.exports = async (req, res) => {
     const serverRoles = rolesRes.ok ? await rolesRes.json() : [];
 
     // 3. MAPEAR NOMES DOS CARGOS (ID -> Nome)
-    // Transforma a lista de patentes do .env em um array limpo
     const idsPatentes = POLICE_ROLE_IDS
       ? POLICE_ROLE_IDS.split(",").map((i) => i.trim())
       : [];
-
-    // Cria um dicionário rápido para achar o nome do cargo pelo ID
     const mapRolesNames = {};
     serverRoles.forEach((r) => {
       mapRolesNames[r.id] = r.name;
@@ -115,7 +112,9 @@ module.exports = async (req, res) => {
 
     oficiais.forEach((p) => {
       if (p.user.bot) return;
-      if (cargoBaseOrg && !p.roles.includes(cargoBaseOrg)) return; // Filtro de Org
+
+      // Filtro de Org (Só processa se tiver o cargo da policia selecionada)
+      if (cargoBaseOrg && !p.roles.includes(cargoBaseOrg)) return;
 
       const uid = p.user.id;
 
@@ -132,32 +131,33 @@ module.exports = async (req, res) => {
       const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
       if (diffDias >= 7) {
-        // Nome e Passaporte
+        // Tenta pegar o Passaporte do Nick (ex: "Dark | 1921")
         const apelido = p.nick || p.user.username;
         const matchPassaporte = apelido.match(/(\d+)/);
         const passaporte = matchPassaporte ? matchPassaporte[0] : "---";
 
+        // --- MUDANÇA AQUI: LÓGICA DO NOME RP ---
         let nomeRpFinal = mapaNomesRP[uid];
-        if (!nomeRpFinal) nomeRpFinal = apelido.replace(/[\d|]/g, "").trim();
 
-        // --- LÓGICA NOVA DE PATENTE ---
-        // Procura qual cargo o usuário tem que está na lista POLICE_ROLE_IDS
-        // O .find pega o primeiro que der match (respeita a ordem do .env)
+        if (!nomeRpFinal) {
+          // Se não achou na admissão, coloca a mensagem padrão
+          nomeRpFinal = "Não consta na aba de admissão";
+        }
+
+        // --- LÓGICA DE PATENTE ---
         const idPatenteEncontrada = idsPatentes.find((id) =>
           p.roles.includes(id)
         );
-
-        // Se achou o ID, busca o nome no mapa de roles. Se não, deixa "Oficial"
         const nomePatente = idPatenteEncontrada
           ? mapRolesNames[idPatenteEncontrada]
           : "Oficial";
 
         resultado.push({
           id: uid,
-          name: p.nick || p.user.username,
-          rpName: nomeRpFinal,
+          name: p.nick || p.user.username, // Apelido do Discord (Exibido na tabela)
+          rpName: nomeRpFinal, // Nome RP ou Mensagem de Erro (Exibido no relatório)
           passaporte: passaporte,
-          cargo: nomePatente, // <--- Agora envia o nome real (ex: Cabo, Sargento)
+          cargo: nomePatente,
           dias: diffDias,
           avatar: p.user.avatar
             ? `https://cdn.discordapp.com/avatars/${uid}/${p.user.avatar}.png`

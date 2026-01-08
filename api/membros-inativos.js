@@ -1,7 +1,6 @@
 // api/membros-inativos.js
-// ATUALIZADO: Filtra membros pela tag da corporação (Org)
+// ATUALIZADO: Busca o nome real do Cargo/Patente
 module.exports = async (req, res) => {
-  // Configuração CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -13,21 +12,18 @@ module.exports = async (req, res) => {
     Discord_Bot_Token,
     GUILD_ID,
     FERIAS_ROLE_ID,
-    // Canais de Admissão
-    ADMISSAO_CHANNEL_ID, // PCERJ (Padrão)
-    PRF_ADMISSAO_CH, // PRF
-    PMERJ_ADMISSAO_CH, // PMERJ
-    // Cargos Principais (Para filtrar quem é quem)
-    POLICE_ROLE_ID, // Cargo Base PCERJ
-    PRF_ROLE_ID, // Cargo Base PRF
-    PMERJ_ROLE_ID, // Cargo Base PMERJ
+    ADMISSAO_CHANNEL_ID,
+    PRF_ADMISSAO_CH,
+    PMERJ_ADMISSAO_CH,
+    POLICE_ROLE_ID,
+    PRF_ROLE_ID,
+    PMERJ_ROLE_ID,
     CARGOS_IMUNES,
+    POLICE_ROLE_IDS, // <--- Importante: Lista de IDs de patentes
   } = process.env;
 
   if (!Discord_Bot_Token) {
-    return res
-      .status(500)
-      .json({ error: "Token do Bot não configurado no .env" });
+    return res.status(500).json({ error: "Token do Bot não configurado." });
   }
 
   const headers = {
@@ -36,9 +32,9 @@ module.exports = async (req, res) => {
   };
 
   try {
-    // 1. DEFINIÇÕES BASEADAS NA ORGANIZAÇÃO (ORG)
-    let canalAdmissaoId = ADMISSAO_CHANNEL_ID; // Padrão
-    let cargoBaseOrg = POLICE_ROLE_ID; // Padrão (PCERJ)
+    // 1. DEFINIÇÕES DE ORG
+    let canalAdmissaoId = ADMISSAO_CHANNEL_ID;
+    let cargoBaseOrg = POLICE_ROLE_ID;
 
     if (org === "PRF") {
       canalAdmissaoId = PRF_ADMISSAO_CH;
@@ -49,8 +45,8 @@ module.exports = async (req, res) => {
       cargoBaseOrg = PMERJ_ROLE_ID;
     }
 
-    // 2. BUSCAR DADOS EM PARALELO (Membros + Mensagens do Canal de Admissão)
-    const [membersRes, admissaoRes] = await Promise.all([
+    // 2. BUSCA TRIPLA: Membros + Mensagens Admissão + CARGOS DO SERVIDOR
+    const [membersRes, admissaoRes, rolesRes] = await Promise.all([
       fetch(
         `https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`,
         { headers }
@@ -61,24 +57,39 @@ module.exports = async (req, res) => {
             { headers }
           )
         : Promise.resolve(null),
+      fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/roles`, {
+        headers,
+      }), // <--- Nova busca
     ]);
 
-    if (!membersRes.ok) {
-      throw new Error(`Erro Discord: ${membersRes.status}`);
-    }
+    if (!membersRes.ok)
+      throw new Error(`Erro Discord Membros: ${membersRes.status}`);
 
     const oficiais = await membersRes.json();
+    const serverRoles = rolesRes.ok ? await rolesRes.json() : [];
 
-    // 3. CRIAR MAPA DE NOMES RP
+    // 3. MAPEAR NOMES DOS CARGOS (ID -> Nome)
+    // Transforma a lista de patentes do .env em um array limpo
+    const idsPatentes = POLICE_ROLE_IDS
+      ? POLICE_ROLE_IDS.split(",").map((i) => i.trim())
+      : [];
+
+    // Cria um dicionário rápido para achar o nome do cargo pelo ID
+    const mapRolesNames = {};
+    serverRoles.forEach((r) => {
+      mapRolesNames[r.id] = r.name;
+    });
+
+    // 4. MAPEAR NOMES RP (Canais de Admissão)
     const mapaNomesRP = {};
     if (admissaoRes && admissaoRes.ok) {
       const mensagens = await admissaoRes.json();
       if (Array.isArray(mensagens)) {
         mensagens.forEach((msg) => {
           let userIdEncontrado = null;
-          if (msg.mentions && msg.mentions.length > 0) {
+          if (msg.mentions && msg.mentions.length > 0)
             userIdEncontrado = msg.mentions[0].id;
-          } else {
+          else {
             const matchId = msg.content.match(/(\d{17,20})/);
             if (matchId) userIdEncontrado = matchId[0];
           }
@@ -97,59 +108,56 @@ module.exports = async (req, res) => {
       }
     }
 
-    // 4. PROCESSAMENTO DE INATIVIDADE
+    // 5. PROCESSAMENTO
     const agora = Date.now();
     const resultado = [];
     const listaImunes = CARGOS_IMUNES ? CARGOS_IMUNES.split(",") : [];
 
     oficiais.forEach((p) => {
-      // a) Pula bots
       if (p.user.bot) return;
-
-      // b) FILTRO CRUCIAL: O usuário tem o cargo da corporação selecionada?
-      // Se cargoBaseOrg estiver definido e o usuário NÃO tiver esse cargo, ignoramos ele.
-      if (cargoBaseOrg && !p.roles.includes(cargoBaseOrg)) return;
+      if (cargoBaseOrg && !p.roles.includes(cargoBaseOrg)) return; // Filtro de Org
 
       const uid = p.user.id;
 
-      // c) Verifica Imunidade por Cargo (Staff, etc)
       const temCargoImune = p.roles.some((roleId) =>
         listaImunes.includes(roleId)
       );
       if (temCargoImune) return;
 
-      // d) Verifica Férias
       const temFerias = FERIAS_ROLE_ID && p.roles.includes(FERIAS_ROLE_ID);
       if (temFerias) return;
 
-      // e) Cálculo de Inatividade
-      // Usamos joined_at como base pois não temos last_message_id confiável via API REST sem Gateway cacheado
       let baseData = new Date(p.joined_at).getTime();
-
       const diffMs = agora - baseData;
       const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-      // Filtro básico de 7 dias para listar
       if (diffDias >= 7) {
-        // Tenta pegar o Passaporte do Nick
+        // Nome e Passaporte
         const apelido = p.nick || p.user.username;
         const matchPassaporte = apelido.match(/(\d+)/);
         const passaporte = matchPassaporte ? matchPassaporte[0] : "---";
 
-        // Tenta pegar o Nome RP
         let nomeRpFinal = mapaNomesRP[uid];
-        if (!nomeRpFinal) {
-          nomeRpFinal = apelido.replace(/[\d|]/g, "").trim(); // Fallback
-        }
+        if (!nomeRpFinal) nomeRpFinal = apelido.replace(/[\d|]/g, "").trim();
 
-        const cargo = p.roles.length > 0 ? "Oficial" : "Recruta";
+        // --- LÓGICA NOVA DE PATENTE ---
+        // Procura qual cargo o usuário tem que está na lista POLICE_ROLE_IDS
+        // O .find pega o primeiro que der match (respeita a ordem do .env)
+        const idPatenteEncontrada = idsPatentes.find((id) =>
+          p.roles.includes(id)
+        );
+
+        // Se achou o ID, busca o nome no mapa de roles. Se não, deixa "Oficial"
+        const nomePatente = idPatenteEncontrada
+          ? mapRolesNames[idPatenteEncontrada]
+          : "Oficial";
 
         resultado.push({
           id: uid,
           name: p.nick || p.user.username,
           rpName: nomeRpFinal,
           passaporte: passaporte,
-          cargo: cargo,
+          cargo: nomePatente, // <--- Agora envia o nome real (ex: Cabo, Sargento)
           dias: diffDias,
           avatar: p.user.avatar
             ? `https://cdn.discordapp.com/avatars/${uid}/${p.user.avatar}.png`
@@ -159,9 +167,7 @@ module.exports = async (req, res) => {
       }
     });
 
-    // Ordena por dias inativos (maior para menor)
     resultado.sort((a, b) => b.dias - a.dias);
-
     res.status(200).json(resultado);
   } catch (error) {
     console.error(error);

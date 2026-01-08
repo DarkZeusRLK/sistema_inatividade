@@ -1,5 +1,9 @@
 // api/membros-inativos.js
-// ATUALIZADO: Considera ATIVO quem MANDA mensagem e quem é MENCIONADO (Marcado)
+// VERSÃO FINAL CORRIGIDA:
+// 1. Busca estrita por "Nome" ou "Nome RP" (Ignora Codinome)
+// 2. Filtra por Org
+// 3. Verifica atividade real (Chat/Menção)
+// 4. Ignora Férias
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
@@ -20,7 +24,7 @@ module.exports = async (req, res) => {
     PMERJ_ROLE_ID,
     CARGOS_IMUNES,
     POLICE_ROLE_IDS,
-    CHAT_ID_BUSCAR, // Pode ser um ID ou vários separados por vírgula
+    CHAT_ID_BUSCAR,
   } = process.env;
 
   if (!Discord_Bot_Token) {
@@ -47,18 +51,16 @@ module.exports = async (req, res) => {
     }
 
     // 2. PREPARAR LISTA DE CANAIS DE ATIVIDADE
-    // Permite colocar vários canais no .env separados por vírgula (ex: ID_PRISOES, ID_MULTAS, ID_GERAL)
     const canaisAtividadeIds = CHAT_ID_BUSCAR
       ? CHAT_ID_BUSCAR.split(",").map((id) => id.trim())
       : [];
 
     // 3. FETCHS EM PARALELO
-    // Cria promessas para buscar mensagens de TODOS os canais de atividade configurados
     const promisesAtividade = canaisAtividadeIds.map((id) =>
       fetch(`https://discord.com/api/v10/channels/${id}/messages?limit=100`, {
         headers,
       })
-        .then((res) => (res.ok ? res.json() : [])) // Se der erro num canal, retorna array vazio para não quebrar tudo
+        .then((res) => (res.ok ? res.json() : []))
         .catch(() => [])
     );
 
@@ -77,7 +79,7 @@ module.exports = async (req, res) => {
         fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/roles`, {
           headers,
         }),
-        ...promisesAtividade, // Espalha as promessas dos canais de atividade
+        ...promisesAtividade,
       ]);
 
     if (!membersRes.ok)
@@ -93,7 +95,7 @@ module.exports = async (req, res) => {
     const mapRolesNames = {};
     serverRoles.forEach((r) => (mapRolesNames[r.id] = r.name));
 
-    // 5. MAPEAR NOMES RP (ADMISSÃO)
+    // 5. MAPEAR NOMES RP (ADMISSÃO) - CORREÇÃO DO REGEX AQUI
     const mapaNomesRP = {};
     if (admissaoRes && admissaoRes.ok) {
       const mensagens = await admissaoRes.json();
@@ -106,24 +108,28 @@ module.exports = async (req, res) => {
             const matchId = msg.content.match(/(\d{17,20})/);
             if (matchId) userIdEncontrado = matchId[0];
           }
+
           if (userIdEncontrado) {
+            // REGEX NOVO: Busca especificamente por "Nome:", "Nome RP:", "Nome Civil:"
+            // O (?:\n|^) garante que pegamos no começo da linha, evitando pegar meio de frase
+            // O [^\n]* garante que pegamos o resto da linha
             const matchNome = msg.content.match(
-              /(?:Nome|Nick|Oficial):\s*(.+?)(\n|$)/i
+              /(?:\n|^|\*)(?:Nome|Nome\s+RP|Nome\s+Civil|Identidade)[\s]*:[\s]*(.+?)(?:\n|$)/i
             );
-            if (matchNome)
+
+            if (matchNome) {
+              // Limpa negrito (**), itálico (*), código (`) e espaços extras
               mapaNomesRP[userIdEncontrado] = matchNome[1]
                 .replace(/[*_`]/g, "")
                 .trim();
+            }
           }
         });
       }
     }
 
     // 6. MAPEAR ATIVIDADE REAL (AUTOR + MENÇÕES)
-    // ID_Usuario -> Timestamp da última atividade
     const mapaUltimaAtividade = {};
-
-    // Função auxiliar para atualizar a data se for mais recente
     const atualizarAtividade = (userId, timestamp) => {
       const time = new Date(timestamp).getTime();
       if (!mapaUltimaAtividade[userId] || time > mapaUltimaAtividade[userId]) {
@@ -131,14 +137,10 @@ module.exports = async (req, res) => {
       }
     };
 
-    // Percorre todas as listas de mensagens recuperadas
     mensagensAtividadeArrays.forEach((listaMensagens) => {
       if (Array.isArray(listaMensagens)) {
         listaMensagens.forEach((msg) => {
-          // A) O Autor da mensagem está ativo
           atualizarAtividade(msg.author.id, msg.timestamp);
-
-          // B) Quem foi MENCIONADO na mensagem está ativo (Logs de prisão, etc)
           if (msg.mentions && msg.mentions.length > 0) {
             msg.mentions.forEach((usuarioMarcado) => {
               atualizarAtividade(usuarioMarcado.id, msg.timestamp);
@@ -158,13 +160,11 @@ module.exports = async (req, res) => {
       if (cargoBaseOrg && !p.roles.includes(cargoBaseOrg)) return;
 
       const uid = p.user.id;
+
       if (p.roles.some((roleId) => listaImunes.includes(roleId))) return;
       if (FERIAS_ROLE_ID && p.roles.includes(FERIAS_ROLE_ID)) return;
 
-      // --- DECISÃO DA DATA ---
       let baseData;
-
-      // Se tiver atividade (chat ou menção), usa ela. Se não, usa data de entrada.
       if (mapaUltimaAtividade[uid]) {
         baseData = mapaUltimaAtividade[uid];
       } else {
@@ -180,7 +180,9 @@ module.exports = async (req, res) => {
         const passaporte = matchPassaporte ? matchPassaporte[0] : "---";
 
         let nomeRpFinal = mapaNomesRP[uid];
-        if (!nomeRpFinal) nomeRpFinal = "Não consta na aba de admissão";
+        if (!nomeRpFinal) {
+          nomeRpFinal = "Não consta na aba de admissão";
+        }
 
         const idPatenteEncontrada = idsPatentes.find((id) =>
           p.roles.includes(id)

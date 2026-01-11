@@ -1,5 +1,5 @@
 // api/membros-inativos.js
-// VERSÃO FINAL: DATA FORMATADA (DD/MM/AAAA) NA COLUNA DE INATIVIDADE
+// VERSÃO FINAL: DATA FORMATADA + DIAS CORRIDOS (SEPARADOS)
 module.exports = async (req, res) => {
   // Configuração de CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -196,33 +196,40 @@ module.exports = async (req, res) => {
       if (p.roles.some((r) => listaImunes.includes(r))) return;
       if (FERIAS_ROLE_ID && p.roles.includes(FERIAS_ROLE_ID)) return;
 
-      // --- CÁLCULO DA DATA E FORMATO ---
+      // --- CÁLCULO DE DATAS E FORMATOS ---
       let baseData = mapaUltimaAtividade[uid];
       let diffDias;
-      let dataExibicao = "Sem registro";
+
+      // Strings que serão exibidas
+      let textoData = "Sem registro";
+      let textoDias = "---";
 
       if (baseData) {
-        // Calcula diferença numérica para o filtro de 7 dias e ordenação
+        // 1. Calcula Diferença
         diffDias = Math.floor((agora - baseData) / (1000 * 60 * 60 * 24));
 
-        // Formata a data para String (DD/MM/AAAA)
+        // 2. Formata Data (DD/MM/AAAA)
         const dataObj = new Date(baseData);
         const dia = String(dataObj.getDate()).padStart(2, "0");
-        const mes = String(dataObj.getMonth() + 1).padStart(2, "0"); // Mês começa em 0
+        const mes = String(dataObj.getMonth() + 1).padStart(2, "0");
         const ano = dataObj.getFullYear();
-        dataExibicao = `${dia}/${mes}/${ano}`;
+        textoData = `${dia}/${mes}/${ano}`;
+
+        // 3. Formata Dias Corridos
+        textoDias = `${diffDias} dias`;
       } else {
-        // Sem registro recento nos canais
+        // Sem registro recente
         diffDias = 99999;
-        dataExibicao = "Sem registro";
+        textoData = "Sem registro";
+        textoDias = "---";
       }
 
-      // Exibe se for maior que 7 dias OU se não tiver registro (99999)
+      // Filtra apenas quem tem 7 dias ou mais (ou sem registro)
       if (diffDias >= 7) {
         const apelido = p.nick || p.user.username;
         let passaporte = "---";
 
-        // A. Passaporte
+        // Passaporte
         if (mapaPassaporteRP[uid]) {
           passaporte = mapaPassaporteRP[uid];
         } else {
@@ -236,7 +243,7 @@ module.exports = async (req, res) => {
           }
         }
 
-        // B. Nome RP
+        // Nome RP
         let nomeRp = mapaNomesRP[uid];
         if (!nomeRp) {
           nomeRp = apelido
@@ -250,7 +257,7 @@ module.exports = async (req, res) => {
           if (!nomeRp) nomeRp = "Não identificado";
         }
 
-        // C. Patente
+        // Patente
         const idPatente = idsPatentes.find((id) => p.roles.includes(id));
         const nomePatente = idPatente ? mapRolesNames[idPatente] : "Oficial";
 
@@ -260,10 +267,12 @@ module.exports = async (req, res) => {
           rpName: nomeRp,
           passaporte: passaporte,
           cargo: nomePatente,
-          // AQUI ESTÁ A MUDANÇA: 'dias' agora é a String da data
-          dias: dataExibicao,
-          // 'diasSort' é usado apenas para ordenação interna
-          diasSort: diffDias,
+
+          // --- CAMPOS FORMATADOS PARA O FRONTEND ---
+          dataUltimaMsg: textoData, // Ex: "14/12/2025"
+          dias: textoDias, // Ex: "10 dias"
+          diasNumber: diffDias, // Numérico (para ordenação)
+
           avatar: p.user.avatar
             ? `https://cdn.discordapp.com/avatars/${uid}/${p.user.avatar}.png`
             : null,
@@ -272,12 +281,12 @@ module.exports = async (req, res) => {
       }
     });
 
-    // Ordena usando o valor numérico oculto
-    resultado.sort((a, b) => b.diasSort - a.diasSort);
+    // Ordena pelo número de dias (invisível)
+    resultado.sort((a, b) => b.diasNumber - a.diasNumber);
 
-    // Limpeza final para envio
+    // Remove o auxiliar antes de enviar
     const final = resultado.map((item) => {
-      const { diasSort, ...resto } = item;
+      const { diasNumber, ...resto } = item;
       return resto;
     });
 

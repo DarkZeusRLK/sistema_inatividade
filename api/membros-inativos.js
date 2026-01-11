@@ -1,5 +1,5 @@
 // api/membros-inativos.js
-// VERSÃO FINAL: PRIORIDADE ADMISSÃO (PARA CORE/BOPE)
+// VERSÃO FINAL: DATA FORMATADA (DD/MM/AAAA) NA COLUNA DE INATIVIDADE
 module.exports = async (req, res) => {
   // Configuração de CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -10,28 +10,25 @@ module.exports = async (req, res) => {
 
   const { org } = req.query;
 
-  // Extrai todas as variáveis de ambiente necessárias
+  // Variáveis de Ambiente
   const {
     Discord_Bot_Token,
     GUILD_ID,
     FERIAS_ROLE_ID,
-
-    // Canais de Admissão
-    ADMISSAO_CHANNEL_ID, // PCERJ (Padrão)
-    PRF_ADMISSAO_CH, // PRF
-    PMERJ_ADMISSAO_CH, // PMERJ
-    PF_ADMISSAO_CH, // PF
-
-    // Cargos Base (Quem é da org)
-    POLICE_ROLE_ID, // PCERJ
-    PRF_ROLE_ID, // PRF
-    PMERJ_ROLE_ID, // PMERJ
-    PF_ROLE_ID, // PF
-
-    // Outros
+    // Canais
+    ADMISSAO_CHANNEL_ID,
+    PRF_ADMISSAO_CH,
+    PMERJ_ADMISSAO_CH,
+    PF_ADMISSAO_CH,
+    // Cargos
+    POLICE_ROLE_ID,
+    PRF_ROLE_ID,
+    PMERJ_ROLE_ID,
+    PF_ROLE_ID,
+    // Configs
     CARGOS_IMUNES,
-    POLICE_ROLE_IDS, // IDs dos cargos de patente
-    CHAT_ID_BUSCAR, // Canais para ler atividade
+    POLICE_ROLE_IDS,
+    CHAT_ID_BUSCAR,
   } = process.env;
 
   if (!Discord_Bot_Token) {
@@ -46,7 +43,7 @@ module.exports = async (req, res) => {
   try {
     const fetch = global.fetch || require("node-fetch");
 
-    // 1. DEFINIÇÕES DE ORG (Lógica de Seleção)
+    // 1. SELEÇÃO DE ORG
     let canalAdmissaoId = ADMISSAO_CHANNEL_ID;
     let cargoBaseOrg = POLICE_ROLE_ID;
 
@@ -61,12 +58,12 @@ module.exports = async (req, res) => {
       cargoBaseOrg = PF_ROLE_ID;
     }
 
-    // 2. PREPARAR LISTA DE CANAIS DE ATIVIDADE
+    // 2. CANAIS DE ATIVIDADE
     const canaisAtividadeIds = CHAT_ID_BUSCAR
       ? CHAT_ID_BUSCAR.split(",").map((id) => id.trim())
       : [];
 
-    // 3. FETCHS EM PARALELO
+    // 3. BUSCAS PARALELAS
     const promisesAtividade = canaisAtividadeIds.map((id) =>
       fetch(`https://discord.com/api/v10/channels/${id}/messages?limit=100`, {
         headers,
@@ -77,42 +74,39 @@ module.exports = async (req, res) => {
 
     const [membersRes, admissaoRes, rolesRes, ...mensagensAtividadeArrays] =
       await Promise.all([
-        // A. Busca Membros
+        // A. Membros
         fetch(
           `https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`,
           { headers }
         ),
-        // B. Busca Mensagens de Admissão
+        // B. Admissão
         canalAdmissaoId
           ? fetch(
               `https://discord.com/api/v10/channels/${canalAdmissaoId}/messages?limit=100`,
               { headers }
             )
           : Promise.resolve(null),
-        // C. Busca Cargos
+        // C. Cargos
         fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/roles`, {
           headers,
         }),
-        // D. Busca Mensagens de Atividade
+        // D. Atividade
         ...promisesAtividade,
       ]);
 
-    if (!membersRes.ok)
-      throw new Error(`Erro Discord Membros: ${membersRes.status}`);
+    if (!membersRes.ok) throw new Error(`Erro Membros: ${membersRes.status}`);
 
     const oficiais = await membersRes.json();
     const serverRoles = rolesRes.ok ? await rolesRes.json() : [];
 
-    // 4. MAPEAR CARGOS E NOMES
-    const idsPatentes = POLICE_ROLE_IDS
-      ? POLICE_ROLE_IDS.split(",").map((i) => i.trim())
-      : [];
+    // 4. MAPEAR PATENTES
+    const idsPatentes = POLICE_ROLE_IDS ? POLICE_ROLE_IDS.split(",") : [];
     const mapRolesNames = {};
     serverRoles.forEach((r) => (mapRolesNames[r.id] = r.name));
 
-    // 5. MAPEAR NOMES RP E PASSAPORTES (ADMISSÃO)
+    // 5. PROCESSAR ADMISSÃO
     const mapaNomesRP = {};
-    const mapaPassaporteRP = {}; // Novo mapa só para IDs
+    const mapaPassaporteRP = {};
 
     if (admissaoRes && admissaoRes.ok) {
       const mensagens = await admissaoRes.json();
@@ -120,27 +114,40 @@ module.exports = async (req, res) => {
         mensagens.forEach((msg) => {
           let userIdEncontrado = null;
 
-          // Tenta pegar pela menção (@Usuario)
-          if (msg.mentions && msg.mentions.length > 0)
+          if (msg.mentions && msg.mentions.length > 0) {
             userIdEncontrado = msg.mentions[0].id;
-          else {
-            const matchId = msg.content.match(/(\d{17,20})/);
+          } else {
+            const tudoJunto = JSON.stringify(msg);
+            const matchId = tudoJunto.match(/(\d{17,20})/);
             if (matchId) userIdEncontrado = matchId[0];
           }
 
           if (userIdEncontrado) {
-            // Regex para pegar NOME
-            const matchNome = msg.content.match(
-              /(?:\n|^|\*|•|➤)(?:\s*)(?:Nome|Nome\s+RP|Nome\s+Civil|Identidade|Membro)[\s]*:[\s]*(.+?)(?:\n|$)/i
+            let textoAnalise = msg.content || "";
+            if (msg.embeds && msg.embeds.length > 0) {
+              msg.embeds.forEach((embed) => {
+                textoAnalise += `\n ${embed.title || ""} \n ${
+                  embed.description || ""
+                }`;
+                if (embed.fields) {
+                  embed.fields.forEach((f) => {
+                    textoAnalise += `\n ${f.name}: ${f.value}`;
+                  });
+                }
+              });
+            }
+
+            const matchNome = textoAnalise.match(
+              /(?:Nome(?:\s+RP|\s+Civil)?|Identidade|Membro)(?:[\s\W]*):(?:\s*)(.*?)(?:\n|$|\||•)/i
             );
 
-            // Regex para pegar ID/PASSAPORTE
-            const matchPassaporte = msg.content.match(
-              /(?:\n|^|\*|•|➤)(?:\s*)(?:Passaporte|ID|Identidade|Rg)[\s]*:[\s]*(\d+)/i
+            const matchPassaporte = textoAnalise.match(
+              /(?:Passaporte|ID|Identidade|Rg|Registro)(?:[\s\W]*):(?:\s*)(\d+)/i
             );
 
             if (matchNome) {
-              mapaNomesRP[userIdEncontrado] = matchNome[1]
+              let nomeBruto = matchNome[1];
+              mapaNomesRP[userIdEncontrado] = nomeBruto
                 .replace(/[*_`]/g, "")
                 .trim();
             }
@@ -153,7 +160,7 @@ module.exports = async (req, res) => {
       }
     }
 
-    // 6. MAPEAR ATIVIDADE REAL
+    // 6. MAPEAR ATIVIDADE (Chat)
     const mapaUltimaAtividade = {};
     const atualizarAtividade = (userId, timestamp) => {
       const time = new Date(timestamp).getTime();
@@ -162,108 +169,101 @@ module.exports = async (req, res) => {
       }
     };
 
-    mensagensAtividadeArrays.forEach((listaMensagens) => {
-      if (Array.isArray(listaMensagens)) {
-        listaMensagens.forEach((msg) => {
+    mensagensAtividadeArrays.forEach((lista) => {
+      if (Array.isArray(lista)) {
+        lista.forEach((msg) => {
           atualizarAtividade(msg.author.id, msg.timestamp);
-          if (msg.mentions && msg.mentions.length > 0) {
-            msg.mentions.forEach((usuarioMarcado) => {
-              atualizarAtividade(usuarioMarcado.id, msg.timestamp);
-            });
+          if (msg.mentions) {
+            msg.mentions.forEach((u) =>
+              atualizarAtividade(u.id, msg.timestamp)
+            );
           }
         });
       }
     });
 
-    // 7. PROCESSAMENTO FINAL DOS DADOS
+    // 7. GERAÇÃO DO RELATÓRIO
     const agora = Date.now();
     const resultado = [];
     const listaImunes = CARGOS_IMUNES ? CARGOS_IMUNES.split(",") : [];
 
     oficiais.forEach((p) => {
-      // Ignora Bots
       if (p.user.bot) return;
-
-      // Verifica cargo da Org
       if (cargoBaseOrg && !p.roles.includes(cargoBaseOrg)) return;
 
       const uid = p.user.id;
 
-      // Ignora Imunes
-      if (p.roles.some((roleId) => listaImunes.includes(roleId))) return;
-
-      // Ignora Férias
+      if (p.roles.some((r) => listaImunes.includes(r))) return;
       if (FERIAS_ROLE_ID && p.roles.includes(FERIAS_ROLE_ID)) return;
 
-      // Data base
-      let baseData;
-      if (mapaUltimaAtividade[uid]) {
-        baseData = mapaUltimaAtividade[uid];
+      // --- CÁLCULO DA DATA E FORMATO ---
+      let baseData = mapaUltimaAtividade[uid];
+      let diffDias;
+      let dataExibicao = "Sem registro";
+
+      if (baseData) {
+        // Calcula diferença numérica para o filtro de 7 dias e ordenação
+        diffDias = Math.floor((agora - baseData) / (1000 * 60 * 60 * 24));
+
+        // Formata a data para String (DD/MM/AAAA)
+        const dataObj = new Date(baseData);
+        const dia = String(dataObj.getDate()).padStart(2, "0");
+        const mes = String(dataObj.getMonth() + 1).padStart(2, "0"); // Mês começa em 0
+        const ano = dataObj.getFullYear();
+        dataExibicao = `${dia}/${mes}/${ano}`;
       } else {
-        baseData = new Date(p.joined_at).getTime();
+        // Sem registro recento nos canais
+        diffDias = 99999;
+        dataExibicao = "Sem registro";
       }
 
-      const diffMs = agora - baseData;
-      const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
+      // Exibe se for maior que 7 dias OU se não tiver registro (99999)
       if (diffDias >= 7) {
         const apelido = p.nick || p.user.username;
         let passaporte = "---";
 
-        // --- LÓGICA DE ID (PRIORIDADE: ADMISSÃO) ---
-
-        // 1. Verifica se achamos o ID na mensagem de admissão
+        // A. Passaporte
         if (mapaPassaporteRP[uid]) {
           passaporte = mapaPassaporteRP[uid];
-        }
-        // 2. Se não achou na admissão, tenta pegar do Nickname (Fallback)
-        else {
+        } else {
           if (apelido.includes("|")) {
             const partes = apelido.split("|");
-            const ultimaParte = partes[partes.length - 1].trim();
-            // Verifica se o que veio depois da barra é número mesmo
-            const match = ultimaParte.match(/^(\d+)$/);
-            if (match) passaporte = match[0];
+            const ultima = partes[partes.length - 1].trim();
+            if (/^\d+$/.test(ultima)) passaporte = ultima;
           } else {
-            // Tenta pegar último número da string
-            const matches = apelido.match(/(\d+)/g);
-            if (matches && matches.length > 0) {
-              passaporte = matches[matches.length - 1];
-            }
+            const nums = apelido.match(/(\d+)/g);
+            if (nums) passaporte = nums[nums.length - 1];
           }
         }
 
-        // --- LÓGICA DE NOME ---
-        let nomeRpFinal = mapaNomesRP[uid];
-
-        if (!nomeRpFinal) {
-          // Limpeza do apelido caso não ache na admissão
-          let nomeLimpo = apelido
+        // B. Nome RP
+        let nomeRp = mapaNomesRP[uid];
+        if (!nomeRp) {
+          nomeRp = apelido
             .replace(/\[.*?\]/g, "")
             .replace(/\(.*?\)/g, "")
             .split("|")[0]
             .replace(/[0-9]/g, "")
-            .replace(/[^\w\s\u00C0-\u00FF]/g, "") // Remove emojis/símbolos
+            .replace(/[^\w\s\u00C0-\u00FF]/g, "")
             .trim();
 
-          nomeRpFinal = nomeLimpo || "Não id. na Admissão";
+          if (!nomeRp) nomeRp = "Não identificado";
         }
 
-        // Patente
-        const idPatenteEncontrada = idsPatentes.find((id) =>
-          p.roles.includes(id)
-        );
-        const nomePatente = idPatenteEncontrada
-          ? mapRolesNames[idPatenteEncontrada]
-          : "Oficial";
+        // C. Patente
+        const idPatente = idsPatentes.find((id) => p.roles.includes(id));
+        const nomePatente = idPatente ? mapRolesNames[idPatente] : "Oficial";
 
         resultado.push({
           id: uid,
-          name: p.nick || p.user.username,
-          rpName: nomeRpFinal,
+          name: apelido,
+          rpName: nomeRp,
           passaporte: passaporte,
           cargo: nomePatente,
-          dias: diffDias,
+          // AQUI ESTÁ A MUDANÇA: 'dias' agora é a String da data
+          dias: dataExibicao,
+          // 'diasSort' é usado apenas para ordenação interna
+          diasSort: diffDias,
           avatar: p.user.avatar
             ? `https://cdn.discordapp.com/avatars/${uid}/${p.user.avatar}.png`
             : null,
@@ -272,11 +272,18 @@ module.exports = async (req, res) => {
       }
     });
 
-    resultado.sort((a, b) => b.dias - a.dias);
+    // Ordena usando o valor numérico oculto
+    resultado.sort((a, b) => b.diasSort - a.diasSort);
 
-    res.status(200).json(resultado);
+    // Limpeza final para envio
+    const final = resultado.map((item) => {
+      const { diasSort, ...resto } = item;
+      return resto;
+    });
+
+    res.status(200).json(final);
   } catch (error) {
-    console.error("Erro Inativos:", error);
-    res.status(500).json({ error: "Erro interno no servidor API" });
+    console.error(error);
+    res.status(500).json({ error: "Erro interno" });
   }
 };

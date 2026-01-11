@@ -13,6 +13,7 @@ module.exports = async (req, res) => {
     CH_PRISIONAL_ID,
     CH_RECRUTAMENTO_ID,
     CH_CURSO_ID,
+    CARGOS_IMUNES, // <--- 1. Adicionado aqui
   } = process.env;
 
   try {
@@ -25,14 +26,27 @@ module.exports = async (req, res) => {
       : Date.now() - 7 * 24 * 60 * 60 * 1000;
     const dataFimMs = end ? new Date(end + "T23:59:59").getTime() : Date.now();
 
+    // Transforma a string de cargos imunes em um array (ex: "123,456" -> ["123", "456"])
+    const listaImunes = CARGOS_IMUNES ? CARGOS_IMUNES.split(",") : [];
+
     const membersRes = await fetch(
       `https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`,
       { headers }
     );
     const allMembers = await membersRes.json();
-    const coreMembers = allMembers.filter((m) =>
-      m.roles.includes(CORE_ROLE_ID)
-    );
+
+    // 2. Filtro Atualizado: Verifica se é CORE e se NÃO tem cargo imune
+    const coreMembers = allMembers.filter((m) => {
+      // Primeiro verifica se tem o cargo da CORE
+      const isCore = m.roles.includes(CORE_ROLE_ID);
+      if (!isCore) return false;
+
+      // Verifica se o membro possui algum dos cargos imunes
+      const isImmune = m.roles.some((roleId) => listaImunes.includes(roleId));
+
+      // Retorna true apenas se for CORE e NÃO for imune
+      return !isImmune;
+    });
 
     let metaMap = {};
     coreMembers.forEach((m) => {
@@ -51,6 +65,8 @@ module.exports = async (req, res) => {
     });
 
     async function processarCanal(channelId, tipo) {
+      if (!channelId) return; // Segurança caso algum canal não esteja no .env
+
       const r = await fetch(
         `https://discord.com/api/v10/channels/${channelId}/messages?limit=100`,
         { headers }

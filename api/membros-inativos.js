@@ -15,6 +15,7 @@ module.exports = async (req, res) => {
     Discord_Bot_Token,
     GUILD_ID,
     FERIAS_ROLE_ID,
+    FERIAS_CHANNEL_ID,
     // Canais
     ADMISSAO_CHANNEL_ID,
     PRF_ADMISSAO_CH,
@@ -182,6 +183,108 @@ module.exports = async (req, res) => {
       }
     });
 
+    // 6.5. MAPEAR FÉRIAS (Verificar período mesmo sem tag)
+    const mapaFerias = {};
+    if (FERIAS_CHANNEL_ID) {
+      try {
+        let allMessagesFerias = [];
+        let lastIdFerias = null;
+        for (let i = 0; i < 5; i++) {
+          const url = `https://discord.com/api/v10/channels/${FERIAS_CHANNEL_ID}/messages?limit=100${
+            lastIdFerias ? `&before=${lastIdFerias}` : ""
+          }`;
+          const r = await fetch(url, { headers });
+          const batch = await r.json();
+          if (!batch || batch.length === 0) break;
+          allMessagesFerias = allMessagesFerias.concat(batch);
+          lastIdFerias = batch[batch.length - 1].id;
+        }
+
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+
+        const regexDataInicio = /(?:In[ií]cio|Come[cç]o|Data de in[ií]cio|Solicita[cç][aã]o|Sa[ií]da).*?(\d{2}\/\d{2}\/\d{4})/i;
+        const regexDataFim = /(?:Fim|T[eé]rmino|Data de fim|Fim das f[eé]rias|Retorno).*?(\d{2}\/\d{2}\/\d{4})/i;
+
+        for (const msg of allMessagesFerias) {
+          let textoTotal = msg.content || "";
+          if (msg.embeds) {
+            msg.embeds.forEach((e) => {
+              textoTotal +=
+                ` ${e.title} ${e.description} ` +
+                (e.fields?.map((f) => `${f.name} ${f.value}`).join(" ") || "");
+            });
+          }
+
+          const matchId = textoTotal.match(/<@!?(\d+)>/);
+          if (matchId) {
+            const userId = matchId[1];
+            const matchInicio = textoTotal.match(regexDataInicio);
+            const matchFim = textoTotal.match(regexDataFim);
+
+            if (matchInicio || matchFim) {
+              let dataInicio = null;
+              let dataFim = null;
+
+              if (matchInicio) {
+                const [d, m, a] = matchInicio[1].split("/");
+                dataInicio = new Date(a, m - 1, d);
+                dataInicio.setHours(0, 0, 0, 0);
+              }
+
+              if (matchFim) {
+                const [d, m, a] = matchFim[1].split("/");
+                dataFim = new Date(a, m - 1, d);
+                dataFim.setHours(23, 59, 59, 999);
+              }
+
+              // Se encontrou data de início mas não de fim
+              if (dataInicio && !dataFim) {
+                // Se a data de início já passou, pode estar em férias
+                if (hoje >= dataInicio) {
+                  const diffDiasInicio = Math.floor((hoje - dataInicio) / (1000 * 60 * 60 * 24));
+                  if (diffDiasInicio <= 60) {
+                    mapaFerias[userId] = { dataInicio, dataFim: null };
+                  }
+                } else {
+                  // Se a data de início é no futuro mas está próxima (até 7 dias), considerar como em férias
+                  const diffDias = Math.floor((dataInicio - hoje) / (1000 * 60 * 60 * 24));
+                  if (diffDias <= 7 && diffDias >= 0) {
+                    mapaFerias[userId] = { dataInicio, dataFim: null };
+                  }
+                }
+              } else if (dataInicio && dataFim) {
+                // Verificar se hoje está no período de férias ou próximo
+                if (hoje >= dataInicio && hoje <= dataFim) {
+                  mapaFerias[userId] = { dataInicio, dataFim };
+                } else if (dataInicio > hoje) {
+                  // Se a data de início é no futuro mas está próxima (até 7 dias), considerar como em férias
+                  const diffDias = Math.floor((dataInicio - hoje) / (1000 * 60 * 60 * 24));
+                  if (diffDias <= 7 && diffDias >= 0) {
+                    mapaFerias[userId] = { dataInicio, dataFim };
+                  }
+                } else if (hoje <= dataFim) {
+                  // Se a data de fim ainda não chegou, pode estar em férias
+                  const diffDias = Math.floor((dataFim - hoje) / (1000 * 60 * 60 * 24));
+                  if (diffDias >= 0 && diffDias <= 60) {
+                    mapaFerias[userId] = { dataInicio, dataFim };
+                  }
+                }
+              } else if (dataFim && hoje <= dataFim) {
+                // Se só tem data de fim e ainda não chegou, pode estar em férias
+                const diffDias = Math.floor((dataFim - hoje) / (1000 * 60 * 60 * 24));
+                if (diffDias >= 0 && diffDias <= 60) {
+                  mapaFerias[userId] = { dataInicio: hoje, dataFim };
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Erro ao processar férias:", e);
+      }
+    }
+
     // 7. GERAÇÃO DO RELATÓRIO
     const agora = Date.now();
     const resultado = [];
@@ -195,6 +298,48 @@ module.exports = async (req, res) => {
 
       if (p.roles.some((r) => listaImunes.includes(r))) return;
       if (FERIAS_ROLE_ID && p.roles.includes(FERIAS_ROLE_ID)) return;
+      
+      // Verificar se está no período de férias mesmo sem tag
+      if (mapaFerias[uid]) {
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        const feriasInfo = mapaFerias[uid];
+        if (feriasInfo.dataFim) {
+          // Tem data de fim, verificar se está no período ou próximo
+          if (hoje >= feriasInfo.dataInicio && hoje <= feriasInfo.dataFim) {
+            return; // Está em férias, não incluir na lista
+          }
+          // Se a data de início é no futuro mas está próxima (até 7 dias), considerar como em férias
+          if (feriasInfo.dataInicio > hoje) {
+            const diffDias = Math.floor((feriasInfo.dataInicio - hoje) / (1000 * 60 * 60 * 24));
+            if (diffDias <= 7 && diffDias >= 0) {
+              return; // Próximo do início das férias, não incluir na lista
+            }
+          }
+          // Se a data de fim ainda não chegou, pode estar em férias
+          if (hoje <= feriasInfo.dataFim) {
+            const diffDias = Math.floor((feriasInfo.dataFim - hoje) / (1000 * 60 * 60 * 24));
+            if (diffDias >= 0 && diffDias <= 60) {
+              return; // Ainda dentro do período de férias, não incluir na lista
+            }
+          }
+        } else if (feriasInfo.dataInicio) {
+          // Só tem data de início
+          if (hoje >= feriasInfo.dataInicio) {
+            // Data de início já passou, considerar como em férias
+            const diffDias = Math.floor((hoje - feriasInfo.dataInicio) / (1000 * 60 * 60 * 24));
+            if (diffDias >= 0 && diffDias <= 60) {
+              return; // Provavelmente está em férias, não incluir na lista
+            }
+          } else {
+            // Data de início é no futuro mas está próxima (até 7 dias)
+            const diffDias = Math.floor((feriasInfo.dataInicio - hoje) / (1000 * 60 * 60 * 24));
+            if (diffDias <= 7 && diffDias >= 0) {
+              return; // Próximo do início das férias, não incluir na lista
+            }
+          }
+        }
+      }
 
       // --- CÁLCULO DE DATAS E FORMATOS ---
       let baseData = mapaUltimaAtividade[uid];

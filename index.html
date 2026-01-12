@@ -160,6 +160,9 @@
             <button onclick="carregarInatividade()" id="btn-sincronizar" class="btn-gold">
               <i class="fa-solid fa-rotate"></i> SINCRONIZAR DADOS
             </button>
+            <button onclick="exonerarSelecionados()" id="btn-exonerar-selecionados" class="btn-gold" style="background: #8b0000; border-color: #ff0000; display: none;">
+              <i class="fa-solid fa-user-check"></i> EXONERAR SELECIONADOS
+            </button>
             <button onclick="exonerarTodosInativos()" id="btn-exonerar-todos" class="btn-gold" style="background: #8b0000; border-color: #ff0000; display: none;">
               <i class="fa-solid fa-user-slash"></i> EXONERAR TODOS
             </button>
@@ -230,6 +233,7 @@
             <table class="audit-table">
               <thead>
                 <tr>
+                  <th style="width: 30px;"></th>
                   <th>Oficial</th>
                   <th>ID Discord</th>
                   <th>Última Mensagem</th>

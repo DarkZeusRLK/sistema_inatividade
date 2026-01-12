@@ -258,6 +258,8 @@ function resetarTelas() {
     .forEach((el) => (el.style.display = "none"));
   const btnMassa = document.getElementById("btn-exonerar-todos");
   if (btnMassa) btnMassa.style.display = "none";
+  const btnSelecionados = document.getElementById("btn-exonerar-selecionados");
+  if (btnSelecionados) btnSelecionados.style.display = "none";
 
   document
     .querySelectorAll(".nav-item")
@@ -338,21 +340,27 @@ window.carregarInatividade = async function () {
           const tr = document.createElement("tr");
           tr.innerHTML = `
             <td>
-              <div class="user-cell">
-                <img src="${
-                  m.avatar || "https://cdn.discordapp.com/embed/avatars/0.png"
-                }" class="avatar-img">
-                <div>
-                   <strong>${m.name}</strong> 
-                   <br><small style="color: #bbb;">${cargoExibicao}</small>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="checkbox" class="checkbox-exonerar" data-user-id="${
+                  m.id
+                }" style="width: 18px; height: 18px; cursor: pointer;">
+                <div class="user-cell">
+                  <img src="${
+                    m.avatar || "https://cdn.discordapp.com/embed/avatars/0.png"
+                  }" class="avatar-img">
+                  <div>
+                     <strong>${m.name}</strong> 
+                     <br><small style="color: #bbb;">${cargoExibicao}</small>
+                  </div>
                 </div>
               </div>
             </td>
             <td><code>${m.id}</code></td> 
             <td>${
-              m.joined_at
+              m.dataUltimaMsg ||
+              (m.joined_at
                 ? new Date(m.joined_at).toLocaleDateString("pt-BR")
-                : "---"
+                : "---")
             }</td>
             <td><strong style="color: #ff4d4d">${m.dias || 0} Dias</strong></td>
             <td align="center">
@@ -371,6 +379,13 @@ window.carregarInatividade = async function () {
         const btnMassa = document.getElementById("btn-exonerar-todos");
         if (btnMassa) {
           btnMassa.style.display =
+            dadosInatividadeGlobal.length > 0 ? "inline-flex" : "none";
+        }
+        const btnSelecionados = document.getElementById(
+          "btn-exonerar-selecionados"
+        );
+        if (btnSelecionados) {
+          btnSelecionados.style.display =
             dadosInatividadeGlobal.length > 0 ? "inline-flex" : "none";
         }
       }
@@ -417,7 +432,42 @@ window.prepararExoneracao = function (discordId, rpName, cargo, passaporte) {
         </p>
     `;
 
-  exibirModalConfirmacao("CONFIRMAR EXONERAÇÃO", htmlMsg, () => {
+  exibirModalConfirmacao("CONFIRMAR EXONERAÇÃO", htmlMsg, async () => {
+    // Verificar se está em férias antes de exonerar
+    const sessao = obterSessao();
+    try {
+      const resFerias = await fetch(
+        `${API_BASE}/api/verificar-ferias.js?org=${sessao.org}`
+      );
+      if (resFerias.ok) {
+        const dataFerias = await resFerias.json();
+        const idsEmFerias = new Set(
+          (dataFerias.oficiais || []).map((o) => o.id)
+        );
+
+        if (idsEmFerias.has(discordId)) {
+          return mostrarAviso(
+            "Não é possível exonerar este oficial pois está em férias.",
+            "error"
+          );
+        }
+
+        // Verificar se está no período de férias mesmo sem tag
+        const estaEmFerias = await verificarPeriodoFerias(
+          discordId,
+          sessao.org
+        );
+        if (estaEmFerias) {
+          return mostrarAviso(
+            "Não é possível exonerar este oficial pois está no período de férias.",
+            "error"
+          );
+        }
+      }
+    } catch (e) {
+      console.error("Erro ao verificar férias:", e);
+    }
+
     executarExoneracaoBot(discordId, nomeLimpo, passaporte, cargo, motivoFixo);
   });
 };
@@ -458,9 +508,176 @@ async function executarExoneracaoBot(
     mostrarAviso("Erro de conexão.", "error");
   }
 }
+window.exonerarSelecionados = async function () {
+  if (!dadosInatividadeGlobal || dadosInatividadeGlobal.length === 0) {
+    return mostrarAviso("Nenhum oficial para exonerar.", "error");
+  }
+
+  const checkboxes = document.querySelectorAll(".checkbox-exonerar:checked");
+  if (checkboxes.length === 0) {
+    return mostrarAviso(
+      "Selecione pelo menos um oficial para exonerar.",
+      "error"
+    );
+  }
+
+  const idsSelecionados = Array.from(checkboxes).map((cb) => cb.dataset.userId);
+  const inativosSelecionados = dadosInatividadeGlobal.filter((m) =>
+    idsSelecionados.includes(m.id)
+  );
+
+  // Verificar férias antes de exonerar
+  const sessao = obterSessao();
+  let usuariosComFerias = [];
+
+  try {
+    const resFerias = await fetch(
+      `${API_BASE}/api/verificar-ferias.js?org=${sessao.org}`
+    );
+    if (resFerias.ok) {
+      const dataFerias = await resFerias.json();
+      const idsEmFerias = new Set((dataFerias.oficiais || []).map((o) => o.id));
+
+      // Verificar também se estão no período de férias (mesmo sem tag)
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+
+      // Buscar informações detalhadas de férias para verificar período
+      for (const usuario of inativosSelecionados) {
+        if (idsEmFerias.has(usuario.id)) {
+          usuariosComFerias.push(usuario.name);
+        } else {
+          // Verificar se está no período de férias mesmo sem tag
+          const estaEmFerias = await verificarPeriodoFerias(
+            usuario.id,
+            sessao.org
+          );
+          if (estaEmFerias) {
+            usuariosComFerias.push(usuario.name);
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Erro ao verificar férias:", e);
+  }
+
+  if (usuariosComFerias.length > 0) {
+    return mostrarAviso(
+      `Não é possível exonerar os seguintes oficiais pois estão em férias: ${usuariosComFerias.join(
+        ", "
+      )}`,
+      "error"
+    );
+  }
+
+  const inativosParaProcessar = inativosSelecionados.map((m) => ({
+    discordUser: m.id,
+    nomeCidade: m.name.replace(/[\d|]/g, "").trim(),
+    idPassaporte: m.passaporte || "---",
+    cargo: m.cargo || "Oficial",
+    action: "kick",
+  }));
+
+  const msgConfirm = `Você está prestes a exonerar <b>${inativosParaProcessar.length} oficial(is) selecionado(s)</b> por inatividade.<br><br>Deseja continuar?`;
+
+  exibirModalConfirmacao(
+    "CONFIRMAR EXONERAÇÃO SELECIONADA",
+    msgConfirm,
+    async () => {
+      const btnSelecionados = document.getElementById(
+        "btn-exonerar-selecionados"
+      );
+      if (btnSelecionados) btnSelecionados.disabled = true;
+      mostrarAviso("Iniciando processamento dos selecionados...", "info");
+
+      try {
+        const res = await fetch(`${API_BASE}/api/exonerar.js`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            users: inativosParaProcessar,
+            action: "kick",
+          }),
+        });
+
+        if (res.ok) {
+          mostrarAviso(
+            `Sucesso! ${inativosParaProcessar.length} oficial(is) processado(s).`,
+            "success"
+          );
+          window.carregarInatividade(); // Recarrega a lista
+        } else {
+          mostrarAviso("Erro ao processar lista selecionada.", "error");
+        }
+      } catch (e) {
+        mostrarAviso("Erro de conexão.", "error");
+      } finally {
+        if (btnSelecionados) btnSelecionados.disabled = false;
+      }
+    }
+  );
+};
+
+async function verificarPeriodoFerias(userId, org) {
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/verificar-ferias-periodo.js?userId=${userId}&org=${org}`
+    );
+    if (res.ok) {
+      const data = await res.json();
+      return data.estaEmFerias || false;
+    }
+  } catch (e) {
+    console.error("Erro ao verificar período de férias:", e);
+  }
+  return false;
+}
+
 window.exonerarTodosInativos = async function () {
   if (!dadosInatividadeGlobal || dadosInatividadeGlobal.length === 0) {
     return mostrarAviso("Nenhum oficial para exonerar.", "error");
+  }
+
+  // Verificar férias antes de exonerar
+  const sessao = obterSessao();
+  let usuariosComFerias = [];
+
+  try {
+    const resFerias = await fetch(
+      `${API_BASE}/api/verificar-ferias.js?org=${sessao.org}`
+    );
+    if (resFerias.ok) {
+      const dataFerias = await resFerias.json();
+      const idsEmFerias = new Set((dataFerias.oficiais || []).map((o) => o.id));
+
+      // Verificar também se estão no período de férias (mesmo sem tag)
+      for (const usuario of dadosInatividadeGlobal) {
+        if (idsEmFerias.has(usuario.id)) {
+          usuariosComFerias.push(usuario.name);
+        } else {
+          // Verificar se está no período de férias mesmo sem tag
+          const estaEmFerias = await verificarPeriodoFerias(
+            usuario.id,
+            sessao.org
+          );
+          if (estaEmFerias) {
+            usuariosComFerias.push(usuario.name);
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Erro ao verificar férias:", e);
+  }
+
+  if (usuariosComFerias.length > 0) {
+    return mostrarAviso(
+      `Não é possível exonerar os seguintes oficiais pois estão em férias: ${usuariosComFerias.join(
+        ", "
+      )}`,
+      "error"
+    );
   }
 
   const inativosParaProcessar = dadosInatividadeGlobal.map((m) => ({

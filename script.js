@@ -324,58 +324,72 @@ window.carregarInatividade = async function () {
 
     if (!Array.isArray(dados) || dados.length === 0) {
       corpo.innerHTML =
-        '<tr><td colspan="6" align="center">✅ Nenhum membro inativo encontrado.</td></tr>';
+        '<tr><td colspan="5" align="center">✅ Nenhum membro inativo encontrado.</td></tr>';
     } else {
       dadosInatividadeGlobal = dados;
       corpo.innerHTML = "";
 
       if (dadosInatividadeGlobal.length === 0) {
         corpo.innerHTML =
-          '<tr><td colspan="6" align="center">Todos os oficiais estão ativos! ✅</td></tr>';
+          '<tr><td colspan="5" align="center">Todos os oficiais estão ativos! ✅</td></tr>';
       } else {
         dadosInatividadeGlobal.forEach((m) => {
           let passaporte = m.passaporte;
           const cargoExibicao = m.cargo || "Oficial";
 
           const tr = document.createElement("tr");
+          tr.className = "row-selectable";
+          tr.dataset.userId = m.id;
+          tr.style.cursor = "pointer";
           tr.innerHTML = `
             <td>
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <input type="checkbox" class="checkbox-exonerar" data-user-id="${
-                  m.id
-                }" style="width: 18px; height: 18px; cursor: pointer;">
-                <div class="user-cell">
-                  <img src="${
-                    m.avatar || "https://cdn.discordapp.com/embed/avatars/0.png"
-                  }" class="avatar-img">
-                  <div>
-                     <strong>${m.name}</strong> 
-                     <br><small style="color: #bbb;">${cargoExibicao}</small>
-                  </div>
+              <div class="user-cell">
+                <img src="${
+                  m.avatar || "https://cdn.discordapp.com/embed/avatars/0.png"
+                }" class="avatar-img">
+                <div>
+                   <strong>${m.name}</strong> 
+                   <br><small style="color: #bbb;">${cargoExibicao}</small>
                 </div>
               </div>
             </td>
-            <td><code>${m.id}</code></td> 
-            <td>${
+            <td><code style="font-size: 0.85rem;">${m.id}</code></td> 
+            <td style="color: #aaa; font-size: 0.9rem;">${
               m.dataUltimaMsg ||
               (m.joined_at
                 ? new Date(m.joined_at).toLocaleDateString("pt-BR")
-                : "---")
+                : "Sem registro")
             }</td>
-            <td><strong style="color: #ff4d4d">${m.dias || 0} Dias</strong></td>
+            <td><strong style="color: #ff4d4d; font-size: 0.95rem;">${
+              m.dias || 0
+            } Dias</strong></td>
             <td align="center">
-               <div style="display: flex; gap: 8px; justify-content: center;">
+               <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
                  <span class="badge-danger">⚠️ INATIVO</span>
-                 <button onclick="window.prepararExoneracao('${m.id}', '${
+                 <button onclick="event.stopPropagation(); window.prepararExoneracao('${
+                   m.id
+                 }', '${
             m.rpName
           }', '${cargoExibicao}', '${passaporte}')" class="btn-exonerar" title="Exonerar e Remover">
                     <i class="fa-solid fa-user-slash"></i>
                  </button>
                </div>
             </td>`;
+
+          // Adicionar evento de clique para selecionar/desselecionar
+          tr.addEventListener("click", function (e) {
+            // Não selecionar se clicou no botão
+            if (e.target.closest(".btn-exonerar")) return;
+
+            tr.classList.toggle("row-selected");
+            atualizarContadorSelecionados();
+          });
+
           corpo.appendChild(tr);
         });
-        mostrarAviso(`${dadosInatividadeGlobal.length} inativos carregados.`);
+        mostrarAviso(
+          `${dadosInatividadeGlobal.length} inativos carregados. Clique nas linhas para selecionar.`
+        );
         const btnMassa = document.getElementById("btn-exonerar-todos");
         if (btnMassa) {
           btnMassa.style.display =
@@ -388,13 +402,14 @@ window.carregarInatividade = async function () {
           btnSelecionados.style.display =
             dadosInatividadeGlobal.length > 0 ? "inline-flex" : "none";
         }
+        atualizarContadorSelecionados();
       }
     }
   } catch (err) {
     clearInterval(fakeProgress);
     console.error(err);
     corpo.innerHTML =
-      '<tr><td colspan="6" align="center" style="color:#ff4d4d">❌ Erro ao conectar com o Servidor.</td></tr>';
+      '<tr><td colspan="5" align="center" style="color:#ff4d4d">❌ Erro ao conectar com o Servidor.</td></tr>';
     mostrarAviso("Erro de conexão.", "error");
   } finally {
     if (btn) btn.disabled = false;
@@ -508,20 +523,35 @@ async function executarExoneracaoBot(
     mostrarAviso("Erro de conexão.", "error");
   }
 }
+function atualizarContadorSelecionados() {
+  const selecionados = document.querySelectorAll(".row-selected");
+  const btnSelecionados = document.getElementById("btn-exonerar-selecionados");
+  if (btnSelecionados) {
+    if (selecionados.length > 0) {
+      btnSelecionados.innerHTML = `<i class="fa-solid fa-user-check"></i> EXONERAR SELECIONADOS (${selecionados.length})`;
+      btnSelecionados.style.display = "inline-flex";
+    } else {
+      btnSelecionados.innerHTML = `<i class="fa-solid fa-user-check"></i> EXONERAR SELECIONADOS`;
+    }
+  }
+}
+
 window.exonerarSelecionados = async function () {
   if (!dadosInatividadeGlobal || dadosInatividadeGlobal.length === 0) {
     return mostrarAviso("Nenhum oficial para exonerar.", "error");
   }
 
-  const checkboxes = document.querySelectorAll(".checkbox-exonerar:checked");
-  if (checkboxes.length === 0) {
+  const linhasSelecionadas = document.querySelectorAll(".row-selected");
+  if (linhasSelecionadas.length === 0) {
     return mostrarAviso(
-      "Selecione pelo menos um oficial para exonerar.",
+      "Selecione pelo menos um oficial clicando na linha da tabela.",
       "error"
     );
   }
 
-  const idsSelecionados = Array.from(checkboxes).map((cb) => cb.dataset.userId);
+  const idsSelecionados = Array.from(linhasSelecionadas).map(
+    (tr) => tr.dataset.userId
+  );
   const inativosSelecionados = dadosInatividadeGlobal.filter((m) =>
     idsSelecionados.includes(m.id)
   );
@@ -592,32 +622,92 @@ window.exonerarSelecionados = async function () {
       mostrarAviso("Iniciando processamento dos selecionados...", "info");
 
       try {
-        const res = await fetch(`${API_BASE}/api/exonerar.js`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            users: inativosParaProcessar,
-            action: "kick",
-          }),
-        });
+        const resultado = await processarExoneracoesEmLotes(
+          inativosParaProcessar,
+          sessao
+        );
 
-        if (res.ok) {
+        if (resultado.sucessos > 0) {
           mostrarAviso(
-            `Sucesso! ${inativosParaProcessar.length} oficial(is) processado(s).`,
-            "success"
+            `Processamento concluído! ${resultado.sucessos} sucesso(s), ${resultado.erros} erro(s).`,
+            resultado.erros > 0 ? "error" : "success"
           );
           window.carregarInatividade(); // Recarrega a lista
         } else {
-          mostrarAviso("Erro ao processar lista selecionada.", "error");
+          mostrarAviso("Nenhum oficial foi processado com sucesso.", "error");
         }
       } catch (e) {
-        mostrarAviso("Erro de conexão.", "error");
+        mostrarAviso("Erro ao processar exonerações.", "error");
+        console.error(e);
       } finally {
         if (btnSelecionados) btnSelecionados.disabled = false;
       }
     }
   );
 };
+
+// Função para processar exonerações em lotes de 10
+async function processarExoneracoesEmLotes(usuarios, sessao) {
+  const BATCH_SIZE = 10;
+  const total = usuarios.length;
+  let processados = 0;
+  let sucessos = 0;
+  let erros = 0;
+
+  mostrarAviso(
+    `Processando ${total} usuários em lotes de ${BATCH_SIZE}...`,
+    "info"
+  );
+
+  for (let i = 0; i < usuarios.length; i += BATCH_SIZE) {
+    const lote = usuarios.slice(i, i + BATCH_SIZE);
+    processados += lote.length;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/exonerar.js`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          users: lote.map((u) => ({
+            discordUser: u.discordUser,
+            nomeCidade: u.nomeCidade,
+            idPassaporte: u.idPassaporte,
+            cargo: u.cargo,
+            action: "kick",
+          })),
+          action: "kick",
+        }),
+      });
+
+      if (res.ok) {
+        sucessos += lote.length;
+        mostrarAviso(
+          `Processando... ${processados}/${total} (${sucessos} sucessos)`,
+          "info"
+        );
+      } else {
+        erros += lote.length;
+        const erro = await res
+          .json()
+          .catch(() => ({ error: "Erro desconhecido" }));
+        console.error(`Erro no lote ${Math.floor(i / BATCH_SIZE) + 1}:`, erro);
+      }
+
+      // Pequeno delay entre lotes para não sobrecarregar a API
+      if (i + BATCH_SIZE < usuarios.length) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+    } catch (e) {
+      erros += lote.length;
+      console.error(
+        `Erro de conexão no lote ${Math.floor(i / BATCH_SIZE) + 1}:`,
+        e
+      );
+    }
+  }
+
+  return { sucessos, erros, total };
+}
 
 async function verificarPeriodoFerias(userId, org) {
   try {

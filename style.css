@@ -253,6 +253,23 @@ body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+.row-selectable {
+  transition: background-color 0.2s ease;
+}
+
+.row-selectable:hover {
+  background-color: rgba(212, 175, 55, 0.1);
+}
+
+.row-selected {
+  background-color: rgba(212, 175, 55, 0.25) !important;
+  border-left: 4px solid var(--gold);
+}
+
+.row-selected:hover {
+  background-color: rgba(212, 175, 55, 0.3) !important;
+}
+
 .avatar-img {
   width: 35px;
   height: 35px;

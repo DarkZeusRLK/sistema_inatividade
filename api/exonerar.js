@@ -15,7 +15,7 @@ module.exports = async (req, res) => {
   if (req.method === "OPTIONS") return res.status(200).end();
 
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Método não permitido (Use POST)" });
+    return res.status(405).json({ error: "Método HTTP não permitido. Utilize o método POST para esta operação." });
   }
 
   const {
@@ -146,9 +146,9 @@ module.exports = async (req, res) => {
 
     return res
       .status(400)
-      .json({ error: "Dados insuficientes para processar." });
+      .json({ error: "Dados insuficientes para processar a solicitação. Verifique os parâmetros enviados." });
   } catch (error) {
     console.error("Erro no processo de exoneração:", error);
-    return res.status(500).json({ error: "Erro interno no servidor." });
+    return res.status(500).json({ error: "Erro interno no servidor. Por favor, tente novamente mais tarde." });
   }
 };

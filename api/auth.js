@@ -26,7 +26,7 @@ app.post("*", async (req, res) => {
   const { token } = req.body;
 
   if (!token) {
-    return res.status(400).json({ error: "Token não fornecido." });
+    return res.status(400).json({ error: "Token de autenticação não fornecido na solicitação." });
   }
 
   try {
@@ -41,7 +41,7 @@ app.post("*", async (req, res) => {
       console.error("Erro Discord API:", errData);
       return res
         .status(401)
-        .json({ error: "Membro não encontrado ou Token inválido." });
+        .json({ error: "Falha na autenticação: Membro não encontrado no servidor ou token de acesso inválido." });
     }
 
     const memberData = await memberRes.json();
@@ -81,7 +81,7 @@ app.post("*", async (req, res) => {
       // Se não for comando e não tiver nenhum cargo de força, nega o acesso
       if (!userOrg) {
         return res.status(403).json({
-          error: "Você não tem um cargo autorizado para acessar o painel.",
+          error: "Acesso negado: Você não possui um cargo autorizado para acessar este painel administrativo.",
         });
       }
     }
@@ -100,7 +100,7 @@ app.post("*", async (req, res) => {
     console.error("Erro Crítico Auth:", err);
     res
       .status(500)
-      .json({ error: "Erro interno no servidor de autenticação." });
+      .json({ error: "Erro interno no servidor de autenticação. Por favor, tente novamente mais tarde." });
   }
 });
 

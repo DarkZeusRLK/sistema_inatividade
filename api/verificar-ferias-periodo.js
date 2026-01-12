@@ -18,7 +18,7 @@ module.exports = async (req, res) => {
   const { userId, org } = req.query;
 
   if (!userId || !org) {
-    return res.status(400).json({ error: "userId e org são obrigatórios" });
+    return res.status(400).json({ error: "Parâmetros obrigatórios não fornecidos: userId e org são necessários para esta operação." });
   }
 
   const headers = {
@@ -136,6 +136,6 @@ module.exports = async (req, res) => {
     res.status(200).json({ estaEmFerias: false });
   } catch (error) {
     console.error("Erro ao verificar período de férias:", error);
-    res.status(500).json({ error: "Erro interno no servidor" });
+    res.status(500).json({ error: "Erro interno no servidor durante a verificação do período de férias. Por favor, tente novamente." });
   }
 };

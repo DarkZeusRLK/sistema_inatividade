@@ -33,7 +33,7 @@ module.exports = async (req, res) => {
   } = process.env;
 
   if (!Discord_Bot_Token) {
-    return res.status(500).json({ error: "Token do Bot não configurado." });
+    return res.status(500).json({ error: "Configuração do sistema incompleta: Token do Bot não configurado no servidor." });
   }
 
   const headers = {
@@ -455,6 +455,6 @@ module.exports = async (req, res) => {
     res.status(200).json(final);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Erro interno" });
+    res.status(500).json({ error: "Erro interno no servidor durante o processamento da auditoria. Por favor, tente novamente." });
   }
 };

@@ -299,7 +299,7 @@ window.carregarInatividade = async function () {
   if (!corpo) return;
 
   corpo.innerHTML =
-    '<tr><td colspan="6" align="center">🤖 Conectando ao Sistema (Vercel)...</td></tr>';
+    '<tr><td colspan="5" align="center">🔄 Conectando ao sistema de auditoria...</td></tr>';
   if (progContainer) progContainer.style.display = "block";
   if (btn) btn.disabled = true;
 
@@ -324,14 +324,14 @@ window.carregarInatividade = async function () {
 
     if (!Array.isArray(dados) || dados.length === 0) {
       corpo.innerHTML =
-        '<tr><td colspan="5" align="center">✅ Nenhum membro inativo encontrado.</td></tr>';
+        '<tr><td colspan="5" align="center">✅ Auditoria concluída: Nenhum oficial identificado como inativo no período analisado.</td></tr>';
     } else {
       dadosInatividadeGlobal = dados;
       corpo.innerHTML = "";
 
       if (dadosInatividadeGlobal.length === 0) {
         corpo.innerHTML =
-          '<tr><td colspan="5" align="center">Todos os oficiais estão ativos! ✅</td></tr>';
+          '<tr><td colspan="5" align="center">✅ Status: Todos os oficiais encontram-se em situação de atividade regular no sistema.</td></tr>';
       } else {
         dadosInatividadeGlobal.forEach((m) => {
           let passaporte = m.passaporte;
@@ -388,7 +388,8 @@ window.carregarInatividade = async function () {
           corpo.appendChild(tr);
         });
         mostrarAviso(
-          `${dadosInatividadeGlobal.length} inativos carregados. Clique nas linhas para selecionar.`
+          `Auditoria concluída: ${dadosInatividadeGlobal.length} oficial(is) identificado(s) como inativo(s). Selecione os registros desejados clicando nas respectivas linhas da tabela.`,
+          "info"
         );
         const btnMassa = document.getElementById("btn-exonerar-todos");
         if (btnMassa) {
@@ -409,8 +410,11 @@ window.carregarInatividade = async function () {
     clearInterval(fakeProgress);
     console.error(err);
     corpo.innerHTML =
-      '<tr><td colspan="5" align="center" style="color:#ff4d4d">❌ Erro ao conectar com o Servidor.</td></tr>';
-    mostrarAviso("Erro de conexão.", "error");
+      '<tr><td colspan="5" align="center" style="color:#ff4d4d">❌ Falha na comunicação com o servidor. Por favor, tente novamente.</td></tr>';
+    mostrarAviso(
+      "Falha na comunicação com o servidor. Verifique sua conexão e tente novamente.",
+      "error"
+    );
   } finally {
     if (btn) btn.disabled = false;
     setTimeout(() => {
@@ -422,7 +426,8 @@ window.carregarInatividade = async function () {
 // --- PREPARAR E EXECUTAR EXONERAÇÃO ---
 window.prepararExoneracao = function (discordId, rpName, cargo, passaporte) {
   const nomeLimpo = rpName.replace(/[\d|]/g, "").trim();
-  const motivoFixo = "Inatividade superior a 7 dias (Audit System)";
+  const motivoFixo =
+    "Inatividade superior a 7 (sete) dias consecutivos - Sistema de Auditoria Automática";
 
   const htmlMsg = `
         <ul style="list-style: none; padding: 0; margin: 0; text-align: left;">
@@ -443,48 +448,58 @@ window.prepararExoneracao = function (discordId, rpName, cargo, passaporte) {
             </li>
         </ul>
         <p style="margin-top: 15px; font-size: 0.9em; color: #ff9999;">
-           🚨 <strong>ATENÇÃO:</strong> Esta ação enviará o relatório e <strong>removerá (kick)</strong> o usuário do Discord automaticamente.
+           🚨 <strong>ATENÇÃO:</strong> Esta ação irá registrar o processo de exoneração no sistema e procederá com a remoção automática do usuário da plataforma Discord. Esta operação é irreversível.
         </p>
     `;
 
-  exibirModalConfirmacao("CONFIRMAR EXONERAÇÃO", htmlMsg, async () => {
-    // Verificar se está em férias antes de exonerar
-    const sessao = obterSessao();
-    try {
-      const resFerias = await fetch(
-        `${API_BASE}/api/verificar-ferias.js?org=${sessao.org}`
-      );
-      if (resFerias.ok) {
-        const dataFerias = await resFerias.json();
-        const idsEmFerias = new Set(
-          (dataFerias.oficiais || []).map((o) => o.id)
+  exibirModalConfirmacao(
+    "CONFIRMAÇÃO DE EXONERAÇÃO ADMINISTRATIVA",
+    htmlMsg,
+    async () => {
+      // Verificar se está em férias antes de exonerar
+      const sessao = obterSessao();
+      try {
+        const resFerias = await fetch(
+          `${API_BASE}/api/verificar-ferias.js?org=${sessao.org}`
         );
-
-        if (idsEmFerias.has(discordId)) {
-          return mostrarAviso(
-            "Não é possível exonerar este oficial pois está em férias.",
-            "error"
+        if (resFerias.ok) {
+          const dataFerias = await resFerias.json();
+          const idsEmFerias = new Set(
+            (dataFerias.oficiais || []).map((o) => o.id)
           );
-        }
 
-        // Verificar se está no período de férias mesmo sem tag
-        const estaEmFerias = await verificarPeriodoFerias(
-          discordId,
-          sessao.org
-        );
-        if (estaEmFerias) {
-          return mostrarAviso(
-            "Não é possível exonerar este oficial pois está no período de férias.",
-            "error"
+          if (idsEmFerias.has(discordId)) {
+            return mostrarAviso(
+              "Operação não autorizada: O oficial encontra-se em período de férias registrado no sistema. A exoneração não pode ser processada neste momento.",
+              "error"
+            );
+          }
+
+          // Verificar se está no período de férias mesmo sem tag
+          const estaEmFerias = await verificarPeriodoFerias(
+            discordId,
+            sessao.org
           );
+          if (estaEmFerias) {
+            return mostrarAviso(
+              "Operação não autorizada: O oficial encontra-se em período de férias. A exoneração não pode ser processada durante este período.",
+              "error"
+            );
+          }
         }
+      } catch (e) {
+        console.error("Erro ao verificar férias:", e);
       }
-    } catch (e) {
-      console.error("Erro ao verificar férias:", e);
-    }
 
-    executarExoneracaoBot(discordId, nomeLimpo, passaporte, cargo, motivoFixo);
-  });
+      executarExoneracaoBot(
+        discordId,
+        nomeLimpo,
+        passaporte,
+        cargo,
+        motivoFixo
+      );
+    }
+  );
 };
 
 async function executarExoneracaoBot(
@@ -495,7 +510,7 @@ async function executarExoneracaoBot(
   motivo
 ) {
   const sessao = obterSessao();
-  mostrarAviso("Enviando comando...", "info");
+  mostrarAviso("Processando solicitação de exoneração...", "info");
 
   try {
     const res = await fetch(`${API_BASE}/api/exonerar.js`, {
@@ -513,14 +528,25 @@ async function executarExoneracaoBot(
     });
 
     if (res.ok) {
-      mostrarAviso("Sucesso! Oficial exonerado com sucesso.", "success");
+      mostrarAviso(
+        "Exoneração processada com sucesso. O oficial foi removido do sistema.",
+        "success"
+      );
       window.carregarInatividade();
     } else {
       const erro = await res.json();
-      mostrarAviso(`Erro: ${erro.error || "Falha desconhecida"}`, "error");
+      mostrarAviso(
+        `Falha no processamento: ${
+          erro.error || "Erro não identificado. Por favor, tente novamente."
+        }`,
+        "error"
+      );
     }
   } catch (e) {
-    mostrarAviso("Erro de conexão.", "error");
+    mostrarAviso(
+      "Falha na comunicação com o servidor. Verifique sua conexão e tente novamente.",
+      "error"
+    );
   }
 }
 function atualizarContadorSelecionados() {
@@ -538,13 +564,16 @@ function atualizarContadorSelecionados() {
 
 window.exonerarSelecionados = async function () {
   if (!dadosInatividadeGlobal || dadosInatividadeGlobal.length === 0) {
-    return mostrarAviso("Nenhum oficial para exonerar.", "error");
+    return mostrarAviso(
+      "Nenhum registro de oficial inativo disponível para processamento de exoneração.",
+      "error"
+    );
   }
 
   const linhasSelecionadas = document.querySelectorAll(".row-selected");
   if (linhasSelecionadas.length === 0) {
     return mostrarAviso(
-      "Selecione pelo menos um oficial clicando na linha da tabela.",
+      "Seleção obrigatória: Por favor, selecione ao menos um oficial clicando na respectiva linha da tabela antes de prosseguir.",
       "error"
     );
   }
@@ -609,17 +638,20 @@ window.exonerarSelecionados = async function () {
     action: "kick",
   }));
 
-  const msgConfirm = `Você está prestes a exonerar <b>${inativosParaProcessar.length} oficial(is) selecionado(s)</b> por inatividade.<br><br>Deseja continuar?`;
+  const msgConfirm = `Você está prestes a processar a exoneração administrativa de <b>${inativosParaProcessar.length} oficial(is) selecionado(s)</b> por inatividade superior a 7 (sete) dias consecutivos.<br><br>Deseja prosseguir com esta operação?`;
 
   exibirModalConfirmacao(
-    "CONFIRMAR EXONERAÇÃO SELECIONADA",
+    "CONFIRMAÇÃO DE EXONERAÇÃO SELETIVA",
     msgConfirm,
     async () => {
       const btnSelecionados = document.getElementById(
         "btn-exonerar-selecionados"
       );
       if (btnSelecionados) btnSelecionados.disabled = true;
-      mostrarAviso("Iniciando processamento dos selecionados...", "info");
+      mostrarAviso(
+        "Iniciando processamento da exoneração dos oficiais selecionados...",
+        "info"
+      );
 
       try {
         const resultado = await processarExoneracoesEmLotes(
@@ -629,15 +661,27 @@ window.exonerarSelecionados = async function () {
 
         if (resultado.sucessos > 0) {
           mostrarAviso(
-            `Processamento concluído! ${resultado.sucessos} sucesso(s), ${resultado.erros} erro(s).`,
+            `Processamento finalizado: ${
+              resultado.sucessos
+            } oficial(is) exonerado(s) com sucesso. ${
+              resultado.erros > 0
+                ? `${resultado.erros} registro(s) apresentaram falha no processamento.`
+                : ""
+            }`,
             resultado.erros > 0 ? "error" : "success"
           );
           window.carregarInatividade(); // Recarrega a lista
         } else {
-          mostrarAviso("Nenhum oficial foi processado com sucesso.", "error");
+          mostrarAviso(
+            "Nenhum oficial foi processado com sucesso. Verifique os registros e tente novamente.",
+            "error"
+          );
         }
       } catch (e) {
-        mostrarAviso("Erro ao processar exonerações.", "error");
+        mostrarAviso(
+          "Falha no processamento das exonerações. Por favor, tente novamente.",
+          "error"
+        );
         console.error(e);
       } finally {
         if (btnSelecionados) btnSelecionados.disabled = false;
@@ -655,7 +699,7 @@ async function processarExoneracoesEmLotes(usuarios, sessao) {
   let erros = 0;
 
   mostrarAviso(
-    `Processando ${total} usuários em lotes de ${BATCH_SIZE}...`,
+    `Processando ${total} registro(s) em lotes de ${BATCH_SIZE} unidade(s) para otimização do sistema...`,
     "info"
   );
 
@@ -682,7 +726,7 @@ async function processarExoneracoesEmLotes(usuarios, sessao) {
       if (res.ok) {
         sucessos += lote.length;
         mostrarAviso(
-          `Processando... ${processados}/${total} (${sucessos} sucessos)`,
+          `Processamento em andamento: ${processados}/${total} registro(s) processado(s) - ${sucessos} sucesso(s) confirmado(s)`,
           "info"
         );
       } else {
@@ -726,7 +770,10 @@ async function verificarPeriodoFerias(userId, org) {
 
 window.exonerarTodosInativos = async function () {
   if (!dadosInatividadeGlobal || dadosInatividadeGlobal.length === 0) {
-    return mostrarAviso("Nenhum oficial para exonerar.", "error");
+    return mostrarAviso(
+      "Nenhum registro de oficial inativo disponível para processamento de exoneração em massa.",
+      "error"
+    );
   }
 
   // Verificar férias antes de exonerar
@@ -763,7 +810,7 @@ window.exonerarTodosInativos = async function () {
 
   if (usuariosComFerias.length > 0) {
     return mostrarAviso(
-      `Não é possível exonerar os seguintes oficiais pois estão em férias: ${usuariosComFerias.join(
+      `Operação não autorizada: Os seguintes oficiais encontram-se em período de férias e não podem ser exonerados: ${usuariosComFerias.join(
         ", "
       )}`,
       "error"
@@ -778,35 +825,51 @@ window.exonerarTodosInativos = async function () {
     action: "kick",
   }));
 
-  const msgConfirm = `Você está prestes a exonerar <b>${inativosParaProcessar.length} oficiais</b> por inatividade.<br><br>Deseja continuar?`;
+  const msgConfirm = `Você está prestes a processar a exoneração administrativa em massa de <b>${inativosParaProcessar.length} oficial(is)</b> por inatividade superior a 7 (sete) dias consecutivos.<br><br>Esta operação processará todos os registros listados. Deseja prosseguir?`;
 
-  exibirModalConfirmacao("CONFIRMAR LIMPEZA EM MASSA", msgConfirm, async () => {
-    const btnMassa = document.getElementById("btn-exonerar-todos");
-    if (btnMassa) btnMassa.disabled = true;
-    mostrarAviso("Iniciando processamento em massa...", "info");
+  exibirModalConfirmacao(
+    "CONFIRMAÇÃO DE EXONERAÇÃO EM MASSA",
+    msgConfirm,
+    async () => {
+      const btnMassa = document.getElementById("btn-exonerar-todos");
+      if (btnMassa) btnMassa.disabled = true;
+      mostrarAviso(
+        "Iniciando processamento em massa das exonerações...",
+        "info"
+      );
 
-    try {
-      const res = await fetch(`${API_BASE}/api/exonerar.js`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ users: inativosParaProcessar, action: "kick" }),
-      });
+      try {
+        const res = await fetch(`${API_BASE}/api/exonerar.js`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            users: inativosParaProcessar,
+            action: "kick",
+          }),
+        });
 
-      if (res.ok) {
+        if (res.ok) {
+          mostrarAviso(
+            `Processamento concluído com sucesso: ${inativosParaProcessar.length} oficial(is) exonerado(s) do sistema.`,
+            "success"
+          );
+          window.carregarInatividade(); // Recarrega a lista
+        } else {
+          mostrarAviso(
+            "Falha no processamento da lista em massa. Por favor, tente novamente.",
+            "error"
+          );
+        }
+      } catch (e) {
         mostrarAviso(
-          `Sucesso! ${inativosParaProcessar.length} oficiais processados.`,
-          "success"
+          "Falha na comunicação com o servidor. Verifique sua conexão e tente novamente.",
+          "error"
         );
-        window.carregarInatividade(); // Recarrega a lista
-      } else {
-        mostrarAviso("Erro ao processar lista em massa.", "error");
+      } finally {
+        if (btnMassa) btnMassa.disabled = false;
       }
-    } catch (e) {
-      mostrarAviso("Erro de conexão.", "error");
-    } finally {
-      if (btnMassa) btnMassa.disabled = false;
     }
-  });
+  );
 };
 // =========================================================
 // 5. OUTRAS TELAS
@@ -856,7 +919,10 @@ window.atualizarListaFerias = async function () {
 const abrirMetaGen = (idSecao, idBotoes, idNav, titulo, orgReq) => {
   const sessao = obterSessao();
   if (sessao.org !== orgReq)
-    return mostrarAviso(`Acesso exclusivo ${orgReq}`, "error");
+    return mostrarAviso(
+      `Acesso restrito: Esta funcionalidade é exclusiva para a organização ${orgReq}.`,
+      "error"
+    );
   resetarTelas();
   document.getElementById(idSecao).style.display = "block";
   document.getElementById(idSecao).style.visibility = "visible";
@@ -905,14 +971,21 @@ window.abrirEnsino = function () {
 window.executarAntecipacao = async function () {
   const select = document.getElementById("select-oficiais-ferias");
   const userId = select.value;
-  if (!userId) return mostrarAviso("Selecione um oficial primeiro.", "error");
+  if (!userId)
+    return mostrarAviso(
+      "Seleção obrigatória: Por favor, selecione um oficial da lista antes de prosseguir.",
+      "error"
+    );
 
   const confirmacao = confirm(
-    "Tem certeza que deseja remover as férias deste oficial e trazê-lo de volta?"
+    "Confirmação necessária: Deseja realmente remover o registro de férias deste oficial e proceder com o retorno imediato ao serviço ativo?"
   );
   if (!confirmacao) return;
 
-  mostrarAviso("Processando retorno...", "info");
+  mostrarAviso(
+    "Processando solicitação de retorno ao serviço ativo...",
+    "info"
+  );
   try {
     const res = await fetch(`${API_BASE}/api/verificar-ferias.js`, {
       method: "POST",
@@ -921,13 +994,22 @@ window.executarAntecipacao = async function () {
     });
 
     if (res.ok) {
-      mostrarAviso("✅ Oficial retornado com sucesso!");
+      mostrarAviso(
+        "Retorno processado com sucesso: O oficial foi reintegrado ao serviço ativo e a tag de férias foi removida.",
+        "success"
+      );
       setTimeout(() => window.atualizarListaFerias(), 1000);
     } else {
-      mostrarAviso("Erro ao processar.", "error");
+      mostrarAviso(
+        "Falha no processamento da solicitação. Por favor, tente novamente.",
+        "error"
+      );
     }
   } catch (e) {
     console.error(e);
-    mostrarAviso("Erro de conexão.", "error");
+    mostrarAviso(
+      "Falha na comunicação com o servidor. Verifique sua conexão e tente novamente.",
+      "error"
+    );
   }
 };

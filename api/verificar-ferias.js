@@ -43,7 +43,7 @@ module.exports = async (req, res) => {
         `https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userId}/roles/${FERIAS_ROLE_ID}`,
         { method: "DELETE", headers }
       );
-      return res.status(200).json({ message: "Sucesso" });
+      return res.status(200).json({ message: "Operação processada com sucesso." });
     }
 
     // 1. Busca todos os membros
@@ -54,7 +54,7 @@ module.exports = async (req, res) => {
     const allGuildMembers = await membersRes.json();
 
     if (!Array.isArray(allGuildMembers)) {
-      throw new Error("Não foi possível carregar a lista de membros.");
+      throw new Error("Falha ao recuperar a lista de membros do servidor Discord.");
     }
 
     const membersMap = new Map();
@@ -150,6 +150,6 @@ module.exports = async (req, res) => {
     });
   } catch (error) {
     console.error("Erro no verificar-ferias:", error);
-    res.status(500).json({ error: "Erro interno no servidor" });
+    res.status(500).json({ error: "Erro interno no servidor durante a verificação de férias. Por favor, tente novamente." });
   }
 };

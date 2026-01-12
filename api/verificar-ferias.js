@@ -114,17 +114,22 @@ module.exports = async (req, res) => {
         ) {
           const temTagFerias = membro.roles.includes(FERIAS_ROLE_ID);
 
-          if (hoje > dataFim) {
+          // Se a data de fim já passou, remover a tag automaticamente
+          if (hoje >= dataFim) {
             if (temTagFerias) {
-              await fetch(
-                `https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userId}/roles/${FERIAS_ROLE_ID}`,
-                { method: "DELETE", headers }
-              );
-              logsRemocao.push(
-                `${membro.nick || membro.user.username} (Vencido em: ${
-                  matchData[1]
-                })`
-              );
+              try {
+                await fetch(
+                  `https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userId}/roles/${FERIAS_ROLE_ID}`,
+                  { method: "DELETE", headers }
+                );
+                logsRemocao.push(
+                  `${membro.nick || membro.user.username} (Férias encerradas em: ${
+                    matchData[1]
+                  } - Tag removida automaticamente)`
+                );
+              } catch (e) {
+                console.error(`Erro ao remover tag de férias de ${userId}:`, e);
+              }
             }
           } else if (temTagFerias) {
             validosParaAntecipar.push({

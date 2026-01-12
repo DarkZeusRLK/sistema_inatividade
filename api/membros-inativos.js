@@ -183,13 +183,15 @@ module.exports = async (req, res) => {
       }
     });
 
-    // 6.5. MAPEAR FÉRIAS (Verificar período mesmo sem tag)
+    // 6.5. MAPEAR FÉRIAS (Armazenar data de fim para calcular inatividade após remoção da tag)
     const mapaFerias = {};
+    const DATA_BASE_AUDITORIA = new Date("2025-12-08T00:00:00").getTime();
+    
     if (FERIAS_CHANNEL_ID) {
       try {
         let allMessagesFerias = [];
         let lastIdFerias = null;
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 10; i++) {
           const url = `https://discord.com/api/v10/channels/${FERIAS_CHANNEL_ID}/messages?limit=100${
             lastIdFerias ? `&before=${lastIdFerias}` : ""
           }`;
@@ -206,6 +208,7 @@ module.exports = async (req, res) => {
         const regexDataInicio = /(?:In[ií]cio|Come[cç]o|Data de in[ií]cio|Solicita[cç][aã]o|Sa[ií]da).*?(\d{2}\/\d{2}\/\d{4})/i;
         const regexDataFim = /(?:Fim|T[eé]rmino|Data de fim|Fim das f[eé]rias|Retorno).*?(\d{2}\/\d{2}\/\d{4})/i;
 
+        // Processar mensagens mais recentes primeiro
         for (const msg of allMessagesFerias) {
           let textoTotal = msg.content || "";
           if (msg.embeds) {
@@ -219,6 +222,10 @@ module.exports = async (req, res) => {
           const matchId = textoTotal.match(/<@!?(\d+)>/);
           if (matchId) {
             const userId = matchId[1];
+            
+            // Se já processamos este usuário, pular (manter a mensagem mais recente)
+            if (mapaFerias[userId]) continue;
+            
             const matchInicio = textoTotal.match(regexDataInicio);
             const matchFim = textoTotal.match(regexDataFim);
 
@@ -238,44 +245,20 @@ module.exports = async (req, res) => {
                 dataFim.setHours(23, 59, 59, 999);
               }
 
-              // Se encontrou data de início mas não de fim
-              if (dataInicio && !dataFim) {
-                // Se a data de início já passou, pode estar em férias
-                if (hoje >= dataInicio) {
-                  const diffDiasInicio = Math.floor((hoje - dataInicio) / (1000 * 60 * 60 * 24));
-                  if (diffDiasInicio <= 60) {
-                    mapaFerias[userId] = { dataInicio, dataFim: null };
-                  }
-                } else {
-                  // Se a data de início é no futuro mas está próxima (até 7 dias), considerar como em férias
-                  const diffDias = Math.floor((dataInicio - hoje) / (1000 * 60 * 60 * 24));
-                  if (diffDias <= 7 && diffDias >= 0) {
-                    mapaFerias[userId] = { dataInicio, dataFim: null };
-                  }
-                }
-              } else if (dataInicio && dataFim) {
-                // Verificar se hoje está no período de férias ou próximo
-                if (hoje >= dataInicio && hoje <= dataFim) {
-                  mapaFerias[userId] = { dataInicio, dataFim };
-                } else if (dataInicio > hoje) {
-                  // Se a data de início é no futuro mas está próxima (até 7 dias), considerar como em férias
-                  const diffDias = Math.floor((dataInicio - hoje) / (1000 * 60 * 60 * 24));
-                  if (diffDias <= 7 && diffDias >= 0) {
-                    mapaFerias[userId] = { dataInicio, dataFim };
-                  }
-                } else if (hoje <= dataFim) {
-                  // Se a data de fim ainda não chegou, pode estar em férias
-                  const diffDias = Math.floor((dataFim - hoje) / (1000 * 60 * 60 * 24));
-                  if (diffDias >= 0 && diffDias <= 60) {
-                    mapaFerias[userId] = { dataInicio, dataFim };
-                  }
-                }
-              } else if (dataFim && hoje <= dataFim) {
-                // Se só tem data de fim e ainda não chegou, pode estar em férias
-                const diffDias = Math.floor((dataFim - hoje) / (1000 * 60 * 60 * 24));
-                if (diffDias >= 0 && diffDias <= 60) {
-                  mapaFerias[userId] = { dataInicio: hoje, dataFim };
-                }
+              // Armazenar informações de férias (sempre a mais recente)
+              if (dataFim) {
+                mapaFerias[userId] = { 
+                  dataInicio: dataInicio || null, 
+                  dataFim: dataFim.getTime(),
+                  timestampMsg: new Date(msg.timestamp).getTime()
+                };
+              } else if (dataInicio) {
+                // Se só tem data de início, considerar como férias em andamento
+                mapaFerias[userId] = { 
+                  dataInicio: dataInicio.getTime(), 
+                  dataFim: null,
+                  timestampMsg: new Date(msg.timestamp).getTime()
+                };
               }
             }
           }
@@ -297,47 +280,50 @@ module.exports = async (req, res) => {
       const uid = p.user.id;
 
       if (p.roles.some((r) => listaImunes.includes(r))) return;
+      
+      // Se tem tag de férias, não considerar inativo
       if (FERIAS_ROLE_ID && p.roles.includes(FERIAS_ROLE_ID)) return;
       
-      // Verificar se está no período de férias mesmo sem tag
-      if (mapaFerias[uid]) {
-        const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
-        const feriasInfo = mapaFerias[uid];
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+      const hojeTimestamp = hoje.getTime();
+      
+      // Verificar se estava de férias e calcular inatividade a partir da remoção da tag
+      let dataInicioInatividade = null;
+      const feriasInfo = mapaFerias[uid];
+      const temTagFerias = FERIAS_ROLE_ID && p.roles.includes(FERIAS_ROLE_ID);
+      
+      if (feriasInfo) {
+        // Se tem data de fim das férias
         if (feriasInfo.dataFim) {
-          // Tem data de fim, verificar se está no período ou próximo
-          if (hoje >= feriasInfo.dataInicio && hoje <= feriasInfo.dataFim) {
-            return; // Está em férias, não incluir na lista
+          const dataFimFerias = feriasInfo.dataFim;
+          
+          // Se ainda está dentro do período de férias E tem a tag, não considerar inativo
+          if (hojeTimestamp <= dataFimFerias && temTagFerias) {
+            return; // Ainda está em férias com tag
           }
-          // Se a data de início é no futuro mas está próxima (até 7 dias), considerar como em férias
-          if (feriasInfo.dataInicio > hoje) {
-            const diffDias = Math.floor((feriasInfo.dataInicio - hoje) / (1000 * 60 * 60 * 24));
-            if (diffDias <= 7 && diffDias >= 0) {
-              return; // Próximo do início das férias, não incluir na lista
-            }
-          }
-          // Se a data de fim ainda não chegou, pode estar em férias
-          if (hoje <= feriasInfo.dataFim) {
-            const diffDias = Math.floor((feriasInfo.dataFim - hoje) / (1000 * 60 * 60 * 24));
-            if (diffDias >= 0 && diffDias <= 60) {
-              return; // Ainda dentro do período de férias, não incluir na lista
-            }
+          
+          // Se não tem mais a tag (foi removida), a inatividade conta a partir da data de fim
+          // OU se passou da data de fim (bot remove automaticamente)
+          // Usar a data de fim como base mínima para cálculo de inatividade
+          if (!temTagFerias || hojeTimestamp > dataFimFerias) {
+            // A tag foi removida (manualmente ou automaticamente)
+            // Contar inatividade a partir da data de fim das férias
+            dataInicioInatividade = dataFimFerias;
           }
         } else if (feriasInfo.dataInicio) {
-          // Só tem data de início
-          if (hoje >= feriasInfo.dataInicio) {
-            // Data de início já passou, considerar como em férias
-            const diffDias = Math.floor((hoje - feriasInfo.dataInicio) / (1000 * 60 * 60 * 24));
-            if (diffDias >= 0 && diffDias <= 60) {
-              return; // Provavelmente está em férias, não incluir na lista
-            }
-          } else {
-            // Data de início é no futuro mas está próxima (até 7 dias)
-            const diffDias = Math.floor((feriasInfo.dataInicio - hoje) / (1000 * 60 * 60 * 24));
-            if (diffDias <= 7 && diffDias >= 0) {
-              return; // Próximo do início das férias, não incluir na lista
-            }
+          // Se só tem data de início
+          const dataInicioFerias = feriasInfo.dataInicio;
+          
+          // Se ainda não começou as férias, não considerar inativo por férias
+          if (hojeTimestamp < dataInicioFerias) {
+            // Não está em férias ainda
+          } else if (temTagFerias) {
+            // Se tem tag e já passou da data de início, considerar como em férias
+            return; // Ainda está em férias
           }
+          // Se não tem mais a tag mas tinha data de início, não vamos contar inatividade por férias
+          // (pode ter sido removida manualmente antes do fim)
         }
       }
 
@@ -349,12 +335,39 @@ module.exports = async (req, res) => {
       let textoData = "Sem registro";
       let textoDias = "---";
 
-      if (baseData) {
-        // 1. Calcula Diferença
-        diffDias = Math.floor((agora - baseData) / (1000 * 60 * 60 * 24));
+      // Se estava de férias, usar a data de fim das férias como base mínima
+      if (dataInicioInatividade) {
+        // A inatividade só conta a partir da data de fim das férias
+        // Mas também precisa respeitar a DATA_BASE_AUDITORIA
+        const dataBaseCalculo = Math.max(dataInicioInatividade, DATA_BASE_AUDITORIA);
+        
+        // Se tem atividade registrada após a data de fim das férias, usar essa
+        if (baseData && baseData > dataBaseCalculo) {
+          diffDias = Math.floor((agora - baseData) / (1000 * 60 * 60 * 24));
+          const dataObj = new Date(baseData);
+          const dia = String(dataObj.getDate()).padStart(2, "0");
+          const mes = String(dataObj.getMonth() + 1).padStart(2, "0");
+          const ano = dataObj.getFullYear();
+          textoData = `${dia}/${mes}/${ano}`;
+          textoDias = `${diffDias} dias`;
+        } else {
+          // Não tem atividade após o fim das férias, contar a partir da data de fim
+          diffDias = Math.floor((agora - dataBaseCalculo) / (1000 * 60 * 60 * 24));
+          const dataObj = new Date(dataBaseCalculo);
+          const dia = String(dataObj.getDate()).padStart(2, "0");
+          const mes = String(dataObj.getMonth() + 1).padStart(2, "0");
+          const ano = dataObj.getFullYear();
+          textoData = `${dia}/${mes}/${ano}`;
+          textoDias = `${diffDias} dias`;
+        }
+      } else if (baseData) {
+        // Não estava de férias, usar a última atividade normal
+        // Mas respeitar DATA_BASE_AUDITORIA
+        const dataBaseCalculo = Math.max(baseData, DATA_BASE_AUDITORIA);
+        diffDias = Math.floor((agora - dataBaseCalculo) / (1000 * 60 * 60 * 24));
 
         // 2. Formata Data (DD/MM/AAAA)
-        const dataObj = new Date(baseData);
+        const dataObj = new Date(dataBaseCalculo);
         const dia = String(dataObj.getDate()).padStart(2, "0");
         const mes = String(dataObj.getMonth() + 1).padStart(2, "0");
         const ano = dataObj.getFullYear();
@@ -363,10 +376,14 @@ module.exports = async (req, res) => {
         // 3. Formata Dias Corridos
         textoDias = `${diffDias} dias`;
       } else {
-        // Sem registro recente
-        diffDias = 99999;
-        textoData = "Sem registro";
-        textoDias = "---";
+        // Sem registro recente - usar DATA_BASE_AUDITORIA como base
+        diffDias = Math.floor((agora - DATA_BASE_AUDITORIA) / (1000 * 60 * 60 * 24));
+        const dataObj = new Date(DATA_BASE_AUDITORIA);
+        const dia = String(dataObj.getDate()).padStart(2, "0");
+        const mes = String(dataObj.getMonth() + 1).padStart(2, "0");
+        const ano = dataObj.getFullYear();
+        textoData = `${dia}/${mes}/${ano}`;
+        textoDias = `${diffDias} dias`;
       }
 
       // Filtra apenas quem tem 7 dias ou mais (ou sem registro)

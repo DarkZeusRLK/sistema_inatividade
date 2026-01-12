@@ -362,7 +362,7 @@ window.carregarInatividade = async function () {
             }</td>
             <td><strong style="color: #ff4d4d; font-size: 0.95rem;">${
               m.dias || 0
-            } Dias</strong></td>
+            }</strong></td>
             <td align="center">
                <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
                  <span class="badge-danger">⚠️ INATIVO</span>

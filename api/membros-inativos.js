@@ -121,9 +121,22 @@ module.exports = async (req, res) => {
     const serverRoles = rolesRes.ok ? await rolesRes.json() : [];
 
     // 4. MAPEAR PATENTES
-    const idsPatentes = POLICE_ROLE_IDS ? POLICE_ROLE_IDS.split(",") : [];
+    const idsPatentes = POLICE_ROLE_IDS 
+      ? POLICE_ROLE_IDS.split(",").map((id) => id.trim()).filter((id) => id) 
+      : [];
     const mapRolesNames = {};
-    serverRoles.forEach((r) => (mapRolesNames[r.id] = r.name));
+    const mapRolesPosition = {}; // Mapear posição dos roles para hierarquia
+    serverRoles.forEach((r) => {
+      mapRolesNames[r.id] = r.name;
+      mapRolesPosition[r.id] = r.position || 0; // Posição do role (maior = mais alto)
+    });
+    
+    // Debug: Verificar se POLICE_ROLE_IDS está configurado
+    if (idsPatentes.length === 0) {
+      console.warn("⚠️ POLICE_ROLE_IDS não configurado ou vazio");
+    } else {
+      console.log(`✅ POLICE_ROLE_IDS encontrados: ${idsPatentes.length} roles`);
+    }
 
     // 5. PROCESSAR ADMISSÃO
     const mapaNomesRP = {};
@@ -468,9 +481,35 @@ module.exports = async (req, res) => {
           if (!nomeRp) nomeRp = "Não identificado";
         }
 
-        // Patente
-        const idPatente = idsPatentes.find((id) => p.roles.includes(id));
-        const nomePatente = idPatente ? mapRolesNames[idPatente] : "Oficial";
+        // Patente - Buscar o cargo do POLICE_ROLE_IDS
+        // Verificar qual role do usuário está na lista de POLICE_ROLE_IDS
+        // Se o usuário tiver múltiplos roles de POLICE_ROLE_IDS, pegar o de maior hierarquia (posição)
+        let idPatente = null;
+        let nomePatente = "Oficial";
+        let maiorPosicao = -1;
+        
+        // Percorrer os roles do usuário e encontrar qual está em POLICE_ROLE_IDS
+        if (idsPatentes.length > 0 && p.roles && p.roles.length > 0) {
+          // Encontrar todos os roles do usuário que estão na lista de POLICE_ROLE_IDS
+          // e pegar o de maior posição (hierarquia)
+          p.roles.forEach((roleId) => {
+            // Verificar se o roleId está na lista de POLICE_ROLE_IDS (comparação exata)
+            if (idsPatentes.includes(roleId)) {
+              const posicao = mapRolesPosition[roleId] || 0;
+              if (posicao > maiorPosicao) {
+                maiorPosicao = posicao;
+                idPatente = roleId;
+              }
+            }
+          });
+          
+          if (idPatente && mapRolesNames[idPatente]) {
+            nomePatente = mapRolesNames[idPatente];
+          } else if (idPatente) {
+            // Role encontrado mas nome não mapeado (pode ser problema de cache)
+            console.warn(`⚠️ Role ${idPatente} encontrado mas nome não mapeado para usuário ${uid}`);
+          }
+        }
 
         resultado.push({
           id: uid,

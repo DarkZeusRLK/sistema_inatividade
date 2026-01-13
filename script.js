@@ -95,18 +95,18 @@ window.mostrarAviso = function (msg, tipo = "success") {
   // Remover qualquer aviso anterior
   aviso.className = "";
   aviso.style.display = "none";
-  
+
   // Pequeno delay para garantir que a animação funcione
   setTimeout(() => {
     // Ícones melhorados
     const icons = {
       success: "✓",
       error: "✕",
-      info: "ℹ"
+      info: "ℹ",
     };
-    
+
     const icon = icons[tipo] || icons.success;
-    
+
     // Renderizar HTML corretamente
     aviso.innerHTML = `<strong>${icon}</strong><span>${msg}</span>`;
     aviso.className = `aviso-toast ${tipo}`;
@@ -370,14 +370,18 @@ window.carregarInatividade = async function () {
                 }" class="avatar-img">
                 <div>
                    <strong>${m.name}</strong> 
-                   <br><small style="color: #bbb;">${cargoExibicao}</small>
+                   <br><small style="color: var(--gold); font-size: 0.85rem; font-weight: 500;">${cargoExibicao}</small>
                 </div>
               </div>
             </td>
             <td>
               <div style="display: flex; align-items: center; gap: 8px;">
-                <code style="font-size: 0.85rem; user-select: all; cursor: text;" onclick="event.stopPropagation();">${m.id}</code>
-                <button onclick="event.stopPropagation(); copiarIdDiscord('${m.id}')" class="btn-copiar-id" title="Copiar ID do Discord" style="background: transparent; border: 1px solid #444; color: #d4af37; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; transition: 0.2s;">
+                <code style="font-size: 0.85rem; user-select: all; cursor: text;" onclick="event.stopPropagation();">${
+                  m.id
+                }</code>
+                <button onclick="event.stopPropagation(); copiarIdDiscord('${
+                  m.id
+                }')" class="btn-copiar-id" title="Copiar ID do Discord" style="background: transparent; border: 1px solid #444; color: #d4af37; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; transition: 0.2s;">
                   <i class="fa-solid fa-copy"></i>
                 </button>
               </div>
@@ -581,24 +585,36 @@ async function executarExoneracaoBot(
 }
 // Função para copiar ID do Discord para a área de transferência
 function copiarIdDiscord(id) {
-  navigator.clipboard.writeText(id).then(() => {
-    mostrarAviso(`ID do Discord copiado com sucesso: <code style="background: rgba(212, 175, 55, 0.2); padding: 2px 6px; border-radius: 4px; font-family: monospace; color: var(--gold);">${id}</code>`, "success");
-  }).catch((err) => {
-    // Fallback para navegadores mais antigos
-    const textArea = document.createElement("textarea");
-    textArea.value = id;
-    textArea.style.position = "fixed";
-    textArea.style.opacity = "0";
-    document.body.appendChild(textArea);
-    textArea.select();
-    try {
-      document.execCommand("copy");
-      mostrarAviso(`ID do Discord copiado com sucesso: <code style="background: rgba(212, 175, 55, 0.2); padding: 2px 6px; border-radius: 4px; font-family: monospace; color: var(--gold);">${id}</code>`, "success");
-    } catch (e) {
-      mostrarAviso("Falha ao copiar ID. Por favor, selecione e copie manualmente.", "error");
-    }
-    document.body.removeChild(textArea);
-  });
+  navigator.clipboard
+    .writeText(id)
+    .then(() => {
+      mostrarAviso(
+        `ID do Discord copiado com sucesso: <code style="background: rgba(212, 175, 55, 0.2); padding: 2px 6px; border-radius: 4px; font-family: monospace; color: var(--gold);">${id}</code>`,
+        "success"
+      );
+    })
+    .catch((err) => {
+      // Fallback para navegadores mais antigos
+      const textArea = document.createElement("textarea");
+      textArea.value = id;
+      textArea.style.position = "fixed";
+      textArea.style.opacity = "0";
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand("copy");
+        mostrarAviso(
+          `ID do Discord copiado com sucesso: <code style="background: rgba(212, 175, 55, 0.2); padding: 2px 6px; border-radius: 4px; font-family: monospace; color: var(--gold);">${id}</code>`,
+          "success"
+        );
+      } catch (e) {
+        mostrarAviso(
+          "Falha ao copiar ID. Por favor, selecione e copie manualmente.",
+          "error"
+        );
+      }
+      document.body.removeChild(textArea);
+    });
 }
 
 function atualizarContadorSelecionados() {

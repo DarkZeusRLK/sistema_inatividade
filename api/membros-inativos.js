@@ -59,18 +59,38 @@ module.exports = async (req, res) => {
       cargoBaseOrg = PF_ROLE_ID;
     }
 
-    // 2. CANAIS DE ATIVIDADE
+    // 2. CANAIS DE ATIVIDADE (apenas CHAT_ID_BUSCAR)
     const canaisAtividadeIds = CHAT_ID_BUSCAR
       ? CHAT_ID_BUSCAR.split(",").map((id) => id.trim())
       : [];
 
-    // 3. BUSCAS PARALELAS
+    // 3. BUSCAR MENSAGENS DOS CANAIS DE ATIVIDADE (paginando para buscar histórico completo)
+    const buscarMensagensCanal = async (channelId) => {
+      let allMessages = [];
+      let lastId = null;
+      // Buscar até 50 lotes (5000 mensagens) para garantir histórico completo
+      for (let i = 0; i < 50; i++) {
+        const url = `https://discord.com/api/v10/channels/${channelId}/messages?limit=100${
+          lastId ? `&before=${lastId}` : ""
+        }`;
+        try {
+          const res = await fetch(url, { headers });
+          if (!res.ok) break;
+          const batch = await res.json();
+          if (!batch || batch.length === 0) break;
+          allMessages = allMessages.concat(batch);
+          lastId = batch[batch.length - 1].id;
+        } catch (e) {
+          console.error(`Erro ao buscar mensagens do canal ${channelId}:`, e);
+          break;
+        }
+      }
+      return allMessages;
+    };
+
+    // Buscar mensagens de todos os canais de atividade em paralelo
     const promisesAtividade = canaisAtividadeIds.map((id) =>
-      fetch(`https://discord.com/api/v10/channels/${id}/messages?limit=100`, {
-        headers,
-      })
-        .then((res) => (res.ok ? res.json() : []))
-        .catch(() => [])
+      buscarMensagensCanal(id).catch(() => [])
     );
 
     const [membersRes, admissaoRes, rolesRes, ...mensagensAtividadeArrays] =
@@ -161,23 +181,35 @@ module.exports = async (req, res) => {
       }
     }
 
-    // 6. MAPEAR ATIVIDADE (Chat)
+    // 6. MAPEAR ATIVIDADE (Apenas canais de CHAT_ID_BUSCAR)
+    // A contagem reseta a cada mensagem ou menção nos canais de atividade
     const mapaUltimaAtividade = {};
+    
+    // Função para atualizar última atividade (sempre pega a mais recente)
     const atualizarAtividade = (userId, timestamp) => {
       const time = new Date(timestamp).getTime();
+      // Sempre atualiza para a data mais recente (reseta a contagem)
       if (!mapaUltimaAtividade[userId] || time > mapaUltimaAtividade[userId]) {
         mapaUltimaAtividade[userId] = time;
       }
     };
 
+    // Processar todas as mensagens dos canais de atividade
     mensagensAtividadeArrays.forEach((lista) => {
       if (Array.isArray(lista)) {
         lista.forEach((msg) => {
-          atualizarAtividade(msg.author.id, msg.timestamp);
-          if (msg.mentions) {
-            msg.mentions.forEach((u) =>
-              atualizarAtividade(u.id, msg.timestamp)
-            );
+          // Atualizar atividade do autor da mensagem
+          if (msg.author && msg.author.id) {
+            atualizarAtividade(msg.author.id, msg.timestamp);
+          }
+          
+          // Atualizar atividade de todos os mencionados
+          if (msg.mentions && Array.isArray(msg.mentions)) {
+            msg.mentions.forEach((u) => {
+              if (u.id) {
+                atualizarAtividade(u.id, msg.timestamp);
+              }
+            });
           }
         });
       }
@@ -328,42 +360,49 @@ module.exports = async (req, res) => {
       }
 
       // --- CÁLCULO DE DATAS E FORMATOS ---
-      let baseData = mapaUltimaAtividade[uid];
+      // A contagem começa a partir do joined_at (data de entrada no Discord)
+      // E reseta a cada mensagem ou menção nos canais de CHAT_ID_BUSCAR
+      
+      let baseData = mapaUltimaAtividade[uid]; // Última atividade nos canais de CHAT_ID_BUSCAR
       let diffDias;
+      let dataBaseCalculo;
 
       // Strings que serão exibidas
       let textoData = "Sem registro";
       let textoDias = "---";
 
+      // Data de entrada no Discord (joined_at) - base inicial para contagem
+      const joinedAtTimestamp = p.joined_at 
+        ? new Date(p.joined_at).getTime() 
+        : null;
+
       // Se estava de férias, usar a data de fim das férias como base mínima
       if (dataInicioInatividade) {
         // A inatividade só conta a partir da data de fim das férias
-        // Mas também precisa respeitar a DATA_BASE_AUDITORIA
-        const dataBaseCalculo = Math.max(dataInicioInatividade, DATA_BASE_AUDITORIA);
+        // Mas também precisa respeitar DATA_BASE_AUDITORIA e joined_at
+        const dataFimFerias = dataInicioInatividade;
+        const dataMinima = Math.max(
+          dataFimFerias,
+          DATA_BASE_AUDITORIA,
+          joinedAtTimestamp || 0
+        );
         
         // Se tem atividade registrada após a data de fim das férias, usar essa
-        if (baseData && baseData > dataBaseCalculo) {
-          diffDias = Math.floor((agora - baseData) / (1000 * 60 * 60 * 24));
-          const dataObj = new Date(baseData);
-          const dia = String(dataObj.getDate()).padStart(2, "0");
-          const mes = String(dataObj.getMonth() + 1).padStart(2, "0");
-          const ano = dataObj.getFullYear();
-          textoData = `${dia}/${mes}/${ano}`;
-          textoDias = `${diffDias} dias`;
+        if (baseData && baseData > dataMinima) {
+          // Tem atividade nos canais de CHAT_ID_BUSCAR após as férias
+          dataBaseCalculo = baseData;
         } else {
           // Não tem atividade após o fim das férias, contar a partir da data de fim
-          diffDias = Math.floor((agora - dataBaseCalculo) / (1000 * 60 * 60 * 24));
-          const dataObj = new Date(dataBaseCalculo);
-          const dia = String(dataObj.getDate()).padStart(2, "0");
-          const mes = String(dataObj.getMonth() + 1).padStart(2, "0");
-          const ano = dataObj.getFullYear();
-          textoData = `${dia}/${mes}/${ano}`;
-          textoDias = `${diffDias} dias`;
+          dataBaseCalculo = dataMinima;
         }
       } else if (baseData) {
-        // Não estava de férias, usar a última atividade normal
-        // Mas respeitar DATA_BASE_AUDITORIA
-        const dataBaseCalculo = Math.max(baseData, DATA_BASE_AUDITORIA);
+        // Não estava de férias, usar a última atividade nos canais de CHAT_ID_BUSCAR
+        // Mas respeitar DATA_BASE_AUDITORIA e joined_at como mínimo
+        const dataMinima = Math.max(
+          DATA_BASE_AUDITORIA,
+          joinedAtTimestamp || 0
+        );
+        dataBaseCalculo = Math.max(baseData, dataMinima);
         diffDias = Math.floor((agora - dataBaseCalculo) / (1000 * 60 * 60 * 24));
 
         // 2. Formata Data (DD/MM/AAAA)
@@ -376,15 +415,25 @@ module.exports = async (req, res) => {
         // 3. Formata Dias Corridos
         textoDias = `${diffDias} dias`;
       } else {
-        // Sem registro recente - usar DATA_BASE_AUDITORIA como base
-        diffDias = Math.floor((agora - DATA_BASE_AUDITORIA) / (1000 * 60 * 60 * 24));
-        const dataObj = new Date(DATA_BASE_AUDITORIA);
-        const dia = String(dataObj.getDate()).padStart(2, "0");
-        const mes = String(dataObj.getMonth() + 1).padStart(2, "0");
-        const ano = dataObj.getFullYear();
-        textoData = `${dia}/${mes}/${ano}`;
-        textoDias = `${diffDias} dias`;
+        // Sem atividade registrada nos canais de CHAT_ID_BUSCAR
+        // Usar joined_at como base, ou DATA_BASE_AUDITORIA se não tiver joined_at
+        if (joinedAtTimestamp) {
+          dataBaseCalculo = Math.max(joinedAtTimestamp, DATA_BASE_AUDITORIA);
+        } else {
+          dataBaseCalculo = DATA_BASE_AUDITORIA;
+        }
       }
+
+      // Calcular diferença em dias (unificado para todos os casos)
+      diffDias = Math.floor((agora - dataBaseCalculo) / (1000 * 60 * 60 * 24));
+
+      // Formatar data (DD/MM/AAAA)
+      const dataObj = new Date(dataBaseCalculo);
+      const dia = String(dataObj.getDate()).padStart(2, "0");
+      const mes = String(dataObj.getMonth() + 1).padStart(2, "0");
+      const ano = dataObj.getFullYear();
+      textoData = `${dia}/${mes}/${ano}`;
+      textoDias = `${diffDias} dias`;
 
       // Filtra apenas quem tem 7 dias ou mais (ou sem registro)
       if (diffDias >= 7) {

@@ -270,6 +270,12 @@ body {
   background-color: rgba(212, 175, 55, 0.3) !important;
 }
 
+.btn-copiar-id:hover {
+  background-color: rgba(212, 175, 55, 0.2) !important;
+  border-color: var(--gold) !important;
+  transform: scale(1.05);
+}
+
 .avatar-img {
   width: 35px;
   height: 35px;

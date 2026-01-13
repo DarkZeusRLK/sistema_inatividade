@@ -353,7 +353,14 @@ window.carregarInatividade = async function () {
                 </div>
               </div>
             </td>
-            <td><code style="font-size: 0.85rem;">${m.id}</code></td> 
+            <td>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <code style="font-size: 0.85rem; user-select: all; cursor: text;" onclick="event.stopPropagation();">${m.id}</code>
+                <button onclick="event.stopPropagation(); copiarIdDiscord('${m.id}')" class="btn-copiar-id" title="Copiar ID do Discord" style="background: transparent; border: 1px solid #444; color: #d4af37; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; transition: 0.2s;">
+                  <i class="fa-solid fa-copy"></i>
+                </button>
+              </div>
+            </td> 
             <td style="color: #aaa; font-size: 0.9rem;">${
               m.dataUltimaMsg ||
               (m.joined_at
@@ -378,8 +385,10 @@ window.carregarInatividade = async function () {
 
           // Adicionar evento de clique para selecionar/desselecionar
           tr.addEventListener("click", function (e) {
-            // Não selecionar se clicou no botão
+            // Não selecionar se clicou no botão ou no ID
             if (e.target.closest(".btn-exonerar")) return;
+            if (e.target.closest(".btn-copiar-id")) return;
+            if (e.target.closest("code")) return;
 
             tr.classList.toggle("row-selected");
             atualizarContadorSelecionados();
@@ -549,6 +558,28 @@ async function executarExoneracaoBot(
     );
   }
 }
+// Função para copiar ID do Discord para a área de transferência
+function copiarIdDiscord(id) {
+  navigator.clipboard.writeText(id).then(() => {
+    mostrarAviso(`ID do Discord copiado: ${id}`, "success");
+  }).catch((err) => {
+    // Fallback para navegadores mais antigos
+    const textArea = document.createElement("textarea");
+    textArea.value = id;
+    textArea.style.position = "fixed";
+    textArea.style.opacity = "0";
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand("copy");
+      mostrarAviso(`ID do Discord copiado: ${id}`, "success");
+    } catch (e) {
+      mostrarAviso("Falha ao copiar ID. Por favor, selecione e copie manualmente.", "error");
+    }
+    document.body.removeChild(textArea);
+  });
+}
+
 function atualizarContadorSelecionados() {
   const selecionados = document.querySelectorAll(".row-selected");
   const btnSelecionados = document.getElementById("btn-exonerar-selecionados");

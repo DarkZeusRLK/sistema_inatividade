@@ -92,14 +92,35 @@ window.mostrarAviso = function (msg, tipo = "success") {
   const aviso = document.getElementById("aviso-global");
   if (!aviso) return console.log(`[${tipo}] ${msg}`);
 
-  const icon = tipo === "success" ? "✅ " : tipo === "error" ? "❌ " : "⚠️ ";
-  aviso.innerHTML = `<strong>${icon}</strong> ${msg}`;
-  aviso.className = `aviso-toast ${tipo}`;
-  aviso.style.display = "block";
-
+  // Remover qualquer aviso anterior
+  aviso.className = "";
+  aviso.style.display = "none";
+  
+  // Pequeno delay para garantir que a animação funcione
   setTimeout(() => {
-    aviso.style.display = "none";
-  }, 4000);
+    // Ícones melhorados
+    const icons = {
+      success: "✓",
+      error: "✕",
+      info: "ℹ"
+    };
+    
+    const icon = icons[tipo] || icons.success;
+    
+    // Renderizar HTML corretamente
+    aviso.innerHTML = `<strong>${icon}</strong><span>${msg}</span>`;
+    aviso.className = `aviso-toast ${tipo}`;
+    aviso.style.display = "flex";
+    aviso.style.animation = "slideInRight 0.4s ease-out";
+
+    // Auto-remover após 5 segundos com animação
+    setTimeout(() => {
+      aviso.style.animation = "fadeOut 0.3s ease-in";
+      setTimeout(() => {
+        aviso.style.display = "none";
+      }, 300);
+    }, 5000);
+  }, 50);
 };
 
 // --- SISTEMA DE MODAL ---
@@ -561,7 +582,7 @@ async function executarExoneracaoBot(
 // Função para copiar ID do Discord para a área de transferência
 function copiarIdDiscord(id) {
   navigator.clipboard.writeText(id).then(() => {
-    mostrarAviso(`ID do Discord copiado: ${id}`, "success");
+    mostrarAviso(`ID do Discord copiado com sucesso: <code style="background: rgba(212, 175, 55, 0.2); padding: 2px 6px; border-radius: 4px; font-family: monospace; color: var(--gold);">${id}</code>`, "success");
   }).catch((err) => {
     // Fallback para navegadores mais antigos
     const textArea = document.createElement("textarea");
@@ -572,7 +593,7 @@ function copiarIdDiscord(id) {
     textArea.select();
     try {
       document.execCommand("copy");
-      mostrarAviso(`ID do Discord copiado: ${id}`, "success");
+      mostrarAviso(`ID do Discord copiado com sucesso: <code style="background: rgba(212, 175, 55, 0.2); padding: 2px 6px; border-radius: 4px; font-family: monospace; color: var(--gold);">${id}</code>`, "success");
     } catch (e) {
       mostrarAviso("Falha ao copiar ID. Por favor, selecione e copie manualmente.", "error");
     }

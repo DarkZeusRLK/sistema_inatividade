@@ -62,20 +62,17 @@ module.exports = async (req, res) => {
       ? CHAT_ID_BUSCAR.split(",").map((id) => id.trim())
       : [];
 
-    // --- SEGURANÇA DE DATA (MANTIDA EM 8 DIAS) ---
-    // A regra de negócio não mudou: 7 dias é inativo.
-    // Buscamos 8 dias para ter margem de segurança.
-    const LIMIT_DAYS_MS = 8 * 24 * 60 * 60 * 1000;
-    const TIME_LIMIT = Date.now() - LIMIT_DAYS_MS;
+    // --- SEGURANÇA DE DATA (AUMENTADA PARA 15 DIAS) ---
+    // A regra de inatividade continua 7 dias.
+    // Mas aumentamos a busca para 15 dias para garantir que logs atrasados ou spamados sejam lidos.
+    const SEARCH_DAYS_MS = 15 * 24 * 60 * 60 * 1000;
+    const TIME_LIMIT = Date.now() - SEARCH_DAYS_MS;
 
     const buscarMensagensCanal = async (channelId) => {
       let allMessages = [];
       let lastId = null;
 
-      // --- PAGINAÇÃO (AUMENTADA BRUTALMENTE) ---
-      // De 50 para 400 requests.
-      // 400 * 100 msgs = 40.000 mensagens analisadas.
-      // Isso garante que atravessemos todo o "lixo" do BigBig até chegar no dia 8.
+      // --- PAGINAÇÃO (MANTIDA FORTE: 400 requests) ---
       for (let i = 0; i < 400; i++) {
         const url = `https://discord.com/api/v10/channels/${channelId}/messages?limit=100${
           lastId ? `&before=${lastId}` : ""
@@ -98,10 +95,6 @@ module.exports = async (req, res) => {
             batch[batch.length - 1].timestamp
           ).getTime();
 
-          // AQUI ESTÁ A TRAVA INTELIGENTE:
-          // Se as mensagens que acabamos de baixar são mais velhas que 8 dias, PARAMOS.
-          // Isso impede que o bot fique lendo à toa em canais parados,
-          // mas permite que ele leia as 40.000 mensagens se elas forem todas de "hoje".
           if (lastMsgDate < TIME_LIMIT) {
             break;
           }
@@ -154,6 +147,25 @@ module.exports = async (req, res) => {
       mapRolesPosition[r.id] = r.position || 0;
     });
 
+    // =================================================================================
+    // [NOVO] 4.5. MAPEAMENTO INTELIGENTE (RESOLVE O PROBLEMA DO RICARDO)
+    // Antes de ler as mensagens, vamos descobrir qual passaporte pertence a quem
+    // olhando os apelidos (Ex: "Ricardo | 7087" -> 7087 é o Ricardo)
+    // =================================================================================
+    const mapaPassaporteParaID = {}; // { '7087': '112298...' }
+
+    oficiais.forEach((m) => {
+      if (m.user.bot) return;
+      const apelido = m.nick || m.user.username;
+      // Pega numeros no final do nick, geralmente depois de uma barra vertical
+      // Ex: "Nome | 7087" ou "Nome 7087"
+      const matchNick = apelido.match(/\|?\s*(\d{3,6})\s*$/);
+      if (matchNick) {
+        const passaporte = matchNick[1];
+        mapaPassaporteParaID[passaporte] = m.user.id;
+      }
+    });
+
     // 5. PROCESSAR ADMISSÃO
     const mapaNomesRP = {};
     const mapaPassaporteRP = {};
@@ -197,14 +209,18 @@ module.exports = async (req, res) => {
                 .trim();
             }
             if (matchPassaporte) {
-              mapaPassaporteRP[userIdEncontrado] = matchPassaporte[1].trim();
+              const pass = matchPassaporte[1].trim();
+              mapaPassaporteRP[userIdEncontrado] = pass;
+              // Reforça o mapa inverso com dados da admissão
+              if (pass.length >= 3)
+                mapaPassaporteParaID[pass] = userIdEncontrado;
             }
           }
         });
       }
     }
 
-    // 6. MAPEAR ATIVIDADE (Scan Profundo nos Embeds)
+    // 6. MAPEAR ATIVIDADE (Scan Profundo nos Embeds + Passaporte)
     const mapaUltimaAtividade = {};
     const atualizarAtividade = (userId, timestamp) => {
       if (!userId) return;
@@ -222,23 +238,15 @@ module.exports = async (req, res) => {
             atualizarAtividade(msg.author.id, msg.timestamp);
           }
 
-          // 2. Menções explícitas
+          // 2. Menções explícitas (Discord Blue Links)
           if (msg.mentions && Array.isArray(msg.mentions)) {
             msg.mentions.forEach((u) => {
               if (u.id) atualizarAtividade(u.id, msg.timestamp);
             });
           }
 
-          // 3. Regex no Conteúdo
-          if (msg.content) {
-            const regexContent = /<@!?(\d{17,20})>/g;
-            let matchContent;
-            while ((matchContent = regexContent.exec(msg.content)) !== null) {
-              atualizarAtividade(matchContent[1], msg.timestamp);
-            }
-          }
-
-          // 4. Regex nos Embeds (CRÍTICO PARA O BIGBIG)
+          // Preparar Texto Completo (Content + Embeds)
+          let textoCompleto = msg.content || "";
           if (msg.embeds && Array.isArray(msg.embeds)) {
             msg.embeds.forEach((embed) => {
               let partesTexto = [
@@ -253,22 +261,28 @@ module.exports = async (req, res) => {
                   partesTexto.push(f.value);
                 });
               }
-              const textoCompleto = partesTexto.filter(Boolean).join(" ");
-
-              // A. Menção padrão <@ID>
-              const regexMention = /<@!?(\d{17,20})>/g;
-              let match;
-              while ((match = regexMention.exec(textoCompleto)) !== null) {
-                atualizarAtividade(match[1], msg.timestamp);
-              }
-
-              // B. IDs soltos (Ex: "Oficial: 123456")
-              const regexRawIds = /\b(\d{17,20})\b/g;
-              let matchRaw;
-              while ((matchRaw = regexRawIds.exec(textoCompleto)) !== null) {
-                atualizarAtividade(matchRaw[1], msg.timestamp);
-              }
+              textoCompleto += " " + partesTexto.filter(Boolean).join(" ");
             });
+          }
+
+          // 3. Regex: Discord User IDs (17-20 digitos)
+          const regexRawIds = /\b(\d{17,20})\b/g;
+          let matchRaw;
+          while ((matchRaw = regexRawIds.exec(textoCompleto)) !== null) {
+            atualizarAtividade(matchRaw[1], msg.timestamp);
+          }
+
+          // 4. [NOVO] Regex: Passaportes (3-6 digitos)
+          // Se encontrar "7087" no texto, verifica de quem é esse número
+          const regexPassaportes = /\b(\d{3,6})\b/g;
+          let matchPass;
+          while ((matchPass = regexPassaportes.exec(textoCompleto)) !== null) {
+            const passaporteEncontrado = matchPass[1];
+            const donoDoID = mapaPassaporteParaID[passaporteEncontrado];
+            if (donoDoID) {
+              // SUCESSO: Log sem menção atribuído corretamente ao Ricardo
+              atualizarAtividade(donoDoID, msg.timestamp);
+            }
           }
         });
       }
@@ -444,13 +458,25 @@ module.exports = async (req, res) => {
         if (mapaPassaporteRP[uid]) {
           passaporte = mapaPassaporteRP[uid];
         } else {
-          if (apelido.includes("|")) {
-            const partes = apelido.split("|");
-            const ultima = partes[partes.length - 1].trim();
-            if (/^\d+$/.test(ultima)) passaporte = ultima;
-          } else {
-            const nums = apelido.match(/(\d+)/g);
-            if (nums) passaporte = nums[nums.length - 1];
+          // Tenta pegar de novo se não veio da admissão (agora temos o mapa inteligente)
+          if (mapaPassaporteParaID) {
+            // Procura se esse ID tem um passaporte associado no inverso
+            const achouPass = Object.keys(mapaPassaporteParaID).find(
+              (key) => mapaPassaporteParaID[key] === uid
+            );
+            if (achouPass) passaporte = achouPass;
+          }
+
+          // Fallback antigo
+          if (passaporte === "---") {
+            if (apelido.includes("|")) {
+              const partes = apelido.split("|");
+              const ultima = partes[partes.length - 1].trim();
+              if (/^\d+$/.test(ultima)) passaporte = ultima;
+            } else {
+              const nums = apelido.match(/(\d+)/g);
+              if (nums) passaporte = nums[nums.length - 1];
+            }
           }
         }
 

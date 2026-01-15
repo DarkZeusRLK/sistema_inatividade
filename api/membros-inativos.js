@@ -73,7 +73,7 @@ module.exports = async (req, res) => {
       let lastId = null;
       // Buscar até 50 lotes (5000 mensagens) para garantir histórico completo
       for (let i = 0; i < 50; i++) {
-        const url = `https://discord.com/api/v10/channels/${channelId}/messages?limit=300${
+        const url = `https://discord.com/api/v10/channels/${channelId}/messages?limit=100${
           lastId ? `&before=${lastId}` : ""
         }`;
         try {
@@ -106,7 +106,7 @@ module.exports = async (req, res) => {
         // B. Admissão
         canalAdmissaoId
           ? fetch(
-              `https://discord.com/api/v10/channels/${canalAdmissaoId}/messages?limit=300`,
+              `https://discord.com/api/v10/channels/${canalAdmissaoId}/messages?limit=100`,
               { headers }
             )
           : Promise.resolve(null),
@@ -244,7 +244,7 @@ module.exports = async (req, res) => {
         let allMessagesFerias = [];
         let lastIdFerias = null;
         for (let i = 0; i < 10; i++) {
-          const url = `https://discord.com/api/v10/channels/${FERIAS_CHANNEL_ID}/messages?limit=300${
+          const url = `https://discord.com/api/v10/channels/${FERIAS_CHANNEL_ID}/messages?limit=100${
             lastIdFerias ? `&before=${lastIdFerias}` : ""
           }`;
           const r = await fetch(url, { headers });

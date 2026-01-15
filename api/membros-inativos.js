@@ -33,7 +33,10 @@ module.exports = async (req, res) => {
   } = process.env;
 
   if (!Discord_Bot_Token) {
-    return res.status(500).json({ error: "Configuração do sistema incompleta: Token do Bot não configurado no servidor." });
+    return res.status(500).json({
+      error:
+        "Configuração do sistema incompleta: Token do Bot não configurado no servidor.",
+    });
   }
 
   const headers = {
@@ -70,7 +73,7 @@ module.exports = async (req, res) => {
       let lastId = null;
       // Buscar até 50 lotes (5000 mensagens) para garantir histórico completo
       for (let i = 0; i < 50; i++) {
-        const url = `https://discord.com/api/v10/channels/${channelId}/messages?limit=100${
+        const url = `https://discord.com/api/v10/channels/${channelId}/messages?limit=300${
           lastId ? `&before=${lastId}` : ""
         }`;
         try {
@@ -103,7 +106,7 @@ module.exports = async (req, res) => {
         // B. Admissão
         canalAdmissaoId
           ? fetch(
-              `https://discord.com/api/v10/channels/${canalAdmissaoId}/messages?limit=100`,
+              `https://discord.com/api/v10/channels/${canalAdmissaoId}/messages?limit=300`,
               { headers }
             )
           : Promise.resolve(null),
@@ -121,8 +124,10 @@ module.exports = async (req, res) => {
     const serverRoles = rolesRes.ok ? await rolesRes.json() : [];
 
     // 4. MAPEAR PATENTES
-    const idsPatentes = POLICE_ROLE_IDS 
-      ? POLICE_ROLE_IDS.split(",").map((id) => id.trim()).filter((id) => id) 
+    const idsPatentes = POLICE_ROLE_IDS
+      ? POLICE_ROLE_IDS.split(",")
+          .map((id) => id.trim())
+          .filter((id) => id)
       : [];
     const mapRolesNames = {};
     const mapRolesPosition = {}; // Mapear posição dos roles para hierarquia
@@ -130,12 +135,14 @@ module.exports = async (req, res) => {
       mapRolesNames[r.id] = r.name;
       mapRolesPosition[r.id] = r.position || 0; // Posição do role (maior = mais alto)
     });
-    
+
     // Debug: Verificar se POLICE_ROLE_IDS está configurado
     if (idsPatentes.length === 0) {
       console.warn("⚠️ POLICE_ROLE_IDS não configurado ou vazio");
     } else {
-      console.log(`✅ POLICE_ROLE_IDS encontrados: ${idsPatentes.length} roles`);
+      console.log(
+        `✅ POLICE_ROLE_IDS encontrados: ${idsPatentes.length} roles`
+      );
     }
 
     // 5. PROCESSAR ADMISSÃO
@@ -197,7 +204,7 @@ module.exports = async (req, res) => {
     // 6. MAPEAR ATIVIDADE (Apenas canais de CHAT_ID_BUSCAR)
     // A contagem reseta a cada mensagem ou menção nos canais de atividade
     const mapaUltimaAtividade = {};
-    
+
     // Função para atualizar última atividade (sempre pega a mais recente)
     const atualizarAtividade = (userId, timestamp) => {
       const time = new Date(timestamp).getTime();
@@ -215,7 +222,7 @@ module.exports = async (req, res) => {
           if (msg.author && msg.author.id) {
             atualizarAtividade(msg.author.id, msg.timestamp);
           }
-          
+
           // Atualizar atividade de todos os mencionados
           if (msg.mentions && Array.isArray(msg.mentions)) {
             msg.mentions.forEach((u) => {
@@ -231,13 +238,13 @@ module.exports = async (req, res) => {
     // 6.5. MAPEAR FÉRIAS (Armazenar data de fim para calcular inatividade após remoção da tag)
     const mapaFerias = {};
     const DATA_BASE_AUDITORIA = new Date("2025-12-08T00:00:00").getTime();
-    
+
     if (FERIAS_CHANNEL_ID) {
       try {
         let allMessagesFerias = [];
         let lastIdFerias = null;
         for (let i = 0; i < 10; i++) {
-          const url = `https://discord.com/api/v10/channels/${FERIAS_CHANNEL_ID}/messages?limit=100${
+          const url = `https://discord.com/api/v10/channels/${FERIAS_CHANNEL_ID}/messages?limit=300${
             lastIdFerias ? `&before=${lastIdFerias}` : ""
           }`;
           const r = await fetch(url, { headers });
@@ -250,8 +257,10 @@ module.exports = async (req, res) => {
         const hoje = new Date();
         hoje.setHours(0, 0, 0, 0);
 
-        const regexDataInicio = /(?:In[ií]cio|Come[cç]o|Data de in[ií]cio|Solicita[cç][aã]o|Sa[ií]da).*?(\d{2}\/\d{2}\/\d{4})/i;
-        const regexDataFim = /(?:Fim|T[eé]rmino|Data de fim|Fim das f[eé]rias|Retorno).*?(\d{2}\/\d{2}\/\d{4})/i;
+        const regexDataInicio =
+          /(?:In[ií]cio|Come[cç]o|Data de in[ií]cio|Solicita[cç][aã]o|Sa[ií]da).*?(\d{2}\/\d{2}\/\d{4})/i;
+        const regexDataFim =
+          /(?:Fim|T[eé]rmino|Data de fim|Fim das f[eé]rias|Retorno).*?(\d{2}\/\d{2}\/\d{4})/i;
 
         // Processar mensagens mais recentes primeiro
         for (const msg of allMessagesFerias) {
@@ -267,10 +276,10 @@ module.exports = async (req, res) => {
           const matchId = textoTotal.match(/<@!?(\d+)>/);
           if (matchId) {
             const userId = matchId[1];
-            
+
             // Se já processamos este usuário, pular (manter a mensagem mais recente)
             if (mapaFerias[userId]) continue;
-            
+
             const matchInicio = textoTotal.match(regexDataInicio);
             const matchFim = textoTotal.match(regexDataFim);
 
@@ -292,17 +301,17 @@ module.exports = async (req, res) => {
 
               // Armazenar informações de férias (sempre a mais recente)
               if (dataFim) {
-                mapaFerias[userId] = { 
-                  dataInicio: dataInicio || null, 
+                mapaFerias[userId] = {
+                  dataInicio: dataInicio || null,
                   dataFim: dataFim.getTime(),
-                  timestampMsg: new Date(msg.timestamp).getTime()
+                  timestampMsg: new Date(msg.timestamp).getTime(),
                 };
               } else if (dataInicio) {
                 // Se só tem data de início, considerar como férias em andamento
-                mapaFerias[userId] = { 
-                  dataInicio: dataInicio.getTime(), 
+                mapaFerias[userId] = {
+                  dataInicio: dataInicio.getTime(),
                   dataFim: null,
-                  timestampMsg: new Date(msg.timestamp).getTime()
+                  timestampMsg: new Date(msg.timestamp).getTime(),
                 };
               }
             }
@@ -325,29 +334,29 @@ module.exports = async (req, res) => {
       const uid = p.user.id;
 
       if (p.roles.some((r) => listaImunes.includes(r))) return;
-      
+
       // Se tem tag de férias, não considerar inativo
       if (FERIAS_ROLE_ID && p.roles.includes(FERIAS_ROLE_ID)) return;
-      
+
       const hoje = new Date();
       hoje.setHours(0, 0, 0, 0);
       const hojeTimestamp = hoje.getTime();
-      
+
       // Verificar se estava de férias e calcular inatividade a partir da remoção da tag
       let dataInicioInatividade = null;
       const feriasInfo = mapaFerias[uid];
       const temTagFerias = FERIAS_ROLE_ID && p.roles.includes(FERIAS_ROLE_ID);
-      
+
       if (feriasInfo) {
         // Se tem data de fim das férias
         if (feriasInfo.dataFim) {
           const dataFimFerias = feriasInfo.dataFim;
-          
+
           // Se ainda está dentro do período de férias E tem a tag, não considerar inativo
           if (hojeTimestamp <= dataFimFerias && temTagFerias) {
             return; // Ainda está em férias com tag
           }
-          
+
           // Se não tem mais a tag (foi removida), a inatividade conta a partir da data de fim
           // OU se passou da data de fim (bot remove automaticamente)
           // Usar a data de fim como base mínima para cálculo de inatividade
@@ -359,7 +368,7 @@ module.exports = async (req, res) => {
         } else if (feriasInfo.dataInicio) {
           // Se só tem data de início
           const dataInicioFerias = feriasInfo.dataInicio;
-          
+
           // Se ainda não começou as férias, não considerar inativo por férias
           if (hojeTimestamp < dataInicioFerias) {
             // Não está em férias ainda
@@ -375,7 +384,7 @@ module.exports = async (req, res) => {
       // --- CÁLCULO DE DATAS E FORMATOS ---
       // A contagem começa a partir do joined_at (data de entrada no Discord)
       // E reseta a cada mensagem ou menção nos canais de CHAT_ID_BUSCAR
-      
+
       let baseData = mapaUltimaAtividade[uid]; // Última atividade nos canais de CHAT_ID_BUSCAR
       let diffDias;
       let dataBaseCalculo;
@@ -385,8 +394,8 @@ module.exports = async (req, res) => {
       let textoDias = "---";
 
       // Data de entrada no Discord (joined_at) - base inicial para contagem
-      const joinedAtTimestamp = p.joined_at 
-        ? new Date(p.joined_at).getTime() 
+      const joinedAtTimestamp = p.joined_at
+        ? new Date(p.joined_at).getTime()
         : null;
 
       // Se estava de férias, usar a data de fim das férias como base mínima
@@ -399,7 +408,7 @@ module.exports = async (req, res) => {
           DATA_BASE_AUDITORIA,
           joinedAtTimestamp || 0
         );
-        
+
         // Se tem atividade registrada após a data de fim das férias, usar essa
         if (baseData && baseData > dataMinima) {
           // Tem atividade nos canais de CHAT_ID_BUSCAR após as férias
@@ -416,7 +425,9 @@ module.exports = async (req, res) => {
           joinedAtTimestamp || 0
         );
         dataBaseCalculo = Math.max(baseData, dataMinima);
-        diffDias = Math.floor((agora - dataBaseCalculo) / (1000 * 60 * 60 * 24));
+        diffDias = Math.floor(
+          (agora - dataBaseCalculo) / (1000 * 60 * 60 * 24)
+        );
 
         // 2. Formata Data (DD/MM/AAAA)
         const dataObj = new Date(dataBaseCalculo);
@@ -487,7 +498,7 @@ module.exports = async (req, res) => {
         let idPatente = null;
         let nomePatente = "Oficial";
         let maiorPosicao = -1;
-        
+
         // Percorrer os roles do usuário e encontrar qual está em POLICE_ROLE_IDS
         if (idsPatentes.length > 0 && p.roles && p.roles.length > 0) {
           // Encontrar todos os roles do usuário que estão na lista de POLICE_ROLE_IDS
@@ -502,12 +513,14 @@ module.exports = async (req, res) => {
               }
             }
           });
-          
+
           if (idPatente && mapRolesNames[idPatente]) {
             nomePatente = mapRolesNames[idPatente];
           } else if (idPatente) {
             // Role encontrado mas nome não mapeado (pode ser problema de cache)
-            console.warn(`⚠️ Role ${idPatente} encontrado mas nome não mapeado para usuário ${uid}`);
+            console.warn(
+              `⚠️ Role ${idPatente} encontrado mas nome não mapeado para usuário ${uid}`
+            );
           }
         }
 
@@ -543,6 +556,9 @@ module.exports = async (req, res) => {
     res.status(200).json(final);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Erro interno no servidor durante o processamento da auditoria. Por favor, tente novamente." });
+    res.status(500).json({
+      error:
+        "Erro interno no servidor durante o processamento da auditoria. Por favor, tente novamente.",
+    });
   }
 };

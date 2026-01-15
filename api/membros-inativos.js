@@ -62,7 +62,7 @@ module.exports = async (req, res) => {
       ? CHAT_ID_BUSCAR.split(",").map((id) => id.trim())
       : [];
 
-    // --- CORREÇÃO PRINCIPAL AQUI (Mantida do seu código) ---
+    // --- LÓGICA DE TEMPO LIMITE (Mantida) ---
     const LIMIT_DAYS_MS = 8 * 24 * 60 * 60 * 1000;
     const TIME_LIMIT = Date.now() - LIMIT_DAYS_MS;
 
@@ -191,9 +191,10 @@ module.exports = async (req, res) => {
       }
     }
 
-    // 6. MAPEAR ATIVIDADE (ADAPTAÇÃO AQUI)
+    // 6. MAPEAR ATIVIDADE (AQUI ESTÁ A CORREÇÃO "NUCLEAR")
     const mapaUltimaAtividade = {};
     const atualizarAtividade = (userId, timestamp) => {
+      if (!userId) return;
       const time = new Date(timestamp).getTime();
       if (!mapaUltimaAtividade[userId] || time > mapaUltimaAtividade[userId]) {
         mapaUltimaAtividade[userId] = time;
@@ -203,38 +204,53 @@ module.exports = async (req, res) => {
     mensagensAtividadeArrays.forEach((lista) => {
       if (Array.isArray(lista)) {
         lista.forEach((msg) => {
-          // 1. Autor da mensagem (usuário normal falando)
+          // 1. Autor humano da mensagem
           if (msg.author && msg.author.id) {
             atualizarAtividade(msg.author.id, msg.timestamp);
           }
 
-          // 2. Menções explícitas (padrão Discord)
+          // 2. Menções explícitas (Array de mentions do Discord)
           if (msg.mentions && Array.isArray(msg.mentions)) {
             msg.mentions.forEach((u) => {
               if (u.id) atualizarAtividade(u.id, msg.timestamp);
             });
           }
 
-          // 3. (ADICIONADO) Varredura profunda em EMBEDS
-          // Isso pega mensagens de BOTS que marcam usuários no texto/descrição
+          // 3. VARREDURA AGRESSIVA EM EMBEDS
+          // Busca IDs escondidos em Título, Descrição, Autor, Footer e Links
           if (msg.embeds && Array.isArray(msg.embeds)) {
             msg.embeds.forEach((embed) => {
-              // Concatena Título, Descrição e Campos do Embed
-              let conteudoEmbed =
-                (embed.title || "") + " " + (embed.description || "");
+              // Concatena TUDO que tem texto no embed
+              let partesTexto = [
+                embed.title,
+                embed.description,
+                embed.author?.name, // Nome do autor do embed (ex: Bate Ponto)
+                embed.footer?.text, // Rodapé do embed (ex: ID: 12345)
+              ];
+
               if (embed.fields && Array.isArray(embed.fields)) {
                 embed.fields.forEach((f) => {
-                  conteudoEmbed += " " + (f.value || "");
+                  partesTexto.push(f.name);
+                  partesTexto.push(f.value);
                 });
               }
 
-              // Regex para encontrar padrões <@123456> ou <@!123456>
-              // O 'g' garante que pegue todas as menções se tiver mais de uma
+              const textoCompleto = partesTexto.filter(Boolean).join(" ");
+
+              // A. Regex Padrão de Menção <@123>
               const regexMention = /<@!?(\d{17,20})>/g;
               let match;
-              while ((match = regexMention.exec(conteudoEmbed)) !== null) {
-                // match[1] contém apenas o ID numérico
+              while ((match = regexMention.exec(textoCompleto)) !== null) {
                 atualizarAtividade(match[1], msg.timestamp);
+              }
+
+              // B. Regex de "ID Bruto"
+              // Encontra qualquer sequência de 17 a 20 números soltos.
+              // Isso pega IDs em links, IDs no rodapé ou IDs soltos no texto.
+              const regexRawIds = /\b(\d{17,20})\b/g;
+              let matchRaw;
+              while ((matchRaw = regexRawIds.exec(textoCompleto)) !== null) {
+                atualizarAtividade(matchRaw[1], msg.timestamp);
               }
             });
           }
@@ -276,10 +292,17 @@ module.exports = async (req, res) => {
             });
           }
 
-          const matchId = textoTotal.match(/<@!?(\d+)>/);
-          if (matchId) {
-            const userId = matchId[1];
-            if (mapaFerias[userId]) continue;
+          // Usa a mesma lógica bruta para garantir que pega quem está de férias
+          const idsEncontrados = new Set();
+          const regexBusca = /\b(\d{17,20})\b/g;
+          let m;
+          while ((m = regexBusca.exec(textoTotal)) !== null) {
+            idsEncontrados.add(m[1]);
+          }
+
+          // Processa cada ID encontrado na msg de férias
+          idsEncontrados.forEach((userId) => {
+            if (mapaFerias[userId]) return;
 
             const matchInicio = textoTotal.match(regexDataInicio);
             const matchFim = textoTotal.match(regexDataFim);
@@ -310,7 +333,7 @@ module.exports = async (req, res) => {
                 };
               }
             }
-          }
+          });
         }
       } catch (e) {
         console.error("Erro ao processar férias:", e);

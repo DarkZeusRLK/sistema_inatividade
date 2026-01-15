@@ -62,7 +62,9 @@ module.exports = async (req, res) => {
       ? CHAT_ID_BUSCAR.split(",").map((id) => id.trim())
       : [];
 
-    // --- SEGURANÇA DE DATA ---
+    // --- SEGURANÇA DE DATA (MANTIDA EM 8 DIAS) ---
+    // A regra de negócio não mudou: 7 dias é inativo.
+    // Buscamos 8 dias para ter margem de segurança.
     const LIMIT_DAYS_MS = 8 * 24 * 60 * 60 * 1000;
     const TIME_LIMIT = Date.now() - LIMIT_DAYS_MS;
 
@@ -70,14 +72,21 @@ module.exports = async (req, res) => {
       let allMessages = [];
       let lastId = null;
 
-      for (let i = 0; i < 50; i++) {
+      // --- PAGINAÇÃO (AUMENTADA BRUTALMENTE) ---
+      // De 50 para 400 requests.
+      // 400 * 100 msgs = 40.000 mensagens analisadas.
+      // Isso garante que atravessemos todo o "lixo" do BigBig até chegar no dia 8.
+      for (let i = 0; i < 400; i++) {
         const url = `https://discord.com/api/v10/channels/${channelId}/messages?limit=100${
           lastId ? `&before=${lastId}` : ""
         }`;
 
         try {
           const res = await fetch(url, { headers });
-          if (!res.ok) break;
+          if (!res.ok) {
+            console.error(`Erro status ${res.status} no canal ${channelId}`);
+            break;
+          }
 
           const batch = await res.json();
           if (!batch || batch.length === 0) break;
@@ -89,11 +98,15 @@ module.exports = async (req, res) => {
             batch[batch.length - 1].timestamp
           ).getTime();
 
+          // AQUI ESTÁ A TRAVA INTELIGENTE:
+          // Se as mensagens que acabamos de baixar são mais velhas que 8 dias, PARAMOS.
+          // Isso impede que o bot fique lendo à toa em canais parados,
+          // mas permite que ele leia as 40.000 mensagens se elas forem todas de "hoje".
           if (lastMsgDate < TIME_LIMIT) {
             break;
           }
         } catch (e) {
-          console.error(`Erro canal ${channelId}:`, e);
+          console.error(`Erro fetch canal ${channelId}:`, e);
           break;
         }
       }
@@ -191,7 +204,7 @@ module.exports = async (req, res) => {
       }
     }
 
-    // 6. MAPEAR ATIVIDADE (CORREÇÃO FINAL PARA O BOT BIGBIG)
+    // 6. MAPEAR ATIVIDADE (Scan Profundo nos Embeds)
     const mapaUltimaAtividade = {};
     const atualizarAtividade = (userId, timestamp) => {
       if (!userId) return;
@@ -204,20 +217,19 @@ module.exports = async (req, res) => {
     mensagensAtividadeArrays.forEach((lista) => {
       if (Array.isArray(lista)) {
         lista.forEach((msg) => {
-          // 1. Autor humano (usuário falando)
+          // 1. Autor humano
           if (msg.author && !msg.author.bot) {
             atualizarAtividade(msg.author.id, msg.timestamp);
           }
 
-          // 2. Menções explícitas (metadados do Discord)
+          // 2. Menções explícitas
           if (msg.mentions && Array.isArray(msg.mentions)) {
             msg.mentions.forEach((u) => {
               if (u.id) atualizarAtividade(u.id, msg.timestamp);
             });
           }
 
-          // 3. VARREDURA DE CONTEÚDO BRUTO (MENSAGEM NORMAL)
-          // Isso pega quando o bot manda "<@123>" no corpo da mensagem mas não gera metadata
+          // 3. Regex no Conteúdo
           if (msg.content) {
             const regexContent = /<@!?(\d{17,20})>/g;
             let matchContent;
@@ -226,40 +238,34 @@ module.exports = async (req, res) => {
             }
           }
 
-          // 4. VARREDURA EM EMBEDS (DESCRIÇÃO, TÍTULO, CAMPOS)
+          // 4. Regex nos Embeds (CRÍTICO PARA O BIGBIG)
           if (msg.embeds && Array.isArray(msg.embeds)) {
             msg.embeds.forEach((embed) => {
-              // Monta um "textão" com tudo que tem no embed
               let partesTexto = [
                 embed.title,
                 embed.description,
                 embed.author?.name,
                 embed.footer?.text,
               ];
-
               if (embed.fields && Array.isArray(embed.fields)) {
                 embed.fields.forEach((f) => {
                   partesTexto.push(f.name);
                   partesTexto.push(f.value);
                 });
               }
-
               const textoCompleto = partesTexto.filter(Boolean).join(" ");
 
-              // A. Regex Padrão de Menção: <@13222...>
-              // Essa é a que vai pegar o BigBig baseado no seu print
+              // A. Menção padrão <@ID>
               const regexMention = /<@!?(\d{17,20})>/g;
               let match;
               while ((match = regexMention.exec(textoCompleto)) !== null) {
                 atualizarAtividade(match[1], msg.timestamp);
               }
 
-              // B. Regex de "ID Solto": 13222... (backup)
+              // B. IDs soltos (Ex: "Oficial: 123456")
               const regexRawIds = /\b(\d{17,20})\b/g;
               let matchRaw;
               while ((matchRaw = regexRawIds.exec(textoCompleto)) !== null) {
-                // Filtra para não pegar IDs de canais ou cargos se possível,
-                // mas na dúvida atualiza pois é atividade relacionada
                 atualizarAtividade(matchRaw[1], msg.timestamp);
               }
             });
@@ -276,11 +282,12 @@ module.exports = async (req, res) => {
       try {
         let allMessagesFerias = [];
         let lastIdFerias = null;
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 10; i++) {
           const url = `https://discord.com/api/v10/channels/${FERIAS_CHANNEL_ID}/messages?limit=100${
             lastIdFerias ? `&before=${lastIdFerias}` : ""
           }`;
           const r = await fetch(url, { headers });
+          if (!r.ok) break;
           const batch = await r.json();
           if (!batch || batch.length === 0) break;
           allMessagesFerias = allMessagesFerias.concat(batch);
@@ -302,20 +309,15 @@ module.exports = async (req, res) => {
             });
           }
 
-          // Busca IDs na mensagem de férias
           const idsEncontrados = new Set();
-
-          // Busca <@ID>
           const regexMentionF = /<@!?(\d{17,20})>/g;
           let mF;
           while ((mF = regexMentionF.exec(textoTotal)) !== null) {
             idsEncontrados.add(mF[1]);
           }
 
-          // Processa cada ID
           idsEncontrados.forEach((userId) => {
             if (mapaFerias[userId]) return;
-
             const matchInicio = textoTotal.match(regexDataInicio);
             const matchFim = textoTotal.match(regexDataFim);
 
@@ -406,7 +408,6 @@ module.exports = async (req, res) => {
           DATA_BASE_AUDITORIA,
           joinedAtTimestamp || 0
         );
-
         if (baseData && baseData > dataMinima) {
           dataBaseCalculo = baseData;
         } else {
@@ -435,6 +436,7 @@ module.exports = async (req, res) => {
       textoData = `${dia}/${mes}/${ano}`;
       textoDias = `${diffDias} dias`;
 
+      // REGRA FINAL: Só retorna quem tem 7 dias ou mais
       if (diffDias >= 7) {
         const apelido = p.nick || p.user.username;
         let passaporte = "---";

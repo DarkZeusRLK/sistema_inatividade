@@ -8,7 +8,7 @@ module.exports = async (req, res) => {
     FERIAS_ROLE_ID,
     AUDITOR_PERICIAL_ROLE_ID,
     AUDITOR_PRISIONAL_ROLE_ID,
-    CH_ACOES_ID, // Agora tratado como múltiplos IDs
+    CH_ACOES_ID,
     CH_PERICIAL_ID,
     CH_PRISIONAL_ID,
     CH_RECRUTAMENTO_ID,
@@ -20,16 +20,12 @@ module.exports = async (req, res) => {
     const headers = { Authorization: `Bot ${Discord_Bot_Token}` };
     const { start, end } = req.query;
 
-    // Converte datas para timestamp (Início: 00:00:00 / Fim: 23:59:59)
     const dataInicioMs = start
       ? new Date(start + "T00:00:00").getTime()
       : Date.now() - 7 * 24 * 60 * 60 * 1000;
     const dataFimMs = end ? new Date(end + "T23:59:59").getTime() : Date.now();
 
-    // Transforma a string de cargos imunes em um array
     const listaImunes = CARGOS_IMUNES ? CARGOS_IMUNES.split(",") : [];
-
-    // --- NOVA ALTERAÇÃO: Transforma CH_ACOES_ID em array (separado por vírgula) ---
     const listaCanaisAcoes = CH_ACOES_ID ? CH_ACOES_ID.split(",") : [];
 
     const membersRes = await fetch(
@@ -38,7 +34,6 @@ module.exports = async (req, res) => {
     );
     const allMembers = await membersRes.json();
 
-    // Filtro: Verifica se é CORE e se NÃO tem cargo imune
     const coreMembers = allMembers.filter((m) => {
       const isCore = m.roles.includes(CORE_ROLE_ID);
       if (!isCore) return false;
@@ -63,7 +58,6 @@ module.exports = async (req, res) => {
     });
 
     async function processarCanal(channelId, tipo) {
-      // Remove espaços em branco caso existam no split (ex: "id1, id2")
       const cleanId = channelId ? channelId.trim() : null;
       if (!cleanId) return;
 
@@ -72,10 +66,9 @@ module.exports = async (req, res) => {
         { headers },
       );
 
-      if (!r.ok) return; // Se o canal não existir ou der erro, ignora silenciosamente
+      if (!r.ok) return;
       const msgs = await r.json();
 
-      // Verifica se msgs é um array (segurança contra erros da API que retornam obj)
       if (!Array.isArray(msgs)) return;
 
       msgs.forEach((msg) => {
@@ -83,9 +76,27 @@ module.exports = async (req, res) => {
         if (ts < dataInicioMs || ts > dataFimMs) return;
 
         if (tipo === "ACOES") {
+          // --- NOVA LÓGICA DE PONTUAÇÃO ---
+          // Divide a mensagem em linhas para analisar o contexto de cada usuário
+          const lines = msg.content.split("\n");
+
           Object.keys(metaMap).forEach((id) => {
-            if (msg.content.includes(id)) metaMap[id].acoes++;
+            // Otimização: se o ID nem está na mensagem, pula
+            if (!msg.content.includes(id)) return;
+
+            // Encontra a linha específica onde o ID do usuário aparece
+            const userLine = lines.find((line) => line.includes(id));
+
+            if (userLine) {
+              // Verifica se NA LINHA do usuário existe a tag de comando (Maiúsculo ou minúsculo)
+              if (userLine.toUpperCase().includes("(CMD AÇÃO)")) {
+                metaMap[id].acoes += 2; // Comandante ganha 2
+              } else {
+                metaMap[id].acoes += 1; // Participante ganha 1
+              }
+            }
           });
+          // --------------------------------
         } else if (tipo === "CGPC") {
           const roleAudit = [
             AUDITOR_PERICIAL_ROLE_ID,
@@ -110,11 +121,8 @@ module.exports = async (req, res) => {
       });
     }
 
-    // --- NOVA ALTERAÇÃO: Mapeia todos os canais de ações encontrados ---
     await Promise.all([
-      // Para cada ID na lista de ações, roda a função processarCanal com tipo "ACOES"
       ...listaCanaisAcoes.map((id) => processarCanal(id, "ACOES")),
-
       processarCanal(CH_PERICIAL_ID, "CGPC"),
       processarCanal(CH_PRISIONAL_ID, "CGPC"),
       processarCanal(CH_RECRUTAMENTO_ID, "ENSINO"),
@@ -123,7 +131,7 @@ module.exports = async (req, res) => {
 
     res.status(200).json(Object.values(metaMap));
   } catch (err) {
-    console.error(err); // Log útil para debug no console do servidor
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 };

@@ -700,7 +700,7 @@ window.exonerarSelecionados = async function () {
 
   const inativosParaProcessar = inativosSelecionados.map((m) => ({
     discordUser: m.id,
-    nomeCidade: m.name.replace(/[\d|]/g, "").trim(),
+    nomeCidade: (m.rpName || m.name || "").replace(/[\d|]/g, "").trim(),
     idPassaporte: m.passaporte || "---",
     cargo: m.cargo || "Oficial",
     action: "kick",
@@ -887,7 +887,7 @@ window.exonerarTodosInativos = async function () {
 
   const inativosParaProcessar = dadosInatividadeGlobal.map((m) => ({
     discordUser: m.id,
-    nomeCidade: m.name.replace(/[\d|]/g, "").trim(),
+    nomeCidade: (m.rpName || m.name || "").replace(/[\d|]/g, "").trim(),
     idPassaporte: m.passaporte || "---",
     cargo: m.cargo || "Oficial",
     action: "kick",

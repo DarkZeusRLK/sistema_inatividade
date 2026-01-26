@@ -196,15 +196,24 @@ module.exports = async (req, res) => {
                 }
               });
             }
-            const matchNome = textoAnalise.match(
-              /(?:Nome(?:\s+RP|\s+Civil)?|Identidade|Membro)(?:[\s\W]*):(?:\s*)(.*?)(?:\n|$|\||•)/i
+            const matchNomeRP = textoAnalise.match(
+              /(?:Nome\s*(?:do\s*)?RP)(?:[\s\W]*):\s*([^|]+)/i
+            );
+            const matchNomeCivil = textoAnalise.match(
+              /(?:Nome(?:\s+Civil)?|Identidade|Membro)(?:[\s\W]*):\s*([^|]+)/i
             );
             const matchPassaporte = textoAnalise.match(
-              /(?:Passaporte|ID|Identidade|Rg|Registro)(?:[\s\W]*):(?:\s*)(\d+)/i
+              /(?:Passaporte|ID|Identidade|Rg|Registro)(?:[\s\W]*):\s*(\d+)/i
             );
 
-            if (matchNome) {
-              mapaNomesRP[userIdEncontrado] = matchNome[1]
+            if (matchNomeRP) {
+              mapaNomesRP[userIdEncontrado] = matchNomeRP[1]
+                .split("\n")[0]
+                .replace(/[*_`]/g, "")
+                .trim();
+            } else if (matchNomeCivil) {
+              mapaNomesRP[userIdEncontrado] = matchNomeCivil[1]
+                .split("\n")[0]
                 .replace(/[*_`]/g, "")
                 .trim();
             }

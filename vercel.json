@@ -15,5 +15,8 @@
         }
       ]
     }
+  ],
+  "crons": [
+    { "path": "/api/cron-ferias", "schedule": "*/5 * * * *" }
   ]
 }

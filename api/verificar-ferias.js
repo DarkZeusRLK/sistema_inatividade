@@ -1,6 +1,7 @@
 // =========================================================
 // API DE VERIFICAÇÃO DE FÉRIAS (FILTRO POR MATRIZ)
 // =========================================================
+const fetch = global.fetch || require("node-fetch");
 const { processarFerias } = require("./_ferias-service");
 
 module.exports = async (req, res) => {

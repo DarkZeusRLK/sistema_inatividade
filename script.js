@@ -490,6 +490,7 @@ window.prepararExoneracao = function (discordId, rpName, cargo, passaporte) {
     "CONFIRMAÇÃO DE EXONERAÇÃO ADMINISTRATIVA",
     htmlMsg,
     async () => {
+      mostrarAviso("Processando exoneração, por favor aguarde.", "info");
       // Verificar se está em férias antes de exonerar
       const sessao = obterSessao();
       try {
@@ -544,7 +545,7 @@ async function executarExoneracaoBot(
   motivo
 ) {
   const sessao = obterSessao();
-  mostrarAviso("Processando solicitação de exoneração...", "info");
+  mostrarAviso("Processando exoneração, por favor aguarde.", "info");
 
   try {
     const res = await fetch(`${API_BASE}/api/exonerar.js`, {
@@ -562,10 +563,7 @@ async function executarExoneracaoBot(
     });
 
     if (res.ok) {
-      mostrarAviso(
-        "Exoneração processada com sucesso. O oficial foi removido do sistema.",
-        "success"
-      );
+      mostrarAviso("Exoneração realizada com sucesso!", "success");
       window.carregarInatividade();
     } else {
       const erro = await res.json();
@@ -716,10 +714,7 @@ window.exonerarSelecionados = async function () {
         "btn-exonerar-selecionados"
       );
       if (btnSelecionados) btnSelecionados.disabled = true;
-      mostrarAviso(
-        "Iniciando processamento da exoneração dos oficiais selecionados...",
-        "info"
-      );
+      mostrarAviso("Processando exoneração, por favor aguarde.", "info");
 
       try {
         const resultado = await processarExoneracoesEmLotes(
@@ -728,16 +723,11 @@ window.exonerarSelecionados = async function () {
         );
 
         if (resultado.sucessos > 0) {
-          mostrarAviso(
-            `Processamento finalizado: ${
-              resultado.sucessos
-            } oficial(is) exonerado(s) com sucesso. ${
-              resultado.erros > 0
-                ? `${resultado.erros} registro(s) apresentaram falha no processamento.`
-                : ""
-            }`,
-            resultado.erros > 0 ? "error" : "success"
-          );
+          const msgSucesso =
+            resultado.erros > 0
+              ? `Exoneração realizada com sucesso! ${resultado.erros} registro(s) apresentaram falha no processamento.`
+              : "Exoneração realizada com sucesso!";
+          mostrarAviso(msgSucesso, resultado.erros > 0 ? "error" : "success");
           window.carregarInatividade(); // Recarrega a lista
         } else {
           mostrarAviso(
@@ -901,10 +891,7 @@ window.exonerarTodosInativos = async function () {
     async () => {
       const btnMassa = document.getElementById("btn-exonerar-todos");
       if (btnMassa) btnMassa.disabled = true;
-      mostrarAviso(
-        "Iniciando processamento em massa das exonerações...",
-        "info"
-      );
+      mostrarAviso("Processando exoneração, por favor aguarde.", "info");
 
       try {
         const res = await fetch(`${API_BASE}/api/exonerar.js`, {
@@ -917,10 +904,7 @@ window.exonerarTodosInativos = async function () {
         });
 
         if (res.ok) {
-          mostrarAviso(
-            `Processamento concluído com sucesso: ${inativosParaProcessar.length} oficial(is) exonerado(s) do sistema.`,
-            "success"
-          );
+          mostrarAviso("Exoneração realizada com sucesso!", "success");
           window.carregarInatividade(); // Recarrega a lista
         } else {
           mostrarAviso(

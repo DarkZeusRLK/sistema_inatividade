@@ -78,10 +78,14 @@ module.exports = async (req, res) => {
     hoje.setHours(0, 0, 0, 0);
 
     let logsRemocao = [];
+    let logsAplicacao = [];
     let validosParaAntecipar = [];
     let processados = new Set();
 
-    const regexDataFim = /Fim das f[eé]rias:.*?(\d{2}\/\d{2}\/\d{4})/i;
+    const regexDataInicio =
+      /(?:In[ií]cio|Come[cç]o|Data de in[ií]cio|Solicita[cç][aã]o|Sa[ií]da).*?(\d{2}\/\d{2}\/\d{4})/i;
+    const regexDataFim =
+      /(?:Fim|T[eé]rmino|Data de fim|Fim das f[eé]rias|Retorno).*?(\d{2}\/\d{2}\/\d{4})/i;
 
     for (const msg of allMessages) {
       let textoTotal = msg.content || "";
@@ -94,15 +98,27 @@ module.exports = async (req, res) => {
       }
 
       const matchId = textoTotal.match(/<@!?(\d+)>/);
-      const matchData = textoTotal.match(regexDataFim);
+      const matchDataInicio = textoTotal.match(regexDataInicio);
+      const matchDataFim = textoTotal.match(regexDataFim);
 
-      if (matchId && matchData) {
+      if (matchId && (matchDataInicio || matchDataFim)) {
         const userId = matchId[1];
         if (processados.has(userId)) continue;
         processados.add(userId);
 
-        const [d, m, a] = matchData[1].split("/");
-        const dataFim = new Date(a, m - 1, d);
+        let dataInicio = null;
+        let dataFim = null;
+
+        if (matchDataInicio) {
+          const [d, m, a] = matchDataInicio[1].split("/");
+          dataInicio = new Date(a, m - 1, d);
+          dataInicio.setHours(0, 0, 0, 0);
+        }
+        if (matchDataFim) {
+          const [d, m, a] = matchDataFim[1].split("/");
+          dataFim = new Date(a, m - 1, d);
+          dataFim.setHours(23, 59, 59, 999);
+        }
 
         const membro = membersMap.get(userId);
 
@@ -114,8 +130,36 @@ module.exports = async (req, res) => {
         ) {
           const temTagFerias = membro.roles.includes(FERIAS_ROLE_ID);
 
+          let deveAplicarTag = false;
+          if (dataInicio && dataFim) {
+            if (hoje >= dataInicio && hoje <= dataFim) {
+              deveAplicarTag = true;
+            } else if (dataInicio > hoje) {
+              const diffDias = Math.floor(
+                (dataInicio - hoje) / (1000 * 60 * 60 * 24)
+              );
+              if (diffDias <= 7 && diffDias >= 0) {
+                deveAplicarTag = true;
+              }
+            }
+          } else if (dataInicio && !dataFim) {
+            const diffDias = Math.floor(
+              (hoje - dataInicio) / (1000 * 60 * 60 * 24)
+            );
+            if (diffDias >= 0 && diffDias <= 60) {
+              deveAplicarTag = true;
+            }
+          } else if (!dataInicio && dataFim) {
+            const diffDias = Math.floor(
+              (dataFim - hoje) / (1000 * 60 * 60 * 24)
+            );
+            if (diffDias >= 0 && diffDias <= 60) {
+              deveAplicarTag = true;
+            }
+          }
+
           // Se a data de fim já passou, remover a tag automaticamente
-          if (hoje >= dataFim) {
+          if (dataFim && hoje >= dataFim) {
             if (temTagFerias) {
               try {
                 await fetch(
@@ -124,18 +168,42 @@ module.exports = async (req, res) => {
                 );
                 logsRemocao.push(
                   `${membro.nick || membro.user.username} (Férias encerradas em: ${
-                    matchData[1]
+                    matchDataFim[1]
                   } - Tag removida automaticamente)`
                 );
               } catch (e) {
                 console.error(`Erro ao remover tag de férias de ${userId}:`, e);
               }
             }
-          } else if (temTagFerias) {
+          } else if (!temTagFerias && deveAplicarTag) {
+            try {
+              await fetch(
+                `https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userId}/roles/${FERIAS_ROLE_ID}`,
+                { method: "PUT", headers }
+              );
+              try {
+                const emojiCheck = encodeURIComponent("✅");
+                await fetch(
+                  `https://discord.com/api/v10/channels/${FERIAS_CHANNEL_ID}/messages/${msg.id}/reactions/${emojiCheck}/@me`,
+                  { method: "PUT", headers }
+                );
+              } catch (e) {
+                console.error(
+                  `Erro ao reagir com check na mensagem ${msg.id}:`,
+                  e
+                );
+              }
+              logsAplicacao.push(
+                `${membro.nick || membro.user.username} (Tag de férias aplicada automaticamente)`
+              );
+            } catch (e) {
+              console.error(`Erro ao aplicar tag de férias em ${userId}:`, e);
+            }
+          } else if (temTagFerias && dataFim) {
             validosParaAntecipar.push({
               id: userId,
               nome: membro.nick || membro.user.username,
-              dataRetorno: matchData[1],
+              dataRetorno: matchDataFim[1],
             });
           }
         }
@@ -147,6 +215,7 @@ module.exports = async (req, res) => {
         a.nome.localeCompare(b.nome)
       ),
       logs: logsRemocao,
+      logsAplicacao,
     });
   } catch (error) {
     console.error("Erro no verificar-ferias:", error);

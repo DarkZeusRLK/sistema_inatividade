@@ -334,12 +334,61 @@ window.carregarInatividade = async function () {
   }, 300);
 
   try {
-    const res = await fetch(
-      `${API_BASE}/api/membros-inativos.js?org=${sessao.org}`
-    );
-    if (!res.ok) throw new Error(`Erro API: ${res.status}`);
+    let dados = [];
+    let cursor = null;
+    let finalizou = false;
 
-    const dados = await res.json();
+    for (let lote = 1; lote <= 80; lote++) {
+      const res = await fetch(`${API_BASE}/api/membros-inativos.js`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          org: sessao.org,
+          cursor,
+          maxExecMs: 6500,
+          maxPagesPerBatch: 16,
+        }),
+      });
+      if (!res.ok) throw new Error(`Erro API: ${res.status}`);
+
+      const payload = await res.json();
+      if (Array.isArray(payload)) {
+        dados = payload;
+        finalizou = true;
+        break;
+      }
+
+      if (!payload || typeof payload !== "object") {
+        throw new Error("Resposta invalida da auditoria.");
+      }
+
+      const progresso = payload.progresso || {};
+      const totalCanais = Number(progresso.totalCanais || 0);
+      const canaisConcluidos = Number(progresso.canaisConcluidos || 0);
+      const percentual = Number(progresso.percentualConclusao || 0);
+
+      if (barra) {
+        width = Math.max(width, Math.min(95, percentual));
+        barra.style.width = `${width}%`;
+      }
+      corpo.innerHTML = `<tr><td colspan="5" align="center">🔄 Sincronizando registros (${canaisConcluidos}/${totalCanais} canais, lote ${lote})...</td></tr>`;
+
+      if (!payload.partial) {
+        dados = Array.isArray(payload.data) ? payload.data : [];
+        finalizou = true;
+        break;
+      }
+
+      cursor = payload.cursor || null;
+      if (!cursor) {
+        throw new Error("Cursor ausente durante sincronizacao em lotes.");
+      }
+    }
+
+    if (!finalizou) {
+      throw new Error("A sincronizacao excedeu o numero maximo de lotes.");
+    }
+
     clearInterval(fakeProgress);
     if (barra) barra.style.width = "100%";
 

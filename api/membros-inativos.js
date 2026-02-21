@@ -1,15 +1,14 @@
 // api/membros-inativos.js
 module.exports = async (req, res) => {
-  // Configuração de CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
   if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "GET" && req.method !== "POST") {
+    return res.status(405).json({ error: "Metodo nao permitido." });
+  }
 
-  const { org } = req.query;
-
-  // Variáveis de Ambiente
   const {
     Discord_Bot_Token,
     GUILD_ID,
@@ -29,9 +28,9 @@ module.exports = async (req, res) => {
   } = process.env;
 
   if (!Discord_Bot_Token) {
-    return res.status(500).json({
-      error: "Configuração incompleta: Token do Bot ausente.",
-    });
+    return res
+      .status(500)
+      .json({ error: "Configuracao incompleta: Token do Bot ausente." });
   }
 
   const headers = {
@@ -41,8 +40,64 @@ module.exports = async (req, res) => {
 
   try {
     const fetch = global.fetch || require("node-fetch");
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-    // 1. SELEÇÃO DE ORG
+    const fetchDiscord = async (url, options = {}, maxRetries = 5) => {
+      for (let tentativa = 0; tentativa <= maxRetries; tentativa++) {
+        const response = await fetch(url, options);
+        if (response.status !== 429) return response;
+
+        let retryAfter = 1;
+        try {
+          const data429 = await response.json();
+          if (
+            data429 &&
+            typeof data429.retry_after === "number" &&
+            data429.retry_after > 0
+          ) {
+            retryAfter = data429.retry_after;
+          }
+        } catch (_) {}
+
+        await sleep(Math.ceil(retryAfter * 1000) + 250);
+      }
+      throw new Error("Discord API rate limit persistente (429).");
+    };
+
+    const lerBodyJson = async () => {
+      if (req.method !== "POST") return {};
+      if (req.body && typeof req.body === "object") return req.body;
+      if (typeof req.body === "string") {
+        try {
+          return JSON.parse(req.body);
+        } catch (_) {
+          return {};
+        }
+      }
+
+      return await new Promise((resolve) => {
+        let raw = "";
+        req.on("data", (chunk) => {
+          raw += chunk;
+        });
+        req.on("end", () => {
+          if (!raw) return resolve({});
+          try {
+            resolve(JSON.parse(raw));
+          } catch (_) {
+            resolve({});
+          }
+        });
+        req.on("error", () => resolve({}));
+      });
+    };
+
+    const body = await lerBodyJson();
+    const orgRaw =
+      (req.query && req.query.org) ||
+      (body && typeof body.org === "string" && body.org);
+    const org = typeof orgRaw === "string" ? orgRaw.trim() : "";
+
     let canalAdmissaoId = ADMISSAO_CHANNEL_ID;
     let cargoBaseOrg = POLICE_ROLE_ID;
 
@@ -57,84 +112,77 @@ module.exports = async (req, res) => {
       cargoBaseOrg = PF_ROLE_ID;
     }
 
-    // 2. CANAIS DE ATIVIDADE
     const canaisAtividadeIds = CHAT_ID_BUSCAR
-      ? CHAT_ID_BUSCAR.split(",").map((id) => id.trim())
+      ? Array.from(
+          new Set(
+            CHAT_ID_BUSCAR.split(/[,\n;]+/)
+              .map((entrada) => {
+                const match = (entrada || "").match(/\d{17,20}/);
+                return match ? match[0] : "";
+              })
+              .filter((id) => id)
+          )
+        )
       : [];
 
-    // --- SEGURANÇA DE DATA (AUMENTADA PARA 15 DIAS) ---
-    // A regra de inatividade continua 7 dias.
-    // Mas aumentamos a busca para 15 dias para garantir que logs atrasados ou spamados sejam lidos.
     const SEARCH_DAYS_MS = 15 * 24 * 60 * 60 * 1000;
     const TIME_LIMIT = Date.now() - SEARCH_DAYS_MS;
+    const DATA_BASE_AUDITORIA = new Date("2025-12-08T00:00:00").getTime();
 
-    const buscarMensagensCanal = async (channelId) => {
-      let allMessages = [];
-      let lastId = null;
+    const startRequestTime = Date.now();
+    const maxExecRaw =
+      (body && body.maxExecMs) || (req.query && req.query.maxExecMs);
+    const maxPagesRaw =
+      (body && body.maxPagesPerBatch) ||
+      (req.query && req.query.maxPagesPerBatch);
 
-      // --- PAGINAÇÃO (MANTIDA FORTE: 400 requests) ---
-      for (let i = 0; i < 400; i++) {
-        const url = `https://discord.com/api/v10/channels/${channelId}/messages?limit=100${
-          lastId ? `&before=${lastId}` : ""
-        }`;
-
-        try {
-          const res = await fetch(url, { headers });
-          if (!res.ok) {
-            console.error(`Erro status ${res.status} no canal ${channelId}`);
-            break;
-          }
-
-          const batch = await res.json();
-          if (!batch || batch.length === 0) break;
-
-          allMessages = allMessages.concat(batch);
-          lastId = batch[batch.length - 1].id;
-
-          const lastMsgDate = new Date(
-            batch[batch.length - 1].timestamp
-          ).getTime();
-
-          if (lastMsgDate < TIME_LIMIT) {
-            break;
-          }
-        } catch (e) {
-          console.error(`Erro fetch canal ${channelId}:`, e);
-          break;
-        }
-      }
-      return allMessages;
-    };
-    // -------------------------------
-
-    const promisesAtividade = canaisAtividadeIds.map((id) =>
-      buscarMensagensCanal(id).catch(() => [])
+    const MAX_EXECUTION_MS = Math.max(
+      2500,
+      Math.min(9000, Number(maxExecRaw) || 7000)
+    );
+    const MAX_PAGES_PER_BATCH = Math.max(
+      2,
+      Math.min(60, Number(maxPagesRaw) || 18)
     );
 
-    const [membersRes, admissaoRes, rolesRes, ...mensagensAtividadeArrays] =
-      await Promise.all([
-        fetch(
-          `https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`,
-          { headers }
-        ),
-        canalAdmissaoId
-          ? fetch(
-              `https://discord.com/api/v10/channels/${canalAdmissaoId}/messages?limit=100`,
-              { headers }
-            )
-          : Promise.resolve(null),
-        fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/roles`, {
-          headers,
-        }),
-        ...promisesAtividade,
-      ]);
+    const cursorEntrada =
+      body && body.cursor && typeof body.cursor === "object" ? body.cursor : null;
+    const cursorValido =
+      cursorEntrada &&
+      cursorEntrada.version === 1 &&
+      cursorEntrada.org === org &&
+      !Array.isArray(cursorEntrada);
+
+    const estadoCanais = cursorValido && cursorEntrada.channelState
+      ? { ...cursorEntrada.channelState }
+      : {};
+    const mapaUltimaAtividade = cursorValido && cursorEntrada.activityMap
+      ? { ...cursorEntrada.activityMap }
+      : {};
+    const paginasProcessadasTotalInicial = cursorValido
+      ? Number(cursorEntrada.pagesProcessedTotal || 0)
+      : 0;
+
+    const [membersRes, admissaoRes, rolesRes] = await Promise.all([
+      fetchDiscord(`https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`, {
+        headers,
+      }),
+      canalAdmissaoId
+        ? fetchDiscord(
+            `https://discord.com/api/v10/channels/${canalAdmissaoId}/messages?limit=100`,
+            { headers }
+          )
+        : Promise.resolve(null),
+      fetchDiscord(`https://discord.com/api/v10/guilds/${GUILD_ID}/roles`, {
+        headers,
+      }),
+    ]);
 
     if (!membersRes.ok) throw new Error(`Erro Membros: ${membersRes.status}`);
 
     const oficiais = await membersRes.json();
     const serverRoles = rolesRes.ok ? await rolesRes.json() : [];
 
-    // 4. MAPEAR PATENTES
     const idsPatentes = POLICE_ROLE_IDS
       ? POLICE_ROLE_IDS.split(",")
           .map((id) => id.trim())
@@ -147,26 +195,16 @@ module.exports = async (req, res) => {
       mapRolesPosition[r.id] = r.position || 0;
     });
 
-    // =================================================================================
-    // [NOVO] 4.5. MAPEAMENTO INTELIGENTE (RESOLVE O PROBLEMA DO RICARDO)
-    // Antes de ler as mensagens, vamos descobrir qual passaporte pertence a quem
-    // olhando os apelidos (Ex: "Ricardo | 7087" -> 7087 é o Ricardo)
-    // =================================================================================
-    const mapaPassaporteParaID = {}; // { '7087': '112298...' }
-
+    const mapaPassaporteParaID = {};
     oficiais.forEach((m) => {
       if (m.user.bot) return;
       const apelido = m.nick || m.user.username;
-      // Pega numeros no final do nick, geralmente depois de uma barra vertical
-      // Ex: "Nome | 7087" ou "Nome 7087"
       const matchNick = apelido.match(/\|?\s*(\d{3,6})\s*$/);
       if (matchNick) {
-        const passaporte = matchNick[1];
-        mapaPassaporteParaID[passaporte] = m.user.id;
+        mapaPassaporteParaID[matchNick[1]] = m.user.id;
       }
     });
 
-    // 5. PROCESSAR ADMISSÃO
     const mapaNomesRP = {};
     const mapaPassaporteRP = {};
 
@@ -182,125 +220,218 @@ module.exports = async (req, res) => {
             if (matchId) userIdEncontrado = matchId[0];
           }
 
-          if (userIdEncontrado) {
-            let textoAnalise = msg.content || "";
-            if (msg.embeds && msg.embeds.length > 0) {
-              msg.embeds.forEach((embed) => {
-                textoAnalise += `\n ${embed.title || ""} \n ${
-                  embed.description || ""
-                }`;
-                if (embed.fields) {
-                  embed.fields.forEach((f) => {
-                    textoAnalise += `\n ${f.name}: ${f.value}`;
-                  });
-                }
-              });
-            }
-            const matchNomeRP = textoAnalise.match(
-              /(?:Nome\s*(?:do\s*)?RP)(?:[\s\W]*):\s*([^|]+)/i
-            );
-            const matchNomeCivil = textoAnalise.match(
-              /(?:Nome(?:\s+Civil)?|Identidade|Membro)(?:[\s\W]*):\s*([^|]+)/i
-            );
-            const matchPassaporte = textoAnalise.match(
-              /(?:Passaporte|ID|Identidade|Rg|Registro)(?:[\s\W]*):\s*(\d+)/i
-            );
+          if (!userIdEncontrado) return;
 
-            if (matchNomeRP) {
-              mapaNomesRP[userIdEncontrado] = matchNomeRP[1]
-                .split("\n")[0]
-                .replace(/[*_`]/g, "")
-                .trim();
-            } else if (matchNomeCivil) {
-              mapaNomesRP[userIdEncontrado] = matchNomeCivil[1]
-                .split("\n")[0]
-                .replace(/[*_`]/g, "")
-                .trim();
-            }
-            if (matchPassaporte) {
-              const pass = matchPassaporte[1].trim();
-              mapaPassaporteRP[userIdEncontrado] = pass;
-              // Reforça o mapa inverso com dados da admissão
-              if (pass.length >= 3)
-                mapaPassaporteParaID[pass] = userIdEncontrado;
-            }
+          let textoAnalise = msg.content || "";
+          if (msg.embeds && msg.embeds.length > 0) {
+            msg.embeds.forEach((embed) => {
+              textoAnalise += `\n ${embed.title || ""}\n ${embed.description || ""}`;
+              if (embed.fields) {
+                embed.fields.forEach((f) => {
+                  textoAnalise += `\n ${f.name}: ${f.value}`;
+                });
+              }
+            });
+          }
+
+          const matchNomeRP = textoAnalise.match(
+            /(?:Nome\s*(?:do\s*)?RP)(?:[\s\W]*):\s*([^|]+)/i
+          );
+          const matchNomeCivil = textoAnalise.match(
+            /(?:Nome(?:\s+Civil)?|Identidade|Membro)(?:[\s\W]*):\s*([^|]+)/i
+          );
+          const matchPassaporte = textoAnalise.match(
+            /(?:Passaporte|ID|Identidade|Rg|Registro)(?:[\s\W]*):\s*(\d+)/i
+          );
+
+          if (matchNomeRP) {
+            mapaNomesRP[userIdEncontrado] = matchNomeRP[1]
+              .split("\n")[0]
+              .replace(/[*_`]/g, "")
+              .trim();
+          } else if (matchNomeCivil) {
+            mapaNomesRP[userIdEncontrado] = matchNomeCivil[1]
+              .split("\n")[0]
+              .replace(/[*_`]/g, "")
+              .trim();
+          }
+
+          if (matchPassaporte) {
+            const pass = matchPassaporte[1].trim();
+            mapaPassaporteRP[userIdEncontrado] = pass;
+            if (pass.length >= 3) mapaPassaporteParaID[pass] = userIdEncontrado;
           }
         });
       }
     }
 
-    // 6. MAPEAR ATIVIDADE (Scan Profundo nos Embeds + Passaporte)
-    const mapaUltimaAtividade = {};
     const atualizarAtividade = (userId, timestamp) => {
       if (!userId) return;
       const time = new Date(timestamp).getTime();
+      if (!Number.isFinite(time)) return;
       if (!mapaUltimaAtividade[userId] || time > mapaUltimaAtividade[userId]) {
         mapaUltimaAtividade[userId] = time;
       }
     };
 
-    mensagensAtividadeArrays.forEach((lista) => {
-      if (Array.isArray(lista)) {
-        lista.forEach((msg) => {
-          // 1. Autor humano
-          if (msg.author && !msg.author.bot) {
-            atualizarAtividade(msg.author.id, msg.timestamp);
-          }
+    const processarMensagemAtividade = (msg) => {
+      if (!msg || !msg.timestamp) return;
 
-          // 2. Menções explícitas (Discord Blue Links)
-          if (msg.mentions && Array.isArray(msg.mentions)) {
-            msg.mentions.forEach((u) => {
-              if (u.id) atualizarAtividade(u.id, msg.timestamp);
-            });
-          }
+      if (msg.author && !msg.author.bot) {
+        atualizarAtividade(msg.author.id, msg.timestamp);
+      }
 
-          // Preparar Texto Completo (Content + Embeds)
-          let textoCompleto = msg.content || "";
-          if (msg.embeds && Array.isArray(msg.embeds)) {
-            msg.embeds.forEach((embed) => {
-              let partesTexto = [
-                embed.title,
-                embed.description,
-                embed.author?.name,
-                embed.footer?.text,
-              ];
-              if (embed.fields && Array.isArray(embed.fields)) {
-                embed.fields.forEach((f) => {
-                  partesTexto.push(f.name);
-                  partesTexto.push(f.value);
-                });
-              }
-              textoCompleto += " " + partesTexto.filter(Boolean).join(" ");
-            });
-          }
-
-          // 3. Regex: Discord User IDs (17-20 digitos)
-          const regexRawIds = /\b(\d{17,20})\b/g;
-          let matchRaw;
-          while ((matchRaw = regexRawIds.exec(textoCompleto)) !== null) {
-            atualizarAtividade(matchRaw[1], msg.timestamp);
-          }
-
-          // 4. [NOVO] Regex: Passaportes (3-6 digitos)
-          // Se encontrar "7087" no texto, verifica de quem é esse número
-          const regexPassaportes = /\b(\d{3,6})\b/g;
-          let matchPass;
-          while ((matchPass = regexPassaportes.exec(textoCompleto)) !== null) {
-            const passaporteEncontrado = matchPass[1];
-            const donoDoID = mapaPassaporteParaID[passaporteEncontrado];
-            if (donoDoID) {
-              // SUCESSO: Log sem menção atribuído corretamente ao Ricardo
-              atualizarAtividade(donoDoID, msg.timestamp);
-            }
-          }
+      if (msg.mentions && Array.isArray(msg.mentions)) {
+        msg.mentions.forEach((u) => {
+          if (u.id) atualizarAtividade(u.id, msg.timestamp);
         });
       }
+
+      let textoCompleto = msg.content || "";
+      if (msg.embeds && Array.isArray(msg.embeds)) {
+        msg.embeds.forEach((embed) => {
+          const partesTexto = [
+            embed.title,
+            embed.description,
+            embed.author?.name,
+            embed.footer?.text,
+          ];
+          if (embed.fields && Array.isArray(embed.fields)) {
+            embed.fields.forEach((f) => {
+              partesTexto.push(f.name);
+              partesTexto.push(f.value);
+            });
+          }
+          textoCompleto += " " + partesTexto.filter(Boolean).join(" ");
+        });
+      }
+
+      const regexRawIds = /\b(\d{17,20})\b/g;
+      let matchRaw;
+      while ((matchRaw = regexRawIds.exec(textoCompleto)) !== null) {
+        atualizarAtividade(matchRaw[1], msg.timestamp);
+      }
+
+      const regexPassaportes = /\b(\d{3,6})\b/g;
+      let matchPass;
+      while ((matchPass = regexPassaportes.exec(textoCompleto)) !== null) {
+        const passaporteEncontrado = matchPass[1];
+        const donoDoID = mapaPassaporteParaID[passaporteEncontrado];
+        if (donoDoID) atualizarAtividade(donoDoID, msg.timestamp);
+      }
+    };
+
+    canaisAtividadeIds.forEach((channelId) => {
+      const estadoAnterior =
+        estadoCanais[channelId] && typeof estadoCanais[channelId] === "object"
+          ? estadoCanais[channelId]
+          : {};
+      estadoCanais[channelId] = {
+        before:
+          typeof estadoAnterior.before === "string" && estadoAnterior.before
+            ? estadoAnterior.before
+            : null,
+        done: Boolean(estadoAnterior.done),
+        pages: Number(estadoAnterior.pages || 0),
+        errorCount: Number(estadoAnterior.errorCount || 0),
+      };
     });
 
-    // 6.5. MAPEAR FÉRIAS
-    const mapaFerias = {};
-    const DATA_BASE_AUDITORIA = new Date("2025-12-08T00:00:00").getTime();
+    let paginasProcessadasLote = 0;
+    const estourouTempo = () =>
+      Date.now() - startRequestTime >= MAX_EXECUTION_MS;
 
+    for (const channelId of canaisAtividadeIds) {
+      if (paginasProcessadasLote >= MAX_PAGES_PER_BATCH || estourouTempo()) {
+        break;
+      }
+
+      const estado = estadoCanais[channelId];
+      if (!estado || estado.done) continue;
+
+      while (!estado.done) {
+        if (paginasProcessadasLote >= MAX_PAGES_PER_BATCH || estourouTempo()) {
+          break;
+        }
+
+        const url = `https://discord.com/api/v10/channels/${channelId}/messages?limit=100${
+          estado.before ? `&before=${estado.before}` : ""
+        }`;
+
+        let resCanal = null;
+        try {
+          resCanal = await fetchDiscord(url, { headers });
+        } catch (erroCanal) {
+          console.error(`Erro fetch canal ${channelId}:`, erroCanal);
+          estado.errorCount = Number(estado.errorCount || 0) + 1;
+          if (estado.errorCount >= 3) estado.done = true;
+          break;
+        }
+
+        if (!resCanal.ok) {
+          console.error(`Erro status ${resCanal.status} no canal ${channelId}`);
+          if (resCanal.status === 403 || resCanal.status === 404) {
+            estado.done = true;
+          } else {
+            estado.errorCount = Number(estado.errorCount || 0) + 1;
+            if (estado.errorCount >= 3) estado.done = true;
+          }
+          break;
+        }
+
+        const batch = await resCanal.json();
+        if (!Array.isArray(batch) || batch.length === 0) {
+          estado.done = true;
+          break;
+        }
+
+        batch.forEach((msg) => processarMensagemAtividade(msg));
+
+        estado.before = batch[batch.length - 1].id;
+        estado.pages = Number(estado.pages || 0) + 1;
+        estado.errorCount = 0;
+        paginasProcessadasLote += 1;
+
+        const lastMsgDate = new Date(batch[batch.length - 1].timestamp).getTime();
+        if (!Number.isFinite(lastMsgDate) || lastMsgDate < TIME_LIMIT) {
+          estado.done = true;
+          break;
+        }
+      }
+    }
+
+    const totalCanais = canaisAtividadeIds.length;
+    const canaisConcluidos = canaisAtividadeIds.filter(
+      (channelId) => estadoCanais[channelId] && estadoCanais[channelId].done
+    ).length;
+    const paginasProcessadasTotal =
+      paginasProcessadasTotalInicial + paginasProcessadasLote;
+    const percentualConclusao =
+      totalCanais > 0
+        ? Math.floor((canaisConcluidos / totalCanais) * 100)
+        : 100;
+
+    if (canaisConcluidos < totalCanais) {
+      return res.status(200).json({
+        partial: true,
+        progresso: {
+          canaisConcluidos,
+          totalCanais,
+          paginasProcessadasLote,
+          paginasProcessadasTotal,
+          percentualConclusao,
+        },
+        cursor: {
+          version: 1,
+          org,
+          channelState: estadoCanais,
+          activityMap: mapaUltimaAtividade,
+          pagesProcessedTotal: paginasProcessadasTotal,
+        },
+      });
+    }
+
+    const mapaFerias = {};
     if (FERIAS_CHANNEL_ID) {
       try {
         let allMessagesFerias = [];
@@ -309,7 +440,7 @@ module.exports = async (req, res) => {
           const url = `https://discord.com/api/v10/channels/${FERIAS_CHANNEL_ID}/messages?limit=100${
             lastIdFerias ? `&before=${lastIdFerias}` : ""
           }`;
-          const r = await fetch(url, { headers });
+          const r = await fetchDiscord(url, { headers });
           if (!r.ok) break;
           const batch = await r.json();
           if (!batch || batch.length === 0) break;
@@ -341,43 +472,42 @@ module.exports = async (req, res) => {
 
           idsEncontrados.forEach((userId) => {
             if (mapaFerias[userId]) return;
+
             const matchInicio = textoTotal.match(regexDataInicio);
             const matchFim = textoTotal.match(regexDataFim);
+            if (!matchInicio && !matchFim) return;
 
-            if (matchInicio || matchFim) {
-              let dataInicio = null;
-              let dataFim = null;
-              if (matchInicio) {
-                const [d, m, a] = matchInicio[1].split("/");
-                dataInicio = new Date(a, m - 1, d);
-                dataInicio.setHours(0, 0, 0, 0);
-              }
-              if (matchFim) {
-                const [d, m, a] = matchFim[1].split("/");
-                dataFim = new Date(a, m - 1, d);
-                dataFim.setHours(23, 59, 59, 999);
-              }
+            let dataInicio = null;
+            let dataFim = null;
+            if (matchInicio) {
+              const [d, m, a] = matchInicio[1].split("/");
+              dataInicio = new Date(a, m - 1, d);
+              dataInicio.setHours(0, 0, 0, 0);
+            }
+            if (matchFim) {
+              const [d, m, a] = matchFim[1].split("/");
+              dataFim = new Date(a, m - 1, d);
+              dataFim.setHours(23, 59, 59, 999);
+            }
 
-              if (dataFim) {
-                mapaFerias[userId] = {
-                  dataInicio: dataInicio || null,
-                  dataFim: dataFim.getTime(),
-                };
-              } else if (dataInicio) {
-                mapaFerias[userId] = {
-                  dataInicio: dataInicio.getTime(),
-                  dataFim: null,
-                };
-              }
+            if (dataFim) {
+              mapaFerias[userId] = {
+                dataInicio: dataInicio ? dataInicio.getTime() : null,
+                dataFim: dataFim.getTime(),
+              };
+            } else if (dataInicio) {
+              mapaFerias[userId] = {
+                dataInicio: dataInicio.getTime(),
+                dataFim: null,
+              };
             }
           });
         }
       } catch (e) {
-        console.error("Erro ao processar férias:", e);
+        console.error("Erro ao processar ferias:", e);
       }
     }
 
-    // 7. GERAÇÃO DO RELATÓRIO
     const agora = Date.now();
     const resultado = [];
     const listaImunes = CARGOS_IMUNES ? CARGOS_IMUNES.split(",") : [];
@@ -407,148 +537,131 @@ module.exports = async (req, res) => {
         } else if (feriasInfo.dataInicio) {
           const dataInicioFerias = feriasInfo.dataInicio;
           if (hojeTimestamp < dataInicioFerias) {
-            // Ainda vai sair
+            // ainda nao iniciou
           } else if (temTagFerias) {
             return;
           }
         }
       }
 
-      let baseData = mapaUltimaAtividade[uid];
-      let diffDias;
-      let dataBaseCalculo;
-      let textoData = "Sem registro";
-      let textoDias = "---";
-
+      const baseData = mapaUltimaAtividade[uid];
       const joinedAtTimestamp = p.joined_at
         ? new Date(p.joined_at).getTime()
         : null;
 
+      let dataBaseCalculo = DATA_BASE_AUDITORIA;
       if (dataInicioInatividade) {
-        const dataFimFerias = dataInicioInatividade;
         const dataMinima = Math.max(
-          dataFimFerias,
+          dataInicioInatividade,
           DATA_BASE_AUDITORIA,
           joinedAtTimestamp || 0
         );
-        if (baseData && baseData > dataMinima) {
-          dataBaseCalculo = baseData;
-        } else {
-          dataBaseCalculo = dataMinima;
-        }
+        dataBaseCalculo = baseData && baseData > dataMinima ? baseData : dataMinima;
       } else if (baseData) {
-        const dataMinima = Math.max(
+        dataBaseCalculo = Math.max(
+          baseData,
           DATA_BASE_AUDITORIA,
           joinedAtTimestamp || 0
         );
-        dataBaseCalculo = Math.max(baseData, dataMinima);
-      } else {
-        if (joinedAtTimestamp) {
-          dataBaseCalculo = Math.max(joinedAtTimestamp, DATA_BASE_AUDITORIA);
-        } else {
-          dataBaseCalculo = DATA_BASE_AUDITORIA;
-        }
+      } else if (joinedAtTimestamp) {
+        dataBaseCalculo = Math.max(joinedAtTimestamp, DATA_BASE_AUDITORIA);
       }
 
-      diffDias = Math.floor((agora - dataBaseCalculo) / (1000 * 60 * 60 * 24));
+      const diffDias = Math.floor((agora - dataBaseCalculo) / (1000 * 60 * 60 * 24));
+      if (diffDias < 7) return;
 
       const dataObj = new Date(dataBaseCalculo);
-      const dia = String(dataObj.getDate()).padStart(2, "0");
-      const mes = String(dataObj.getMonth() + 1).padStart(2, "0");
-      const ano = dataObj.getFullYear();
-      textoData = `${dia}/${mes}/${ano}`;
-      textoDias = `${diffDias} dias`;
+      const textoData = `${String(dataObj.getDate()).padStart(2, "0")}/${String(
+        dataObj.getMonth() + 1
+      ).padStart(2, "0")}/${dataObj.getFullYear()}`;
 
-      // REGRA FINAL: Só retorna quem tem 7 dias ou mais
-      if (diffDias >= 7) {
-        const apelido = p.nick || p.user.username;
-        let passaporte = "---";
+      const apelido = p.nick || p.user.username;
+      let passaporte = "---";
+      if (mapaPassaporteRP[uid]) {
+        passaporte = mapaPassaporteRP[uid];
+      } else {
+        const achouPass = Object.keys(mapaPassaporteParaID).find(
+          (key) => mapaPassaporteParaID[key] === uid
+        );
+        if (achouPass) passaporte = achouPass;
 
-        if (mapaPassaporteRP[uid]) {
-          passaporte = mapaPassaporteRP[uid];
-        } else {
-          // Tenta pegar de novo se não veio da admissão (agora temos o mapa inteligente)
-          if (mapaPassaporteParaID) {
-            // Procura se esse ID tem um passaporte associado no inverso
-            const achouPass = Object.keys(mapaPassaporteParaID).find(
-              (key) => mapaPassaporteParaID[key] === uid
-            );
-            if (achouPass) passaporte = achouPass;
-          }
-
-          // Fallback antigo
-          if (passaporte === "---") {
-            if (apelido.includes("|")) {
-              const partes = apelido.split("|");
-              const ultima = partes[partes.length - 1].trim();
-              if (/^\d+$/.test(ultima)) passaporte = ultima;
-            } else {
-              const nums = apelido.match(/(\d+)/g);
-              if (nums) passaporte = nums[nums.length - 1];
-            }
+        if (passaporte === "---") {
+          if (apelido.includes("|")) {
+            const partes = apelido.split("|");
+            const ultima = partes[partes.length - 1].trim();
+            if (/^\d+$/.test(ultima)) passaporte = ultima;
+          } else {
+            const nums = apelido.match(/(\d+)/g);
+            if (nums) passaporte = nums[nums.length - 1];
           }
         }
-
-        let nomeRp = mapaNomesRP[uid];
-        if (!nomeRp) {
-          nomeRp = apelido
-            .replace(/\[.*?\]/g, "")
-            .replace(/\(.*?\)/g, "")
-            .split("|")[0]
-            .replace(/[0-9]/g, "")
-            .replace(/[^\w\s\u00C0-\u00FF]/g, "")
-            .trim();
-          if (!nomeRp) nomeRp = "Não identificado";
-        }
-
-        let idPatente = null;
-        let nomePatente = "Oficial";
-        let maiorPosicao = -1;
-
-        if (idsPatentes.length > 0 && p.roles && p.roles.length > 0) {
-          p.roles.forEach((roleId) => {
-            if (idsPatentes.includes(roleId)) {
-              const posicao = mapRolesPosition[roleId] || 0;
-              if (posicao > maiorPosicao) {
-                maiorPosicao = posicao;
-                idPatente = roleId;
-              }
-            }
-          });
-          if (idPatente && mapRolesNames[idPatente]) {
-            nomePatente = mapRolesNames[idPatente];
-          }
-        }
-
-        resultado.push({
-          id: uid,
-          name: apelido,
-          rpName: nomeRp,
-          passaporte: passaporte,
-          cargo: nomePatente,
-          dataUltimaMsg: textoData,
-          dias: textoDias,
-          diasNumber: diffDias,
-          avatar: p.user.avatar
-            ? `https://cdn.discordapp.com/avatars/${uid}/${p.user.avatar}.png`
-            : null,
-          joined_at: p.joined_at,
-        });
       }
+
+      let nomeRp = mapaNomesRP[uid];
+      if (!nomeRp) {
+        nomeRp = apelido
+          .replace(/\[.*?\]/g, "")
+          .replace(/\(.*?\)/g, "")
+          .split("|")[0]
+          .replace(/[0-9]/g, "")
+          .replace(/[^\w\s\u00C0-\u00FF]/g, "")
+          .trim();
+        if (!nomeRp) nomeRp = "Nao identificado";
+      }
+
+      let idPatente = null;
+      let nomePatente = "Oficial";
+      let maiorPosicao = -1;
+      if (idsPatentes.length > 0 && p.roles && p.roles.length > 0) {
+        p.roles.forEach((roleId) => {
+          if (idsPatentes.includes(roleId)) {
+            const posicao = mapRolesPosition[roleId] || 0;
+            if (posicao > maiorPosicao) {
+              maiorPosicao = posicao;
+              idPatente = roleId;
+            }
+          }
+        });
+        if (idPatente && mapRolesNames[idPatente]) {
+          nomePatente = mapRolesNames[idPatente];
+        }
+      }
+
+      resultado.push({
+        id: uid,
+        name: apelido,
+        rpName: nomeRp,
+        passaporte,
+        cargo: nomePatente,
+        dataUltimaMsg: textoData,
+        dias: `${diffDias} dias`,
+        diasNumber: diffDias,
+        avatar: p.user.avatar
+          ? `https://cdn.discordapp.com/avatars/${uid}/${p.user.avatar}.png`
+          : null,
+        joined_at: p.joined_at,
+      });
     });
 
     resultado.sort((a, b) => b.diasNumber - a.diasNumber);
-
     const final = resultado.map((item) => {
       const { diasNumber, ...resto } = item;
       return resto;
     });
 
-    res.status(200).json(final);
+    return res.status(200).json({
+      partial: false,
+      progresso: {
+        canaisConcluidos: totalCanais,
+        totalCanais,
+        paginasProcessadasLote,
+        paginasProcessadasTotal,
+        percentualConclusao: 100,
+      },
+      data: final,
+    });
   } catch (error) {
     console.error(error);
-    res.status(500).json({
-      error: "Erro interno no servidor.",
-    });
+    return res.status(500).json({ error: "Erro interno no servidor." });
   }
 };

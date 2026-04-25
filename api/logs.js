@@ -27,6 +27,6 @@ module.exports = async (req, res) => {
     return res.status(200).json({ entries });
   } catch (error) {
     console.error("Erro ao carregar logs:", error);
-    return res.status(500).json({ error: "Erro interno ao carregar logs." });
+    return res.status(200).json({ entries: [], degraded: true });
   }
 };

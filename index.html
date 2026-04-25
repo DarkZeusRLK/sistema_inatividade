@@ -279,24 +279,13 @@
           <div class="card-header logs-header">
             <h3><i class="fa-solid fa-timeline"></i> Histórico Operacional</h3>
             <select id="filtro-tipo-log" class="logs-filter" onchange="carregarLogs()">
-              <option value="todos">Todos os logs</option>
               <option value="ferias">Logs de férias</option>
               <option value="exoneracao">Logs de exonerações</option>
             </select>
           </div>
           <div class="table-responsive">
             <table class="audit-table">
-              <thead>
-                <tr>
-                  <th>Tipo</th>
-                  <th>Referência 1</th>
-                  <th>Referência 2</th>
-                  <th>Data</th>
-                  <th>Horário / Fim</th>
-                  <th>Status / Quantidade</th>
-                  <th>Ação</th>
-                </tr>
-              </thead>
+              <thead id="cabecalho-logs"></thead>
               <tbody id="corpo-logs">
                 <tr>
                   <td colspan="7" style="text-align: center; padding: 40px; color: #888;">

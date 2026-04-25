@@ -13,12 +13,6 @@ function parseDateBr(value, endOfDay = false) {
   return date;
 }
 
-function diffDiasInclusivo(dataInicio, dataFim) {
-  if (!dataInicio || !dataFim) return 0;
-  const diff = dataFim.getTime() - dataInicio.getTime();
-  return Math.floor(diff / (1000 * 60 * 60 * 24)) + 1;
-}
-
 function diffDiasRegraFerias(dataInicio, dataFim) {
   if (!dataInicio || !dataFim) return 0;
   const inicio = new Date(dataInicio);
@@ -44,12 +38,21 @@ function extrairTextoMensagem(msg) {
   return textoTotal.trim();
 }
 
+function normalizarTextoFerias(texto) {
+  return String(texto || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function extrairSolicitacaoFerias(msg) {
   const texto = extrairTextoMensagem(msg);
+  const textoNormalizado = normalizarTextoFerias(texto);
   const regexDataInicio =
-    /(?:In[ií]cio|Come[cç]o|Data de in[ií]cio|Sa[ií]da|Inicio).*?(\d{2}\/\d{2}\/\d{4})/i;
+    /(?:inicio(?: das ferias)?|comeco|data de inicio|saida).*?(\d{2}\/\d{2}\/\d{4})/i;
   const regexDataFim =
-    /(?:Fim|T[eé]rmino|Data de fim|Fim das f[eé]rias|Retorno).*?(\d{2}\/\d{2}\/\d{4})/i;
+    /(?:fim(?: das ferias)?|termino|data de fim|retorno).*?(\d{2}\/\d{2}\/\d{4})/i;
   const regexMention = /<@!?(\d{17,20})>/g;
 
   const mentionIds = [];
@@ -60,11 +63,12 @@ function extrairSolicitacaoFerias(msg) {
 
   const userId =
     mentionIds[0] ||
+    msg?.interaction_metadata?.user?.id ||
     msg?.author?.id ||
     (Array.isArray(msg?.mentions) && msg.mentions[0] ? msg.mentions[0].id : null);
 
-  const matchInicio = texto.match(regexDataInicio);
-  const matchFim = texto.match(regexDataFim);
+  const matchInicio = textoNormalizado.match(regexDataInicio);
+  const matchFim = textoNormalizado.match(regexDataFim);
 
   const dataInicio = parseDateBr(matchInicio?.[1] || null, false);
   const dataFim = parseDateBr(matchFim?.[1] || null, true);
@@ -227,7 +231,10 @@ async function processarSolicitacoesFerias(env) {
     const membro = solicitacao.userId ? membersMap.get(solicitacao.userId) : null;
     const nomeSolicitante = membro
       ? membro.nick || membro.user.username
-      : msg?.author?.global_name || msg?.author?.username || "Nao identificado";
+      : msg?.interaction_metadata?.user?.username ||
+        msg?.author?.global_name ||
+        msg?.author?.username ||
+        "Nao identificado";
     const org = determinarOrgDoMembro(membro, env);
 
     let status = solicitacao.status;
@@ -309,4 +316,5 @@ module.exports = {
   processarSolicitacoesFerias,
   parseDateBr,
   diffDiasRegraFerias,
+  normalizarTextoFerias,
 };

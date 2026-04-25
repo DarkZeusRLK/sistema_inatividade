@@ -1,5 +1,8 @@
 const fetch = global.fetch || require("node-fetch");
-const { processarSolicitacoesFerias } = require("./_utils/ferias");
+const {
+  processarSolicitacoesFerias,
+  normalizarTextoFerias,
+} = require("./_utils/ferias");
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -71,7 +74,14 @@ module.exports = async (req, res) => {
   };
 
   try {
-    await processarSolicitacoesFerias(process.env);
+    const resultadoProcessamento = await processarSolicitacoesFerias(process.env);
+
+    if (action === "sincronizar") {
+      return res.status(200).json({
+        ok: true,
+        processados: resultadoProcessamento.processados || 0,
+      });
+    }
 
     if (req.method === "POST" && action === "remover") {
       await fetch(
@@ -94,16 +104,17 @@ module.exports = async (req, res) => {
       hoje.setHours(0, 0, 0, 0);
 
       const regexDataInicio =
-        /(?:In[ií]cio|Come[cç]o|Data de in[ií]cio|Solicita[cç][aã]o|Sa[ií]da).*?(\d{2}\/\d{2}\/\d{4})/i;
+        /(?:inicio(?: das ferias)?|comeco|data de inicio|solicitacao|saida).*?(\d{2}\/\d{2}\/\d{4})/i;
       const regexDataFim =
-        /(?:Fim|T[eé]rmino|Data de fim|Fim das f[eé]rias|Retorno).*?(\d{2}\/\d{2}\/\d{4})/i;
+        /(?:fim(?: das ferias)?|termino|data de fim|retorno).*?(\d{2}\/\d{2}\/\d{4})/i;
 
       for (const msg of allMessages) {
         const textoTotal = extrairTexto(msg);
+        const textoNormalizado = normalizarTextoFerias(textoTotal);
         const matchId = textoTotal.match(/<@!?(\d+)>/);
         if (matchId && matchId[1] === userId) {
-          const matchInicio = textoTotal.match(regexDataInicio);
-          const matchFim = textoTotal.match(regexDataFim);
+          const matchInicio = textoNormalizado.match(regexDataInicio);
+          const matchFim = textoNormalizado.match(regexDataFim);
 
           if (matchInicio || matchFim) {
             let dataInicio = null;
@@ -185,12 +196,13 @@ module.exports = async (req, res) => {
     const logsRemocao = [];
     const validosParaAntecipar = [];
     const processados = new Set();
-    const regexDataFim = /Fim das f[eé]rias:.*?(\d{2}\/\d{2}\/\d{4})/i;
+    const regexDataFim = /fim(?: das ferias)?:.*?(\d{2}\/\d{2}\/\d{4})/i;
 
     for (const msg of allMessages) {
       const textoTotal = extrairTexto(msg);
+      const textoNormalizado = normalizarTextoFerias(textoTotal);
       const matchId = textoTotal.match(/<@!?(\d+)>/);
-      const matchData = textoTotal.match(regexDataFim);
+      const matchData = textoNormalizado.match(regexDataFim);
 
       if (matchId && matchData) {
         const currentUserId = matchId[1];

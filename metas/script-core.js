@@ -21,7 +21,7 @@ window.carregarMetaCore = async function () {
 
   try {
     const res = await fetch(
-      `/api/meta-core?start=${dataInicio}&end=${dataFim}`
+      `/api/relatorios.js?tipo=core&start=${dataInicio}&end=${dataFim}`
     );
     const dados = await res.json();
     listaMetaCoreAtual = dados;

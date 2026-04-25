@@ -21,47 +21,48 @@
       if (session.tema) document.body.classList.add(session.tema);
 
       const configOrg = {
-        'PCERJ': {
-          logo: 'Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png',
-          titulo: 'POLÍCIA CIVIL',
-          sigla: 'PCERJ'
+        PCERJ: {
+          logo: "Imagens/Brasão_da_Polícia_Civil_do_Estado_do_Rio_de_Janeiro.png",
+          titulo: "POLÍCIA CIVIL",
+          sigla: "PCERJ",
         },
-        'PRF': {
-          logo: 'Imagens/PRF_new.png',
-          titulo: 'POLÍCIA RODOVIÁRIA',
-          sigla: 'PRF'
+        PRF: {
+          logo: "Imagens/PRF_new.png",
+          titulo: "POLÍCIA RODOVIÁRIA",
+          sigla: "PRF",
         },
-        'PMERJ': {
-          logo: 'Imagens/Brasão_da_Polícia_Militar_do_Estado_do_Rio_de_Janeiro_-_PMERJ.png',
-          titulo: 'POLÍCIA MILITAR',
-          sigla: 'PMERJ'
+        PMERJ: {
+          logo: "Imagens/Brasão_da_Polícia_Militar_do_Estado_do_Rio_de_Janeiro_-_PMERJ.png",
+          titulo: "POLÍCIA MILITAR",
+          sigla: "PMERJ",
         },
-        'PF': {
-          logo: 'Imagens/Policia-federal-logo.png',
-          titulo: 'POLÍCIA FEDERAL',
-          sigla: 'PF'
-        }
+        PF: {
+          logo: "Imagens/Policia-federal-logo.png",
+          titulo: "POLÍCIA FEDERAL",
+          sigla: "PF",
+        },
       };
 
       if (session.org) {
         const config = configOrg[session.org];
         if (config) {
           const interval = setInterval(() => {
-            const logoImg = document.getElementById('logo-sidebar');
-            const sidebarTitulo = document.querySelector('.sidebar-header h2');
-            const subtitulo = document.getElementById('subtitulo-pagina');
+            const logoImg = document.getElementById("logo-sidebar");
+            const sidebarTitulo = document.querySelector(".sidebar-header h2");
+            const subtitulo = document.getElementById("subtitulo-pagina");
 
             if (logoImg && sidebarTitulo) {
               logoImg.src = config.logo;
-              // Fallback de erro de imagem
-              logoImg.onerror = function () { this.src = 'Imagens/PRF_new.png'; };
+              logoImg.onerror = function () {
+                this.src = "Imagens/PRF_new.png";
+              };
 
               sidebarTitulo.innerText = config.titulo;
               if (subtitulo) subtitulo.innerText = `Painel de Auditoria - ${config.sigla}`;
 
               if (session.isComando) {
-                const btnTrocar = document.getElementById('wrapper-comando');
-                if (btnTrocar) btnTrocar.style.display = 'block';
+                const btnTrocar = document.getElementById("wrapper-comando");
+                if (btnTrocar) btnTrocar.style.display = "block";
               }
               clearInterval(interval);
             }
@@ -88,6 +89,11 @@
         <a href="#" id="nav-inatividade" class="nav-item active" onclick="abrirInatividade()">
           <i class="fa-solid fa-user-clock"></i>
           <span>Inatividade (7 Dias)</span>
+        </a>
+
+        <a href="#" id="nav-logs" class="nav-item" onclick="abrirLogs()">
+          <i class="fa-solid fa-clipboard-list"></i>
+          <span>Logs</span>
         </a>
 
         <a href="#" id="nav-ensino" class="nav-item" onclick="abrirEnsino()">
@@ -220,7 +226,7 @@
           <div class="alert-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
           <div class="alert-text">
             <h3>Aviso de Inatividade</h3>
-            <p>Alguns oficiais aparecerao com datas muito altas de inatividade, como exemplo 40 dias ou mais, isto se deve ao fato de que o usuario possui registros tao antigos que o sistema determina ele como inativo desde dezembro de 2025.</p>
+            <p>Alguns oficiais aparecerão com datas muito altas de inatividade, como exemplo 40 dias ou mais, isto se deve ao fato de que o usuário possui registros tão antigos que o sistema determina ele como inativo desde dezembro de 2025.</p>
           </div>
         </div>
 
@@ -229,12 +235,13 @@
             <h3><i class="fa-solid fa-list-check"></i> Relação de Oficiais</h3>
           </div>
           <div class="table-responsive">
-            <div id="progress-container" style="display: none; margin: 20px 0;">
-              <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                <span id="progress-label" style="color: #d4af37; font-size: 0.8rem; font-weight: bold;">PROCESSANDO DADOS...</span>
+            <div id="progress-container" class="loading-progress-card" style="display: none;">
+              <div class="loading-progress-spinner">
+                <i class="fa-solid fa-spinner fa-spin"></i>
               </div>
-              <div style="background: #1a1a1e; border: 1px solid #333; height: 10px; border-radius: 5px; overflow: hidden;">
-                <div class="progress-bar" style="background: linear-gradient(90deg, #d4af37, #f2d06b); width: 0%; height: 100%; transition: width 0.3s ease;"></div>
+              <div class="loading-progress-text">
+                <strong id="progress-percent">0%</strong>
+                <span id="progress-status">Por favor aguarde.</span>
               </div>
             </div>
             <table class="audit-table">
@@ -258,6 +265,49 @@
           </div>
         </div>
       </div>
+
+      <section id="secao-logs" style="display: none; padding: 20px;">
+        <div class="info-alert-gold">
+          <div class="alert-icon"><i class="fa-solid fa-clipboard-list"></i></div>
+          <div class="alert-text">
+            <h3>Central de Logs</h3>
+            <p>Consulta unificada de férias aprovadas ou reprovadas e relatórios de exoneração emitidos no sistema.</p>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <div class="card-header logs-header">
+            <h3><i class="fa-solid fa-timeline"></i> Histórico Operacional</h3>
+            <select id="filtro-tipo-log" class="logs-filter" onchange="carregarLogs()">
+              <option value="todos">Todos os logs</option>
+              <option value="ferias">Logs de férias</option>
+              <option value="exoneracao">Logs de exonerações</option>
+            </select>
+          </div>
+          <div class="table-responsive">
+            <table class="audit-table">
+              <thead>
+                <tr>
+                  <th>Tipo</th>
+                  <th>Referência 1</th>
+                  <th>Referência 2</th>
+                  <th>Data</th>
+                  <th>Horário / Fim</th>
+                  <th>Status / Quantidade</th>
+                  <th>Ação</th>
+                </tr>
+              </thead>
+              <tbody id="corpo-logs">
+                <tr>
+                  <td colspan="7" style="text-align: center; padding: 40px; color: #888;">
+                    Abra esta aba para carregar o histórico de logs.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
 
       <section id="secao-ensino" style="display: none; padding: 20px;">
         <div class="info-alert-gold">
@@ -301,8 +351,7 @@
                   <th style="padding: 12px; text-align: center;">Total</th>
                 </tr>
               </thead>
-              <tbody id="corpo-ensino">
-              </tbody>
+              <tbody id="corpo-ensino"></tbody>
             </table>
           </div>
         </div>
@@ -463,6 +512,14 @@
         </div>
       </section>
     </main>
+  </div>
+
+  <div id="logs-overlay" class="logs-overlay" style="display: none;">
+    <div class="logs-overlay-card">
+      <button class="logs-overlay-close" onclick="fecharDetalhesLog()">&times;</button>
+      <h3>Oficiais Exonerados</h3>
+      <div id="logs-overlay-content"></div>
+    </div>
   </div>
 
   <div id="modal-selecao-comando" class="modal-pcerj" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 10001; align-items: center; justify-content: center;">

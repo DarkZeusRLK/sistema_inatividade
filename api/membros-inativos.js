@@ -1,4 +1,5 @@
 // api/membros-inativos.js
+const { processarSolicitacoesFerias } = require("./_utils/ferias");
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -39,6 +40,8 @@ module.exports = async (req, res) => {
   };
 
   try {
+    await processarSolicitacoesFerias(process.env);
+
     const fetch = global.fetch || require("node-fetch");
     const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -530,8 +533,8 @@ module.exports = async (req, res) => {
       if (feriasInfo) {
         if (feriasInfo.dataFim) {
           const dataFimFerias = feriasInfo.dataFim;
-          if (hojeTimestamp <= dataFimFerias && temTagFerias) return;
-          if (!temTagFerias || hojeTimestamp > dataFimFerias) {
+          if (hojeTimestamp <= dataFimFerias) return;
+          if (hojeTimestamp > dataFimFerias) {
             dataInicioInatividade = dataFimFerias;
           }
         } else if (feriasInfo.dataInicio) {

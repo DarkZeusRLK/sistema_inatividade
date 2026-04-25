@@ -24,7 +24,7 @@ window.carregarMetaBOPE = async function () {
 
   try {
     const res = await fetch(
-      `/api/meta-bope?start=${dataInicio}&end=${dataFim}&org=PMERJ`
+      `/api/relatorios.js?tipo=bope&start=${dataInicio}&end=${dataFim}&org=PMERJ`
     );
     const { dados } = await res.json();
     listaMetaBOPEAtual = dados;

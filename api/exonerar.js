@@ -1,13 +1,12 @@
 // api/exonerar.js
 const path = require("path");
-// Tenta carregar o .env da raiz
+const { appendLog } = require("./_utils/logs");
+
 require("dotenv").config({ path: path.join(process.cwd(), ".env") });
 
-// Fallback para fetch (Node 18+ nativo)
 const fetch = global.fetch || require("node-fetch");
 
 module.exports = async (req, res) => {
-  // --- CONFIGURAÇÃO DE CORS ---
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -15,7 +14,10 @@ module.exports = async (req, res) => {
   if (req.method === "OPTIONS") return res.status(200).end();
 
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Método HTTP não permitido. Utilize o método POST para esta operação." });
+    return res.status(405).json({
+      error:
+        "Metodo HTTP nao permitido. Utilize o metodo POST para esta operacao.",
+    });
   }
 
   const {
@@ -25,17 +27,20 @@ module.exports = async (req, res) => {
     POLICE_ROLE_IDS,
   } = process.env;
 
-  // Captura os dados da requisição
-  const { users, discordUser, nomeCidade, idPassaporte, cargo, action } =
-    req.body;
+  const {
+    users,
+    discordUser,
+    nomeCidade,
+    idPassaporte,
+    cargo,
+    action,
+    org,
+    emissor,
+  } = req.body;
 
-  // -----------------------------------------------------------
-  // FUNÇÃO AUXILIAR: PROCESSA UMA ÚNICA EXONERAÇÃO
-  // -----------------------------------------------------------
   async function processarExoneracao(idDiscord, nome, passaporte, cargoBase) {
     let cargoExibicao = cargoBase || "Oficial";
 
-    // 1. Detecção de Patente via Discord
     if (idDiscord && POLICE_ROLE_IDS) {
       try {
         const memberRes = await fetch(
@@ -63,7 +68,6 @@ module.exports = async (req, res) => {
       }
     }
 
-    // 2. Formatação da Mensagem
     const dataFormatada = new Date().toLocaleString("pt-BR", {
       timeZone: "America/Sao_Paulo",
       weekday: "long",
@@ -79,9 +83,8 @@ module.exports = async (req, res) => {
 **ID:** ${passaporte || "---"}
 **Patente/Cargo:** ${cargoExibicao}
 **Data e hora:** ${dataFormatada}
-**Motivo:** Inatividade (Auditoria Automática)`;
+**Motivo:** Inatividade`;
 
-    // 3. Envio de Log
     await fetch(
       `https://discord.com/api/v10/channels/${EXONERACAO_CHANNEL_ID}/messages`,
       {
@@ -94,7 +97,6 @@ module.exports = async (req, res) => {
       }
     );
 
-    // 4. Execução do Kick
     if (action === "kick" && idDiscord) {
       await fetch(
         `https://discord.com/api/v10/guilds/${GUILD_ID}/members/${idDiscord}`,
@@ -102,53 +104,86 @@ module.exports = async (req, res) => {
           method: "DELETE",
           headers: {
             Authorization: `Bot ${Discord_Bot_Token}`,
-            "X-Audit-Log-Reason": `Inatividade - Auditoria Automática`,
+            "X-Audit-Log-Reason": "Inatividade - Auditoria Automatica",
           },
         }
       );
     }
 
-    return true;
+    return {
+      discordUser: idDiscord,
+      nomeCidade: nome || "---",
+      idPassaporte: passaporte || "---",
+      cargo: cargoBase || "Oficial",
+    };
   }
 
-  // -----------------------------------------------------------
-  // LÓGICA DE EXECUÇÃO (INDIVIDUAL OU MASSA)
-  // -----------------------------------------------------------
   try {
-    // Caso receba um array de usuários (Exoneração em Massa)
     if (Array.isArray(users) && users.length > 0) {
-      console.log(`Iniciando exoneração em massa: ${users.length} usuários.`);
+      console.log(`Iniciando exoneracao em massa: ${users.length} usuarios.`);
+      const exonerados = [];
 
-      // Processa um por um (Sequencial para evitar spam block da API do Discord)
       for (const u of users) {
-        await processarExoneracao(
+        const exonerado = await processarExoneracao(
           u.discordUser,
           u.nomeCidade,
           u.idPassaporte,
           u.cargo
         );
-        // Pequeno delay opcional para segurança
+        exonerados.push(exonerado);
         await new Promise((r) => setTimeout(r, 300));
       }
 
-      return res
-        .status(200)
-        .json({ success: true, msg: `${users.length} oficiais processados.` });
+      await appendLog({
+        type: "exoneracao",
+        org: org || null,
+        emissor: {
+          nome: emissor?.nome || "Nao identificado",
+          id: emissor?.id || null,
+        },
+        quantidadeExonerados: exonerados.length,
+        exonerados,
+      });
+
+      return res.status(200).json({
+        success: true,
+        msg: `${users.length} oficiais processados.`,
+      });
     }
 
-    // Caso receba apenas um usuário (Exoneração Individual antigo)
-    else if (discordUser) {
-      await processarExoneracao(discordUser, nomeCidade, idPassaporte, cargo);
-      return res
-        .status(200)
-        .json({ success: true, msg: "Oficial processado individualmente." });
+    if (discordUser) {
+      const exonerado = await processarExoneracao(
+        discordUser,
+        nomeCidade,
+        idPassaporte,
+        cargo
+      );
+
+      await appendLog({
+        type: "exoneracao",
+        org: org || null,
+        emissor: {
+          nome: emissor?.nome || "Nao identificado",
+          id: emissor?.id || null,
+        },
+        quantidadeExonerados: 1,
+        exonerados: [exonerado],
+      });
+
+      return res.status(200).json({
+        success: true,
+        msg: "Oficial processado individualmente.",
+      });
     }
 
-    return res
-      .status(400)
-      .json({ error: "Dados insuficientes para processar a solicitação. Verifique os parâmetros enviados." });
+    return res.status(400).json({
+      error:
+        "Dados insuficientes para processar a solicitacao. Verifique os parametros enviados.",
+    });
   } catch (error) {
-    console.error("Erro no processo de exoneração:", error);
-    return res.status(500).json({ error: "Erro interno no servidor. Por favor, tente novamente mais tarde." });
+    console.error("Erro no processo de exoneracao:", error);
+    return res.status(500).json({
+      error: "Erro interno no servidor. Por favor, tente novamente mais tarde.",
+    });
   }
 };

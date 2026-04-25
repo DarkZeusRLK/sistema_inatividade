@@ -24,7 +24,9 @@ window.carregarMetaGRR = async function () {
 
   try {
     // Chamada para a API do GRR
-    const res = await fetch(`/api/meta-grr?start=${dataInicio}&end=${dataFim}`);
+    const res = await fetch(
+      `/api/relatorios.js?tipo=grr&start=${dataInicio}&end=${dataFim}`
+    );
     const result = await res.json();
     const dados = result.dados || [];
     listaMetaGRRAtual = dados;

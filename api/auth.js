@@ -91,6 +91,7 @@ app.post("*", async (req, res) => {
       org: userOrg ? userOrg.id : null, // Comando recebe null
       tema: userOrg ? userOrg.tema : "tema-pcerj", // Tema padrão
       isComando: isComando,
+      userId: memberData.user.id,
       nome: memberData.nick || memberData.user.username,
       avatar: memberData.user.avatar
         ? `https://cdn.discordapp.com/avatars/${memberData.user.id}/${memberData.user.avatar}.png`

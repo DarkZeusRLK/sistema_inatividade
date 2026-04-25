@@ -83,7 +83,7 @@ window.carregarRelatorioEnsino = async function () {
 
   try {
     // Monta a URL da API
-    const url = `/api/relatorio-ensino?org=${org}&dataInicio=${
+    const url = `/api/relatorios.js?tipo=ensino&org=${org}&dataInicio=${
       dataIn || ""
     }&dataFim=${dataFi || ""}`;
 

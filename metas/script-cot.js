@@ -25,7 +25,7 @@ window.carregarMetaCOT = async function () {
   try {
     // Chama a API passando a Org PF
     const res = await fetch(
-      `/api/meta-cot?start=${dataInicio}&end=${dataFim}&org=PF`
+      `/api/relatorios.js?tipo=cot&start=${dataInicio}&end=${dataFim}&org=PF`
     );
     const { dados } = await res.json();
     listaMetaCOTAtual = dados;

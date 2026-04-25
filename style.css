@@ -303,6 +303,24 @@ body {
   font-size: 0.75rem;
 }
 
+.badge-info {
+  background: rgba(77, 184, 255, 0.1);
+  color: #4db8ff;
+  padding: 5px 12px;
+  border: 1px solid #4db8ff;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.badge-warning {
+  background: rgba(212, 175, 55, 0.1);
+  color: var(--gold);
+  padding: 5px 12px;
+  border: 1px solid var(--gold);
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
 /* =========================================================
    6. MODAIS E ALERTAS CUSTOMIZADOS
    ========================================================= */
@@ -851,4 +869,131 @@ body.tema-pf {
   border-radius: 4px;
   font-family: 'Courier New', monospace;
   font-size: 0.9em;
+}
+
+.loading-progress-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 20px 0;
+  padding: 18px 20px;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.08), rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.loading-progress-spinner {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gold);
+  font-size: 1.35rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+}
+
+.loading-progress-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.loading-progress-text strong {
+  color: #fff;
+  font-size: 1.2rem;
+}
+
+.loading-progress-text span {
+  color: var(--gold);
+  font-size: 0.92rem;
+}
+
+.logs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.logs-filter {
+  background: #0f0f12;
+  color: #fff;
+  border: 1px solid #333;
+  padding: 10px 12px;
+  border-radius: 8px;
+}
+
+.btn-log-detalhes {
+  padding: 10px 14px;
+  font-size: 0.78rem;
+}
+
+.logs-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10002;
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(4px);
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.logs-overlay-card {
+  position: relative;
+  width: min(760px, 100%);
+  max-height: 80vh;
+  overflow: auto;
+  background: #111318;
+  border: 1px solid var(--gold);
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+}
+
+.logs-overlay-card h3 {
+  color: var(--gold);
+  margin-bottom: 20px;
+}
+
+.logs-overlay-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid #444;
+  background: transparent;
+  color: #fff;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.overlay-lista-exonerados {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.overlay-exonerado-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+}
+
+.overlay-exonerado-item strong {
+  color: #fff;
+}
+
+.overlay-exonerado-item span {
+  color: #bbb;
+  font-size: 0.9rem;
 }

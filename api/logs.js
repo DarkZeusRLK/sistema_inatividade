@@ -1,8 +1,5 @@
 const { readLogs } = require("./_utils/logs");
-const {
-  processarSolicitacoesFerias,
-  listarLogsFerias,
-} = require("./_utils/ferias");
+const { processarSolicitacoesFerias } = require("./_utils/ferias");
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -24,7 +21,11 @@ module.exports = async (req, res) => {
         console.error("Erro ao sincronizar logs de ferias:", error);
       }
 
-      let entries = await listarLogsFerias(process.env);
+      const store = await readLogs();
+      let entries = Array.isArray(store.entries) ? [...store.entries] : [];
+      entries = entries.filter(
+        (entry) => entry.type === "ferias" && entry.status === "aprovado"
+      );
       if (org) {
         entries = entries.filter((entry) => !entry.org || entry.org === org);
       }

@@ -62,11 +62,14 @@ function normalizarTextoFerias(texto) {
 function extrairSolicitacaoFerias(msg) {
   const texto = extrairTextoMensagem(msg);
   const textoNormalizado = normalizarTextoFerias(texto);
+  const textoBruto = String(msg?.content || texto || "");
   const regexDataInicio =
     /(?:inicio(?: das ferias)?|comeco|data de inicio|saida).*?(\d{2}\/\d{2}(?:\/\d{4})?)/i;
   const regexDataFim =
     /(?:fim(?: das ferias)?|termino|data de fim|retorno).*?(\d{2}\/\d{2}(?:\/\d{4})?)/i;
   const regexMention = /<@!?(\d{17,20})>/g;
+  const regexMotivoLinha = /motivo\s*:\s*([^\n\r]+)/i;
+  const regexMotivoFallback = /motivo\s*:?\s*(.+)$/i;
 
   const mentionIds = [];
   let matchMention;
@@ -82,9 +85,15 @@ function extrairSolicitacaoFerias(msg) {
 
   const matchInicio = textoNormalizado.match(regexDataInicio);
   const matchFim = textoNormalizado.match(regexDataFim);
+  const matchMotivoBruto = textoBruto.match(regexMotivoLinha);
+  const matchMotivoFallback = textoNormalizado.match(regexMotivoFallback);
 
   const dataInicio = parseDateBr(matchInicio?.[1] || null, false);
   const dataFim = parseDateBr(matchFim?.[1] || null, true);
+  const motivoSolicitacao =
+    (matchMotivoBruto?.[1] || matchMotivoFallback?.[1] || "")
+      .replace(/<@!?(\d{17,20})>/g, "")
+      .trim() || null;
 
   let status = "reprovado";
   let motivo = "";
@@ -108,6 +117,7 @@ function extrairSolicitacaoFerias(msg) {
     texto,
     dataInicio,
     dataFim,
+    motivoSolicitacao,
     periodoDias:
       dataInicio && dataFim ? diffDiasRegraFerias(dataInicio, dataFim) : 0,
     status,
@@ -427,6 +437,7 @@ async function processarSolicitacoesFerias(env) {
         ? solicitacao.dataInicio.toISOString()
         : null,
       dataFim: solicitacao.dataFim ? solicitacao.dataFim.toISOString() : null,
+      motivoSolicitacao: solicitacao.motivoSolicitacao,
       periodoTotalDias: solicitacao.periodoDias,
       status,
       observacao,

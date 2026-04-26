@@ -497,6 +497,100 @@ window.carregarLogs = async function () {
   }
 };
 
+window.carregarLogs = async function () {
+  const sessao = obterSessao();
+  const corpo = document.getElementById("corpo-logs");
+  const filtro = document.getElementById("filtro-tipo-log");
+  const cabecalho = document.getElementById("cabecalho-logs");
+  if (!sessao || !corpo || !filtro || !cabecalho) return;
+
+  const tipoSelecionado =
+    filtro.value === "exoneracao" ? "exoneracao" : "ferias";
+
+  if (tipoSelecionado === "ferias") {
+    cabecalho.innerHTML = `
+      <tr>
+        <th>Solicitante</th>
+        <th>ID do Solicitante</th>
+        <th>Data Inicio</th>
+        <th>Data Fim</th>
+        <th>Motivo</th>
+      </tr>
+    `;
+    corpo.innerHTML =
+      '<tr><td colspan="5" style="text-align:center; padding:30px; color:#888;">Carregando logs de ferias...</td></tr>';
+  } else {
+    cabecalho.innerHTML = `
+      <tr>
+        <th>Emissor</th>
+        <th>ID Discord</th>
+        <th>Data da Emissao</th>
+        <th>Horario</th>
+        <th>Exonerados</th>
+        <th>Acao</th>
+      </tr>
+    `;
+    corpo.innerHTML =
+      '<tr><td colspan="6" style="text-align:center; padding:30px; color:#888;">Carregando logs de exoneracoes...</td></tr>';
+  }
+
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/logs.js?org=${encodeURIComponent(
+        sessao.org
+      )}&type=${encodeURIComponent(tipoSelecionado)}`
+    );
+    if (!res.ok) throw new Error(`Erro ao carregar logs: ${res.status}`);
+    const data = await res.json();
+    const entries = Array.isArray(data.entries) ? data.entries : [];
+
+    if (entries.length === 0) {
+      corpo.innerHTML =
+        `<tr><td colspan="${tipoSelecionado === "ferias" ? "5" : "6"}" style="text-align:center; padding:30px; color:#888;">Nenhum log de ${
+          tipoSelecionado === "ferias" ? "ferias" : "exoneracoes"
+        } encontrado.</td></tr>`;
+      return;
+    }
+
+    corpo.innerHTML = "";
+
+    entries.forEach((entry) => {
+      const tr = document.createElement("tr");
+      tr.dataset.logId = entry.id;
+
+      if (tipoSelecionado === "ferias") {
+        tr.innerHTML = `
+          <td>${escaparHtml(entry.solicitante?.nome || "-")}</td>
+          <td>${escaparHtml(entry.solicitante?.id || "-")}</td>
+          <td>${formatarData(entry.dataInicio)}</td>
+          <td>${formatarData(entry.dataFim)}</td>
+          <td>${escaparHtml(entry.motivoSolicitacao || "-")}</td>
+        `;
+      } else {
+        tr.dataset.exonerados = JSON.stringify(entry.exonerados || []);
+        tr.innerHTML = `
+          <td>${escaparHtml(entry.emissor?.nome || "-")}</td>
+          <td>${escaparHtml(entry.emissor?.id || "-")}</td>
+          <td>${formatarData(entry.createdAt)}</td>
+          <td>${new Date(entry.createdAt).toLocaleTimeString("pt-BR", {
+            timeZone: "America/Sao_Paulo",
+          })}</td>
+          <td>${escaparHtml(entry.quantidadeExonerados || 0)}</td>
+          <td><button class="btn-outline-gold btn-log-detalhes" onclick="abrirDetalhesLog('${escaparHtml(
+            entry.id
+          )}')">VER MAIS</button></td>
+        `;
+      }
+
+      corpo.appendChild(tr);
+    });
+  } catch (error) {
+    console.error(error);
+    corpo.innerHTML =
+      `<tr><td colspan="${tipoSelecionado === "ferias" ? "5" : "6"}" style="text-align:center; padding:30px; color:#ff4d4d;">Falha ao carregar os logs.</td></tr>`;
+  }
+};
+
 // =========================================================
 // 4. LOGICA DE INATIVIDADE
 // =========================================================

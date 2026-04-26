@@ -355,9 +355,9 @@ async function processarSolicitacoesFerias(env) {
     "Content-Type": "application/json",
   };
 
-  const [logsStore, logsFerias, membros] = await Promise.all([
+  const [logsStore, mensagens, membros] = await Promise.all([
     readLogs(),
-    listarLogsFerias(env),
+    buscarMensagensFerias({ headers, channelId: FERIAS_CHANNEL_ID }),
     carregarMembrosGuild({ headers, guildId: GUILD_ID }),
   ]);
 
@@ -373,33 +373,73 @@ async function processarSolicitacoesFerias(env) {
       .filter((entry) => entry.type === "ferias" && entry.sourceMessageId)
       .map((entry) => entry.sourceMessageId)
   );
+  const ultimoPeriodoAprovadoPorUsuario = new Map();
+
+  logsStore.entries.forEach((entry) => {
+    const periodo = normalizarPeriodoAprovado(entry);
+    if (!periodo) return;
+
+    const atual = ultimoPeriodoAprovadoPorUsuario.get(periodo.userId);
+    if (!atual || periodo.dataFim.getTime() > atual.dataFim.getTime()) {
+      ultimoPeriodoAprovadoPorUsuario.set(periodo.userId, periodo);
+    }
+  });
 
   let processados = 0;
 
-  for (const entry of logsFerias.slice().reverse()) {
-    if (!entry?.sourceMessageId) continue;
+  for (const msg of mensagens.reverse()) {
+    if (!msg?.id || !ehMensagemSolicitacaoFerias(msg)) continue;
 
-    const membro = entry.solicitante?.id ? membersMap.get(entry.solicitante.id) : null;
+    const avaliacao = avaliarSolicitacaoFerias({
+      msg,
+      membersMap,
+      ultimoPeriodoAprovadoPorUsuario,
+      env,
+    });
+    const { solicitacao, membro, nomeSolicitante, org, status, observacao } =
+      avaliacao;
 
-    if (entry.status === "aprovado" && membro && !membro.roles.includes(FERIAS_ROLE_ID)) {
+    if (status === "aprovado" && membro && !membro.roles.includes(FERIAS_ROLE_ID)) {
       await fetchDiscord(
-        `https://discord.com/api/v10/guilds/${GUILD_ID}/members/${entry.solicitante.id}/roles/${FERIAS_ROLE_ID}`,
+        `https://discord.com/api/v10/guilds/${GUILD_ID}/members/${solicitacao.userId}/roles/${FERIAS_ROLE_ID}`,
         { method: "PUT", headers }
       );
     }
 
-    if (entry.status === "aprovado") {
+    if (status === "aprovado") {
       await fetchDiscord(
-        `https://discord.com/api/v10/channels/${FERIAS_CHANNEL_ID}/messages/${entry.sourceMessageId}/reactions/%E2%9C%85/@me`,
+        `https://discord.com/api/v10/channels/${FERIAS_CHANNEL_ID}/messages/${msg.id}/reactions/%E2%9C%85/@me`,
         { method: "PUT", headers }
       );
     }
 
-    if (messageIdsJaProcessados.has(entry.sourceMessageId)) continue;
+    if (messageIdsJaProcessados.has(msg.id)) continue;
 
     await appendLog({
-      ...entry,
+      type: "ferias",
+      org,
+      sourceMessageId: msg.id,
+      solicitante: {
+        id: solicitacao.userId,
+        nome: nomeSolicitante,
+      },
+      dataInicio: solicitacao.dataInicio
+        ? solicitacao.dataInicio.toISOString()
+        : null,
+      dataFim: solicitacao.dataFim ? solicitacao.dataFim.toISOString() : null,
+      periodoTotalDias: solicitacao.periodoDias,
+      status,
+      observacao,
     });
+
+    if (status === "aprovado" && solicitacao.dataFim) {
+      const dataFimNormalizada = new Date(solicitacao.dataFim);
+      dataFimNormalizada.setHours(0, 0, 0, 0);
+      ultimoPeriodoAprovadoPorUsuario.set(solicitacao.userId, {
+        userId: solicitacao.userId,
+        dataFim: dataFimNormalizada,
+      });
+    }
 
     processados += 1;
   }

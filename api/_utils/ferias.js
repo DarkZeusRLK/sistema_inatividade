@@ -361,7 +361,7 @@ async function processarSolicitacoesFerias(env) {
   let processados = 0;
 
   for (const entry of logsFerias.slice().reverse()) {
-    if (!entry?.sourceMessageId || messageIdsJaProcessados.has(entry.sourceMessageId)) continue;
+    if (!entry?.sourceMessageId) continue;
 
     const membro = entry.solicitante?.id ? membersMap.get(entry.solicitante.id) : null;
 
@@ -378,6 +378,8 @@ async function processarSolicitacoesFerias(env) {
         { method: "PUT", headers }
       );
     }
+
+    if (messageIdsJaProcessados.has(entry.sourceMessageId)) continue;
 
     await appendLog({
       ...entry,

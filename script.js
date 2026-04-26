@@ -1249,15 +1249,28 @@ window.atualizarListaFerias = async function () {
   select.innerHTML = "<option>Carregando...</option>";
   infoBox.innerHTML = "Sincronizando solicitacoes de ferias...";
   try {
-    await fetch(
-      `${API_BASE}/api/ferias.js?action=sincronizar&org=${encodeURIComponent(
-        sessao.org
-      )}`
-    );
+    const syncRes = await fetch(`${API_BASE}/api/ferias.js`, {
+      method: "POST",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "sincronizar",
+        org: sessao.org,
+        _ts: Date.now(),
+      }),
+    });
+
+    if (!syncRes.ok) {
+      throw new Error(`Falha ao sincronizar ferias: ${syncRes.status}`);
+    }
 
     const res = await fetch(
-      `${API_BASE}/api/ferias.js?org=${sessao.org}`
+      `${API_BASE}/api/ferias.js?org=${sessao.org}&_ts=${Date.now()}`,
+      { cache: "no-store" }
     );
+    if (!res.ok) {
+      throw new Error(`Falha ao carregar lista de ferias: ${res.status}`);
+    }
     const data = await res.json();
     select.innerHTML = '<option value="">Selecione...</option>';
 

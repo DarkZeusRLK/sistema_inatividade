@@ -329,6 +329,7 @@ async function listarLogsFerias(env, options = {}) {
       dataFim: avaliacao.solicitacao.dataFim
         ? avaliacao.solicitacao.dataFim.toISOString()
         : null,
+      motivoSolicitacao: avaliacao.solicitacao.motivoSolicitacao,
       periodoTotalDias: avaliacao.solicitacao.periodoDias,
       status: avaliacao.status,
       observacao: avaliacao.observacao,

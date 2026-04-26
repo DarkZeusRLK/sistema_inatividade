@@ -118,6 +118,24 @@ module.exports = async (req, res) => {
     };
   }
 
+  async function enviarResumoLogExoneracao(payload) {
+    if (!EXONERACAO_CHANNEL_ID || !Discord_Bot_Token) return;
+
+    const content = `SITE_LOG_EXONERACAO::${JSON.stringify(payload)}`;
+
+    await fetch(
+      `https://discord.com/api/v10/channels/${EXONERACAO_CHANNEL_ID}/messages`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bot ${Discord_Bot_Token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ content }),
+      }
+    );
+  }
+
   try {
     if (Array.isArray(users) && users.length > 0) {
       console.log(`Iniciando exoneracao em massa: ${users.length} usuarios.`);
@@ -145,6 +163,18 @@ module.exports = async (req, res) => {
         exonerados,
       });
 
+      await enviarResumoLogExoneracao({
+        type: "exoneracao",
+        org: org || null,
+        createdAt: new Date().toISOString(),
+        emissor: {
+          nome: emissor?.nome || "Nao identificado",
+          id: emissor?.id || null,
+        },
+        quantidadeExonerados: exonerados.length,
+        exonerados,
+      });
+
       return res.status(200).json({
         success: true,
         msg: `${users.length} oficiais processados.`,
@@ -162,6 +192,18 @@ module.exports = async (req, res) => {
       await appendLog({
         type: "exoneracao",
         org: org || null,
+        emissor: {
+          nome: emissor?.nome || "Nao identificado",
+          id: emissor?.id || null,
+        },
+        quantidadeExonerados: 1,
+        exonerados: [exonerado],
+      });
+
+      await enviarResumoLogExoneracao({
+        type: "exoneracao",
+        org: org || null,
+        createdAt: new Date().toISOString(),
         emissor: {
           nome: emissor?.nome || "Nao identificado",
           id: emissor?.id || null,

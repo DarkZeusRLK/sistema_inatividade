@@ -185,6 +185,28 @@ async function buscarMensagensFerias({ headers, channelId, pages = 8 }) {
   return mensagens;
 }
 
+async function carregarMembrosGuild({ headers, guildId, pages = 20 }) {
+  const membros = [];
+  let after = null;
+
+  for (let i = 0; i < pages; i++) {
+    const url = `https://discord.com/api/v10/guilds/${guildId}/members?limit=1000${
+      after ? `&after=${after}` : ""
+    }`;
+    const response = await fetchDiscord(url, { headers });
+    if (!response.ok) break;
+
+    const batch = await response.json();
+    if (!Array.isArray(batch) || batch.length === 0) break;
+
+    membros.push(...batch);
+    after = batch[batch.length - 1]?.user?.id || null;
+    if (!after || batch.length < 1000) break;
+  }
+
+  return membros;
+}
+
 function avaliarSolicitacaoFerias({
   msg,
   membersMap,
@@ -257,18 +279,15 @@ async function listarLogsFerias(env, options = {}) {
     "Content-Type": "application/json",
   };
 
-  const [membersRes, mensagens] = await Promise.all([
-    fetchDiscord(`https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`, {
-      headers,
-    }),
+  const [membros, mensagens] = await Promise.all([
+    carregarMembrosGuild({ headers, guildId: GUILD_ID }),
     buscarMensagensFerias({ headers, channelId: FERIAS_CHANNEL_ID, pages }),
   ]);
 
-  if (!membersRes.ok) {
+  if (!Array.isArray(membros) || membros.length === 0) {
     return [];
   }
 
-  const membros = await membersRes.json();
   const membersMap = new Map();
   membros.forEach((member) => membersMap.set(member.user.id, member));
 
@@ -336,19 +355,16 @@ async function processarSolicitacoesFerias(env) {
     "Content-Type": "application/json",
   };
 
-  const [logsStore, logsFerias, membersRes] = await Promise.all([
+  const [logsStore, logsFerias, membros] = await Promise.all([
     readLogs(),
     listarLogsFerias(env),
-    fetchDiscord(`https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`, {
-      headers,
-    }),
+    carregarMembrosGuild({ headers, guildId: GUILD_ID }),
   ]);
 
-  if (!membersRes.ok) {
+  if (!Array.isArray(membros) || membros.length === 0) {
     return { processados: 0 };
   }
 
-  const membros = await membersRes.json();
   const membersMap = new Map();
   membros.forEach((member) => membersMap.set(member.user.id, member));
 
@@ -395,6 +411,7 @@ module.exports = {
   extrairSolicitacaoFerias,
   processarSolicitacoesFerias,
   listarLogsFerias,
+  carregarMembrosGuild,
   parseDateBr,
   diffDiasRegraFerias,
   normalizarTextoFerias,

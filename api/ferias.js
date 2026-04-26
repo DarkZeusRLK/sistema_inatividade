@@ -1,5 +1,6 @@
 const fetch = global.fetch || require("node-fetch");
 const {
+  carregarMembrosGuild,
   processarSolicitacoesFerias,
   normalizarTextoFerias,
 } = require("./_utils/ferias");
@@ -185,13 +186,12 @@ module.exports = async (req, res) => {
       });
     }
 
-    const membersRes = await fetch(
-      `https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`,
-      { headers }
-    );
-    const allGuildMembers = await membersRes.json();
+    const allGuildMembers = await carregarMembrosGuild({
+      headers,
+      guildId: GUILD_ID,
+    });
 
-    if (!Array.isArray(allGuildMembers)) {
+    if (!Array.isArray(allGuildMembers) || allGuildMembers.length === 0) {
       throw new Error("Falha ao recuperar a lista de membros do servidor Discord.");
     }
 

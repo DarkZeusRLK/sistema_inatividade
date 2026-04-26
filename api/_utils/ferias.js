@@ -46,6 +46,11 @@ function extrairTextoMensagem(msg) {
   return textoTotal.trim();
 }
 
+function ehMensagemSolicitacaoFerias(msg) {
+  const texto = normalizarTextoFerias(extrairTextoMensagem(msg));
+  return texto.includes("solicitacao de ferias");
+}
+
 function normalizarTextoFerias(texto) {
   return String(texto || "")
     .normalize("NFD")
@@ -180,6 +185,140 @@ async function buscarMensagensFerias({ headers, channelId, pages = 8 }) {
   return mensagens;
 }
 
+function avaliarSolicitacaoFerias({
+  msg,
+  membersMap,
+  ultimoPeriodoAprovadoPorUsuario,
+  env,
+}) {
+  const solicitacao = extrairSolicitacaoFerias(msg);
+  const membro = solicitacao.userId ? membersMap.get(solicitacao.userId) : null;
+  const nomeSolicitante = membro
+    ? membro.nick || membro.user.username
+    : msg?.interaction_metadata?.user?.username ||
+      msg?.author?.global_name ||
+      msg?.author?.username ||
+      "Nao identificado";
+  const org = determinarOrgDoMembro(membro, env);
+
+  let status = solicitacao.status;
+  let observacao = solicitacao.motivo;
+
+  if (status === "aprovado" && !membro) {
+    status = "reprovado";
+    observacao = "Solicitante nao encontrado no servidor.";
+  }
+
+  if (status === "aprovado" && !org) {
+    status = "reprovado";
+    observacao = "Solicitante nao pertence a uma organizacao valida.";
+  }
+
+  if (status === "aprovado") {
+    const ultimoPeriodo = ultimoPeriodoAprovadoPorUsuario.get(solicitacao.userId);
+    const momentoSolicitacao = new Date(msg.timestamp || Date.now());
+    momentoSolicitacao.setHours(0, 0, 0, 0);
+
+    if (
+      ultimoPeriodo &&
+      momentoSolicitacao.getTime() < ultimoPeriodo.dataFim.getTime()
+    ) {
+      status = "reprovado";
+      observacao =
+        "Renovacao antecipada nao permitida. A nova solicitacao so pode ser feita quando chegar a data final das ferias atuais.";
+    }
+  }
+
+  return {
+    solicitacao,
+    membro,
+    nomeSolicitante,
+    org,
+    status,
+    observacao,
+  };
+}
+
+async function listarLogsFerias(env, options = {}) {
+  const {
+    Discord_Bot_Token,
+    GUILD_ID,
+    FERIAS_ROLE_ID,
+    FERIAS_CHANNEL_ID,
+  } = env;
+  const pages = Number(options.pages || 8);
+
+  if (!Discord_Bot_Token || !GUILD_ID || !FERIAS_ROLE_ID || !FERIAS_CHANNEL_ID) {
+    return [];
+  }
+
+  const headers = {
+    Authorization: `Bot ${Discord_Bot_Token}`,
+    "Content-Type": "application/json",
+  };
+
+  const [membersRes, mensagens] = await Promise.all([
+    fetchDiscord(`https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`, {
+      headers,
+    }),
+    buscarMensagensFerias({ headers, channelId: FERIAS_CHANNEL_ID, pages }),
+  ]);
+
+  if (!membersRes.ok) {
+    return [];
+  }
+
+  const membros = await membersRes.json();
+  const membersMap = new Map();
+  membros.forEach((member) => membersMap.set(member.user.id, member));
+
+  const ultimoPeriodoAprovadoPorUsuario = new Map();
+  const entries = [];
+
+  for (const msg of mensagens.reverse()) {
+    if (!msg?.id || !ehMensagemSolicitacaoFerias(msg)) continue;
+
+    const avaliacao = avaliarSolicitacaoFerias({
+      msg,
+      membersMap,
+      ultimoPeriodoAprovadoPorUsuario,
+      env,
+    });
+
+    entries.unshift({
+      id: msg.id,
+      type: "ferias",
+      org: avaliacao.org,
+      sourceMessageId: msg.id,
+      solicitante: {
+        id: avaliacao.solicitacao.userId,
+        nome: avaliacao.nomeSolicitante,
+      },
+      dataInicio: avaliacao.solicitacao.dataInicio
+        ? avaliacao.solicitacao.dataInicio.toISOString()
+        : null,
+      dataFim: avaliacao.solicitacao.dataFim
+        ? avaliacao.solicitacao.dataFim.toISOString()
+        : null,
+      periodoTotalDias: avaliacao.solicitacao.periodoDias,
+      status: avaliacao.status,
+      observacao: avaliacao.observacao,
+      createdAt: msg.timestamp || new Date().toISOString(),
+    });
+
+    if (avaliacao.status === "aprovado" && avaliacao.solicitacao.dataFim) {
+      const dataFimNormalizada = new Date(avaliacao.solicitacao.dataFim);
+      dataFimNormalizada.setHours(0, 0, 0, 0);
+      ultimoPeriodoAprovadoPorUsuario.set(avaliacao.solicitacao.userId, {
+        userId: avaliacao.solicitacao.userId,
+        dataFim: dataFimNormalizada,
+      });
+    }
+  }
+
+  return entries;
+}
+
 async function processarSolicitacoesFerias(env) {
   const {
     Discord_Bot_Token,
@@ -197,12 +336,12 @@ async function processarSolicitacoesFerias(env) {
     "Content-Type": "application/json",
   };
 
-  const [membersRes, logsStore, mensagens] = await Promise.all([
+  const [logsStore, logsFerias, membersRes] = await Promise.all([
+    readLogs(),
+    listarLogsFerias(env),
     fetchDiscord(`https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`, {
       headers,
     }),
-    readLogs(),
-    buscarMensagensFerias({ headers, channelId: FERIAS_CHANNEL_ID }),
   ]);
 
   if (!membersRes.ok) {
@@ -218,100 +357,31 @@ async function processarSolicitacoesFerias(env) {
       .filter((entry) => entry.type === "ferias" && entry.sourceMessageId)
       .map((entry) => entry.sourceMessageId)
   );
-  const ultimoPeriodoAprovadoPorUsuario = new Map();
-
-  logsStore.entries.forEach((entry) => {
-    const periodo = normalizarPeriodoAprovado(entry);
-    if (!periodo) return;
-
-    const atual = ultimoPeriodoAprovadoPorUsuario.get(periodo.userId);
-    if (!atual || periodo.dataFim.getTime() > atual.dataFim.getTime()) {
-      ultimoPeriodoAprovadoPorUsuario.set(periodo.userId, periodo);
-    }
-  });
 
   let processados = 0;
 
-  for (const msg of mensagens.reverse()) {
-    if (!msg?.id || messageIdsJaProcessados.has(msg.id)) continue;
+  for (const entry of logsFerias.slice().reverse()) {
+    if (!entry?.sourceMessageId || messageIdsJaProcessados.has(entry.sourceMessageId)) continue;
 
-    const solicitacao = extrairSolicitacaoFerias(msg);
-    const membro = solicitacao.userId ? membersMap.get(solicitacao.userId) : null;
-    const nomeSolicitante = membro
-      ? membro.nick || membro.user.username
-      : msg?.interaction_metadata?.user?.username ||
-        msg?.author?.global_name ||
-        msg?.author?.username ||
-        "Nao identificado";
-    const org = determinarOrgDoMembro(membro, env);
+    const membro = entry.solicitante?.id ? membersMap.get(entry.solicitante.id) : null;
 
-    let status = solicitacao.status;
-    let observacao = solicitacao.motivo;
-
-    if (status === "aprovado" && !membro) {
-      status = "reprovado";
-      observacao = "Solicitante nao encontrado no servidor.";
-    }
-
-    if (status === "aprovado" && !org) {
-      status = "reprovado";
-      observacao = "Solicitante nao pertence a uma organizacao valida.";
-    }
-
-    if (status === "aprovado") {
-      const ultimoPeriodo = ultimoPeriodoAprovadoPorUsuario.get(solicitacao.userId);
-      const momentoSolicitacao = new Date(msg.timestamp || Date.now());
-      momentoSolicitacao.setHours(0, 0, 0, 0);
-
-      if (
-        ultimoPeriodo &&
-        momentoSolicitacao.getTime() < ultimoPeriodo.dataFim.getTime()
-      ) {
-        status = "reprovado";
-        observacao =
-          "Renovacao antecipada nao permitida. A nova solicitacao so pode ser feita quando chegar a data final das ferias atuais.";
-      }
-    }
-
-    if (status === "aprovado" && membro && !membro.roles.includes(FERIAS_ROLE_ID)) {
+    if (entry.status === "aprovado" && membro && !membro.roles.includes(FERIAS_ROLE_ID)) {
       await fetchDiscord(
-        `https://discord.com/api/v10/guilds/${GUILD_ID}/members/${solicitacao.userId}/roles/${FERIAS_ROLE_ID}`,
+        `https://discord.com/api/v10/guilds/${GUILD_ID}/members/${entry.solicitante.id}/roles/${FERIAS_ROLE_ID}`,
         { method: "PUT", headers }
       );
     }
 
-    if (status === "aprovado") {
+    if (entry.status === "aprovado") {
       await fetchDiscord(
-        `https://discord.com/api/v10/channels/${FERIAS_CHANNEL_ID}/messages/${msg.id}/reactions/%E2%9C%85/@me`,
+        `https://discord.com/api/v10/channels/${FERIAS_CHANNEL_ID}/messages/${entry.sourceMessageId}/reactions/%E2%9C%85/@me`,
         { method: "PUT", headers }
       );
     }
 
     await appendLog({
-      type: "ferias",
-      org,
-      sourceMessageId: msg.id,
-      solicitante: {
-        id: solicitacao.userId,
-        nome: nomeSolicitante,
-      },
-      dataInicio: solicitacao.dataInicio
-        ? solicitacao.dataInicio.toISOString()
-        : null,
-      dataFim: solicitacao.dataFim ? solicitacao.dataFim.toISOString() : null,
-      periodoTotalDias: solicitacao.periodoDias,
-      status,
-      observacao,
+      ...entry,
     });
-
-    if (status === "aprovado" && solicitacao.dataFim) {
-      const dataFimNormalizada = new Date(solicitacao.dataFim);
-      dataFimNormalizada.setHours(0, 0, 0, 0);
-      ultimoPeriodoAprovadoPorUsuario.set(solicitacao.userId, {
-        userId: solicitacao.userId,
-        dataFim: dataFimNormalizada,
-      });
-    }
 
     processados += 1;
   }
@@ -322,6 +392,7 @@ async function processarSolicitacoesFerias(env) {
 module.exports = {
   extrairSolicitacaoFerias,
   processarSolicitacoesFerias,
+  listarLogsFerias,
   parseDateBr,
   diffDiasRegraFerias,
   normalizarTextoFerias,

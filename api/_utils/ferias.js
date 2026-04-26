@@ -2,10 +2,15 @@ const { appendLog, readLogs } = require("./logs");
 
 const fetchImpl = global.fetch || require("node-fetch");
 const MAX_FERIAS_DIAS = 15;
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
 function parseDateBr(value, endOfDay = false) {
   if (!value) return null;
-  const [d, m, a] = value.split("/");
+  const partes = String(value).split("/");
+  if (partes.length < 2) return null;
+  const [d, m, anoInformado] = partes;
+  const anoAtual = new Date().getFullYear();
+  const a = anoInformado || String(anoAtual);
   const date = new Date(Number(a), Number(m) - 1, Number(d));
   if (Number.isNaN(date.getTime())) return null;
   if (endOfDay) date.setHours(23, 59, 59, 999);
@@ -13,14 +18,17 @@ function parseDateBr(value, endOfDay = false) {
   return date;
 }
 
+function obterIndiceDia(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return null;
+  return Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / MS_PER_DAY);
+}
+
 function diffDiasRegraFerias(dataInicio, dataFim) {
   if (!dataInicio || !dataFim) return 0;
-  const inicio = new Date(dataInicio);
-  const fim = new Date(dataFim);
-  inicio.setHours(0, 0, 0, 0);
-  fim.setHours(0, 0, 0, 0);
-  const diff = fim.getTime() - inicio.getTime();
-  return Math.floor(diff / (1000 * 60 * 60 * 24));
+  const diaInicio = obterIndiceDia(new Date(dataInicio));
+  const diaFim = obterIndiceDia(new Date(dataFim));
+  if (diaInicio === null || diaFim === null) return 0;
+  return diaFim - diaInicio;
 }
 
 function extrairTextoMensagem(msg) {
@@ -50,9 +58,9 @@ function extrairSolicitacaoFerias(msg) {
   const texto = extrairTextoMensagem(msg);
   const textoNormalizado = normalizarTextoFerias(texto);
   const regexDataInicio =
-    /(?:inicio(?: das ferias)?|comeco|data de inicio|saida).*?(\d{2}\/\d{2}\/\d{4})/i;
+    /(?:inicio(?: das ferias)?|comeco|data de inicio|saida).*?(\d{2}\/\d{2}(?:\/\d{4})?)/i;
   const regexDataFim =
-    /(?:fim(?: das ferias)?|termino|data de fim|retorno).*?(\d{2}\/\d{2}\/\d{4})/i;
+    /(?:fim(?: das ferias)?|termino|data de fim|retorno).*?(\d{2}\/\d{2}(?:\/\d{4})?)/i;
   const regexMention = /<@!?(\d{17,20})>/g;
 
   const mentionIds = [];

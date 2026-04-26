@@ -61,6 +61,19 @@ module.exports = async (req, res) => {
     return allMessages;
   };
 
+  const parseDateBrFlex = (value, endOfDay = false) => {
+    if (!value) return null;
+    const partes = String(value).split("/");
+    if (partes.length < 2) return null;
+    const [d, m, anoInformado] = partes;
+    const ano = Number(anoInformado || new Date().getFullYear());
+    const data = new Date(ano, Number(m) - 1, Number(d));
+    if (Number.isNaN(data.getTime())) return null;
+    if (endOfDay) data.setHours(23, 59, 59, 999);
+    else data.setHours(0, 0, 0, 0);
+    return data;
+  };
+
   const extrairTexto = (msg) => {
     let textoTotal = msg.content || "";
     if (msg.embeds) {
@@ -104,9 +117,9 @@ module.exports = async (req, res) => {
       hoje.setHours(0, 0, 0, 0);
 
       const regexDataInicio =
-        /(?:inicio(?: das ferias)?|comeco|data de inicio|solicitacao|saida).*?(\d{2}\/\d{2}\/\d{4})/i;
+        /(?:inicio(?: das ferias)?|comeco|data de inicio|solicitacao|saida).*?(\d{2}\/\d{2}(?:\/\d{4})?)/i;
       const regexDataFim =
-        /(?:fim(?: das ferias)?|termino|data de fim|retorno).*?(\d{2}\/\d{2}\/\d{4})/i;
+        /(?:fim(?: das ferias)?|termino|data de fim|retorno).*?(\d{2}\/\d{2}(?:\/\d{4})?)/i;
 
       for (const msg of allMessages) {
         const textoTotal = extrairTexto(msg);
@@ -121,15 +134,11 @@ module.exports = async (req, res) => {
             let dataFim = null;
 
             if (matchInicio) {
-              const [d, m, a] = matchInicio[1].split("/");
-              dataInicio = new Date(a, m - 1, d);
-              dataInicio.setHours(0, 0, 0, 0);
+              dataInicio = parseDateBrFlex(matchInicio[1], false);
             }
 
             if (matchFim) {
-              const [d, m, a] = matchFim[1].split("/");
-              dataFim = new Date(a, m - 1, d);
-              dataFim.setHours(23, 59, 59, 999);
+              dataFim = parseDateBrFlex(matchFim[1], true);
             }
 
             if (!dataInicio && dataFim && hoje <= dataFim) {
@@ -196,7 +205,7 @@ module.exports = async (req, res) => {
     const logsRemocao = [];
     const validosParaAntecipar = [];
     const processados = new Set();
-    const regexDataFim = /fim(?: das ferias)?:.*?(\d{2}\/\d{2}\/\d{4})/i;
+    const regexDataFim = /fim(?: das ferias)?:.*?(\d{2}\/\d{2}(?:\/\d{4})?)/i;
 
     for (const msg of allMessages) {
       const textoTotal = extrairTexto(msg);
@@ -209,8 +218,7 @@ module.exports = async (req, res) => {
         if (processados.has(currentUserId)) continue;
         processados.add(currentUserId);
 
-        const [d, m, a] = matchData[1].split("/");
-        const dataFim = new Date(a, m - 1, d);
+        const dataFim = parseDateBrFlex(matchData[1], false);
         const membro = membersMap.get(currentUserId);
 
         if (

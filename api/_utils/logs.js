@@ -22,6 +22,36 @@ function getMemoryStore() {
   return global[MEMORY_KEY];
 }
 
+function obterIndiceDia(valor) {
+  if (!valor) return null;
+  const data = valor instanceof Date ? valor : new Date(valor);
+  if (Number.isNaN(data.getTime())) return null;
+  return Math.floor(
+    Date.UTC(data.getFullYear(), data.getMonth(), data.getDate()) /
+      (1000 * 60 * 60 * 24)
+  );
+}
+
+function limparLogsExpirados(store) {
+  const entries = Array.isArray(store?.entries) ? store.entries : [];
+  const hoje = new Date();
+  const indiceHoje = obterIndiceDia(hoje);
+
+  const filtrados = entries.filter((entry) => {
+    if (entry?.type !== "ferias") return true;
+    if (entry?.status !== "aprovado") return true;
+
+    const indiceFim = obterIndiceDia(entry.dataFim);
+    if (indiceFim === null || indiceHoje === null) return true;
+
+    return indiceFim >= indiceHoje;
+  });
+
+  return {
+    entries: filtrados,
+  };
+}
+
 async function readLogs() {
   try {
     await fs.promises.access(LOGS_FILE, fs.constants.F_OK);
@@ -30,22 +60,35 @@ async function readLogs() {
     if (!parsed || !Array.isArray(parsed.entries)) {
       return getMemoryStore();
     }
-    global[MEMORY_KEY] = parsed;
-    return parsed;
+    const sanitized = limparLogsExpirados(parsed);
+    global[MEMORY_KEY] = sanitized;
+
+    if (sanitized.entries.length !== parsed.entries.length) {
+      await writeLogs(sanitized);
+    }
+
+    return sanitized;
   } catch (error) {
     if (error && error.code !== "ENOENT") {
       console.error("Falha ao ler arquivo de logs, usando memoria:", error);
     }
-    return getMemoryStore();
+    const memoryStore = limparLogsExpirados(getMemoryStore());
+    global[MEMORY_KEY] = memoryStore;
+    return memoryStore;
   }
 }
 
 async function writeLogs(data) {
-  global[MEMORY_KEY] = data;
+  const sanitized = limparLogsExpirados(data || cloneDefaultLogs());
+  global[MEMORY_KEY] = sanitized;
 
   try {
     await fs.promises.mkdir(DATA_DIR, { recursive: true });
-    await fs.promises.writeFile(LOGS_FILE, JSON.stringify(data, null, 2), "utf8");
+    await fs.promises.writeFile(
+      LOGS_FILE,
+      JSON.stringify(sanitized, null, 2),
+      "utf8"
+    );
   } catch (error) {
     console.error("Falha ao persistir logs em disco, mantendo em memoria:", error);
   }
@@ -59,7 +102,7 @@ async function appendLog(entry) {
     ...entry,
   });
   await writeLogs(logs);
-  return logs.entries[0];
+  return global[MEMORY_KEY].entries[0];
 }
 
 module.exports = {

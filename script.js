@@ -1247,7 +1247,14 @@ window.atualizarListaFerias = async function () {
   if (!select || !infoBox || !sessao) return;
 
   select.innerHTML = "<option>Carregando...</option>";
+  infoBox.innerHTML = "Sincronizando solicitacoes de ferias...";
   try {
+    await fetch(
+      `${API_BASE}/api/ferias.js?action=sincronizar&org=${encodeURIComponent(
+        sessao.org
+      )}`
+    );
+
     const res = await fetch(
       `${API_BASE}/api/ferias.js?org=${sessao.org}`
     );

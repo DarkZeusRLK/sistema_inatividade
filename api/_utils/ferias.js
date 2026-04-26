@@ -379,9 +379,22 @@ async function processarSolicitacoesFerias(env) {
   const membersMap = new Map();
   membros.forEach((member) => membersMap.set(member.user.id, member));
 
-  const messageIdsJaProcessados = new Set(
+  const logsFeriasPorMensagem = new Map();
+  logsStore.entries
+    .filter((entry) => entry.type === "ferias" && entry.sourceMessageId)
+    .forEach((entry) => {
+      if (!logsFeriasPorMensagem.has(entry.sourceMessageId)) {
+        logsFeriasPorMensagem.set(entry.sourceMessageId, entry);
+      }
+    });
+  const messageIdsJaAprovados = new Set(
     logsStore.entries
-      .filter((entry) => entry.type === "ferias" && entry.sourceMessageId)
+      .filter(
+        (entry) =>
+          entry.type === "ferias" &&
+          entry.sourceMessageId &&
+          entry.status === "aprovado"
+      )
       .map((entry) => entry.sourceMessageId)
   );
   const ultimoPeriodoAprovadoPorUsuario = new Map();
@@ -424,7 +437,15 @@ async function processarSolicitacoesFerias(env) {
       );
     }
 
-    if (messageIdsJaProcessados.has(msg.id)) continue;
+    if (messageIdsJaAprovados.has(msg.id)) continue;
+
+    const logAnterior = logsFeriasPorMensagem.get(msg.id);
+    const jaTinhaMesmoStatus =
+      logAnterior &&
+      logAnterior.status === status &&
+      (logAnterior.observacao || "") === (observacao || "");
+
+    if (jaTinhaMesmoStatus) continue;
 
     await appendLog({
       type: "ferias",

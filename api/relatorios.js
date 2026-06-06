@@ -506,11 +506,11 @@ module.exports = async (req, res) => {
           idsMencionados.forEach((id) => {
             if (ensinoMap[id]) {
               if (isRecrutamento) {
-                ensinoMap[id].cursos++;
-                ensinoMap[id].total += 1;
-              } else {
                 ensinoMap[id].recs++;
                 ensinoMap[id].total += 2;
+              } else {
+                ensinoMap[id].cursos++;
+                ensinoMap[id].total += 1;
               }
             }
           });

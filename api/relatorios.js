@@ -447,16 +447,29 @@ module.exports = async (req, res) => {
       }
 
       const texto = partes.join("\n").replace(/\r\n?/g, "\n");
-      const regexSecoes = /(?:instrutores|instrutor|auxiliares|auxiliar)\s*[:\-–]?\s*([\s\S]*?)(?=\n\s*(?:instrutores|instrutor|auxiliares|auxiliar|aprovados|reprovados|observaç|observacoes|equipe de ensino|data|início|inicio|fim|✅|❌|📑|📌|📍|$))/gi;
       const ids = new Set();
-      let match;
+      const mentionRegex = /<@!?(\d{17,20})>/g;
+      const sectionRegex = /(?:instrutores|instrutor|auxiliares|auxiliar)/i;
+      const boundaryRegex = /(?:instrutores|instrutor|auxiliares|auxiliar|aprovados|reprovados|observaç|observacoes|equipe de ensino|data|início|inicio|fim|✅|❌|📑|📌|📍)/i;
+      const linhas = texto.split("\n");
 
-      while ((match = regexSecoes.exec(texto)) !== null) {
-        const secao = match[1];
-        let mentionMatch;
-        const mentionRegex = /<@!?(\d+)>/g;
-        while ((mentionMatch = mentionRegex.exec(secao)) !== null) {
-          ids.add(mentionMatch[1]);
+      for (let i = 0; i < linhas.length; i++) {
+        const linha = linhas[i].trim();
+        if (!linha) continue;
+
+        if (sectionRegex.test(linha)) {
+          for (let j = i; j < linhas.length; j++) {
+            const atual = linhas[j].trim();
+            if (j !== i && atual && boundaryRegex.test(atual) && !sectionRegex.test(atual)) {
+              break;
+            }
+
+            let match;
+            mentionRegex.lastIndex = 0;
+            while ((match = mentionRegex.exec(atual)) !== null) {
+              ids.add(match[1]);
+            }
+          }
         }
       }
 

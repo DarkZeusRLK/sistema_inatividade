@@ -424,58 +424,6 @@ module.exports = async (req, res) => {
       };
     });
 
-    function extrairIdsInstrutoresAuxiliares(msg) {
-      const partes = [];
-      if (typeof msg.content === "string") partes.push(msg.content);
-      if (Array.isArray(msg.embeds)) {
-        msg.embeds.forEach((embed) => {
-          if (typeof embed.title === "string") partes.push(embed.title);
-          if (typeof embed.description === "string") partes.push(embed.description);
-          if (Array.isArray(embed.fields)) {
-            embed.fields.forEach((field) => {
-              if (typeof field.name === "string") partes.push(field.name);
-              if (typeof field.value === "string") partes.push(field.value);
-            });
-          }
-          if (embed.footer && typeof embed.footer.text === "string") {
-            partes.push(embed.footer.text);
-          }
-          if (embed.author && typeof embed.author.name === "string") {
-            partes.push(embed.author.name);
-          }
-        });
-      }
-
-      const texto = partes.join("\n").replace(/\r\n?/g, "\n");
-      const ids = new Set();
-      const mentionRegex = /<@!?(\d{17,20})>/g;
-      const sectionRegex = /(?:instrutores|instrutor|auxiliares|auxiliar)/i;
-      const boundaryRegex = /(?:instrutores|instrutor|auxiliares|auxiliar|aprovados|reprovados|observaç|observacoes|equipe de ensino|data|início|inicio|fim|✅|❌|📑|📌|📍)/i;
-      const linhas = texto.split("\n");
-
-      for (let i = 0; i < linhas.length; i++) {
-        const linha = linhas[i].trim();
-        if (!linha) continue;
-
-        if (sectionRegex.test(linha)) {
-          for (let j = i; j < linhas.length; j++) {
-            const atual = linhas[j].trim();
-            if (j !== i && atual && boundaryRegex.test(atual) && !sectionRegex.test(atual)) {
-              break;
-            }
-
-            let match;
-            mentionRegex.lastIndex = 0;
-            while ((match = mentionRegex.exec(atual)) !== null) {
-              ids.add(match[1]);
-            }
-          }
-        }
-      }
-
-      return ids;
-    }
-
     for (let i = 0; i < canaisEnsino.length; i++) {
       const channelId = canaisEnsino[i];
       const isRecrutamento =
@@ -502,7 +450,14 @@ module.exports = async (req, res) => {
           }
           if (msgTs > endTs) return;
 
-          const idsMencionados = extrairIdsInstrutoresAuxiliares(msg);
+          const idsMencionados = new Set();
+          if (msg.mentions) msg.mentions.forEach((m) => idsMencionados.add(m.id));
+          const contentStr = msg.content + JSON.stringify(msg.embeds || {});
+          const matches = contentStr.match(/<@!?(\d+)>/g);
+          if (matches) {
+            matches.forEach((m) => idsMencionados.add(m.replace(/\D/g, "")));
+          }
+
           idsMencionados.forEach((id) => {
             if (ensinoMap[id]) {
               if (isRecrutamento) {

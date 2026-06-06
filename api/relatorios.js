@@ -424,6 +424,45 @@ module.exports = async (req, res) => {
       };
     });
 
+    function extrairIdsInstrutoresAuxiliares(msg) {
+      const partes = [];
+      if (typeof msg.content === "string") partes.push(msg.content);
+      if (Array.isArray(msg.embeds)) {
+        msg.embeds.forEach((embed) => {
+          if (typeof embed.title === "string") partes.push(embed.title);
+          if (typeof embed.description === "string") partes.push(embed.description);
+          if (Array.isArray(embed.fields)) {
+            embed.fields.forEach((field) => {
+              if (typeof field.name === "string") partes.push(field.name);
+              if (typeof field.value === "string") partes.push(field.value);
+            });
+          }
+          if (embed.footer && typeof embed.footer.text === "string") {
+            partes.push(embed.footer.text);
+          }
+          if (embed.author && typeof embed.author.name === "string") {
+            partes.push(embed.author.name);
+          }
+        });
+      }
+
+      const texto = partes.join("\n").replace(/\r\n?/g, "\n");
+      const regexSecoes = /(?:instrutores|instrutor|auxiliares|auxiliar)\s*[:\-–]?\s*([\s\S]*?)(?=\n\s*(?:instrutores|instrutor|auxiliares|auxiliar|aprovados|reprovados|observaç|observacoes|equipe de ensino|data|início|inicio|fim|✅|❌|📑|📌|📍|$))/gi;
+      const ids = new Set();
+      let match;
+
+      while ((match = regexSecoes.exec(texto)) !== null) {
+        const secao = match[1];
+        let mentionMatch;
+        const mentionRegex = /<@!?(\d+)>/g;
+        while ((mentionMatch = mentionRegex.exec(secao)) !== null) {
+          ids.add(mentionMatch[1]);
+        }
+      }
+
+      return ids;
+    }
+
     for (let i = 0; i < canaisEnsino.length; i++) {
       const channelId = canaisEnsino[i];
       const isRecrutamento =
@@ -450,14 +489,7 @@ module.exports = async (req, res) => {
           }
           if (msgTs > endTs) return;
 
-          const idsMencionados = new Set();
-          if (msg.mentions) msg.mentions.forEach((m) => idsMencionados.add(m.id));
-          const contentStr = msg.content + JSON.stringify(msg.embeds || {});
-          const matches = contentStr.match(/<@!?(\d+)>/g);
-          if (matches) {
-            matches.forEach((m) => idsMencionados.add(m.replace(/\D/g, "")));
-          }
-
+          const idsMencionados = extrairIdsInstrutoresAuxiliares(msg);
           idsMencionados.forEach((id) => {
             if (ensinoMap[id]) {
               if (isRecrutamento) {

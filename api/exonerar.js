@@ -1,6 +1,5 @@
 // api/exonerar.js
 const path = require("path");
-const { appendLog } = require("./_utils/logs");
 
 require("dotenv").config({ path: path.join(process.cwd(), ".env") });
 
@@ -85,6 +84,18 @@ module.exports = async (req, res) => {
 **Data e hora:** ${dataFormatada}
 **Motivo:** Inatividade`;
 
+    await fetch(
+      `https://discord.com/api/v10/channels/${EXONERACAO_CHANNEL_ID}/messages`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bot ${Discord_Bot_Token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ content: mensagemTexto }),
+      }
+    );
+
     if (action === "kick" && idDiscord) {
       await fetch(
         `https://discord.com/api/v10/guilds/${GUILD_ID}/members/${idDiscord}`,
@@ -106,62 +117,19 @@ module.exports = async (req, res) => {
     };
   }
 
-  async function enviarResumoLogExoneracao(payload) {
-    if (!EXONERACAO_CHANNEL_ID || !Discord_Bot_Token) return;
-
-    const content = `SITE_LOG_EXONERACAO::${JSON.stringify(payload)}`;
-
-    await fetch(
-      `https://discord.com/api/v10/channels/${EXONERACAO_CHANNEL_ID}/messages`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bot ${Discord_Bot_Token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ content }),
-      }
-    );
-  }
-
   try {
     if (Array.isArray(users) && users.length > 0) {
       console.log(`Iniciando exoneracao em massa: ${users.length} usuarios.`);
-      const exonerados = [];
 
       for (const u of users) {
-        const exonerado = await processarExoneracao(
+        await processarExoneracao(
           u.discordUser,
           u.nomeCidade,
           u.idPassaporte,
           u.cargo
         );
-        exonerados.push(exonerado);
         await new Promise((r) => setTimeout(r, 300));
       }
-
-      await appendLog({
-        type: "exoneracao",
-        org: org || null,
-        emissor: {
-          nome: emissor?.nome || "Nao identificado",
-          id: emissor?.id || null,
-        },
-        quantidadeExonerados: exonerados.length,
-        exonerados,
-      });
-
-      await enviarResumoLogExoneracao({
-        type: "exoneracao",
-        org: org || null,
-        createdAt: new Date().toISOString(),
-        emissor: {
-          nome: emissor?.nome || "Nao identificado",
-          id: emissor?.id || null,
-        },
-        quantidadeExonerados: exonerados.length,
-        exonerados,
-      });
 
       return res.status(200).json({
         success: true,
@@ -170,35 +138,12 @@ module.exports = async (req, res) => {
     }
 
     if (discordUser) {
-      const exonerado = await processarExoneracao(
+      await processarExoneracao(
         discordUser,
         nomeCidade,
         idPassaporte,
         cargo
       );
-
-      await appendLog({
-        type: "exoneracao",
-        org: org || null,
-        emissor: {
-          nome: emissor?.nome || "Nao identificado",
-          id: emissor?.id || null,
-        },
-        quantidadeExonerados: 1,
-        exonerados: [exonerado],
-      });
-
-      await enviarResumoLogExoneracao({
-        type: "exoneracao",
-        org: org || null,
-        createdAt: new Date().toISOString(),
-        emissor: {
-          nome: emissor?.nome || "Nao identificado",
-          id: emissor?.id || null,
-        },
-        quantidadeExonerados: 1,
-        exonerados: [exonerado],
-      });
 
       return res.status(200).json({
         success: true,

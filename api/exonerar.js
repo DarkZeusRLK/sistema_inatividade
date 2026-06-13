@@ -85,18 +85,6 @@ module.exports = async (req, res) => {
 **Data e hora:** ${dataFormatada}
 **Motivo:** Inatividade`;
 
-    await fetch(
-      `https://discord.com/api/v10/channels/${EXONERACAO_CHANNEL_ID}/messages`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bot ${Discord_Bot_Token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ content: mensagemTexto }),
-      }
-    );
-
     if (action === "kick" && idDiscord) {
       await fetch(
         `https://discord.com/api/v10/guilds/${GUILD_ID}/members/${idDiscord}`,

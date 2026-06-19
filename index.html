@@ -279,24 +279,31 @@
           <div class="card-header logs-header">
             <h3><i class="fa-solid fa-timeline"></i> Histórico Operacional</h3>
             <select id="filtro-tipo-log" class="logs-filter" onchange="carregarLogs()">
-              <option value="ferias">Logs de férias</option>
               <option value="exoneracao">Logs de exonerações</option>
+              <option value="ferias">Logs de férias</option>
             </select>
           </div>
-          <div class="table-responsive">
-            <table class="audit-table">
-              <thead id="cabecalho-logs"></thead>
-              <tbody id="corpo-logs">
-                <tr>
-                  <td colspan="7" style="text-align: center; padding: 40px; color: #888;">
-                    Abra esta aba para carregar o histórico de logs.
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div class="logs-list" id="corpo-logs-list">
+            <div class="logs-empty">
+              <i class="fa-solid fa-clipboard-list"></i>
+              <span>Abra esta aba para carregar o histórico de logs.</span>
+            </div>
           </div>
         </div>
       </section>
+
+      <!-- Overlay de detalhes de exoneração (redesenhado) -->
+      <div id="detalhes-exoneracao-overlay" class="overlay-modal" style="display: none;">
+        <div class="overlay-card">
+          <div class="overlay-header">
+            <h3><i class="fa-solid fa-list-check"></i> Exonerados deste relatório</h3>
+            <button class="overlay-close-btn" onclick="fecharDetalhesExoneracao()">&times;</button>
+          </div>
+          <div class="overlay-body" id="detalhes-exoneracao-body">
+            <div class="logs-empty">Carregando...</div>
+          </div>
+        </div>
+      </div>
 
       <section id="secao-ensino" style="display: none; padding: 20px;">
         <div class="info-alert-gold">
@@ -501,14 +508,6 @@
         </div>
       </section>
     </main>
-  </div>
-
-  <div id="logs-overlay" class="logs-overlay" style="display: none;">
-    <div class="logs-overlay-card">
-      <button class="logs-overlay-close" onclick="fecharDetalhesLog()">&times;</button>
-      <h3>Oficiais Exonerados</h3>
-      <div id="logs-overlay-content"></div>
-    </div>
   </div>
 
   <div id="modal-selecao-comando" class="modal-pcerj" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 10001; align-items: center; justify-content: center;">

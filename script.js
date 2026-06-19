@@ -180,11 +180,12 @@ document.addEventListener("DOMContentLoaded", () => {
   if (!sessao) return;
   if (sessao.tema) document.body.classList.add(sessao.tema);
 
-  const overlay = document.getElementById("logs-overlay");
+  // Fechar overlay de detalhes clicando fora
+  const overlay = document.getElementById("detalhes-exoneracao-overlay");
   if (overlay) {
     overlay.addEventListener("click", (event) => {
       if (event.target === overlay) {
-        window.fecharDetalhesLog();
+        window.fecharDetalhesExoneracao();
       }
     });
   }
@@ -353,241 +354,135 @@ window.abrirLogs = function () {
   window.carregarLogs();
 };
 
-window.fecharDetalhesLog = function () {
-  const overlay = document.getElementById("logs-overlay");
+window.fecharDetalhesExoneracao = function () {
+  const overlay = document.getElementById("detalhes-exoneracao-overlay");
   if (overlay) overlay.style.display = "none";
 };
 
-window.abrirDetalhesLog = function (entryId) {
-  const conteudo = document.getElementById("logs-overlay-content");
-  const overlay = document.getElementById("logs-overlay");
-  const tbody = document.getElementById("corpo-logs");
-  if (!conteudo || !overlay || !tbody) return;
+window.abrirDetalhesExoneracao = function (entry) {
+  const overlay = document.getElementById("detalhes-exoneracao-overlay");
+  const body = document.getElementById("detalhes-exoneracao-body");
+  if (!overlay || !body) return;
 
-  const linhas = Array.from(tbody.querySelectorAll("tr[data-log-id]"));
-  const linha = linhas.find((tr) => tr.dataset.logId === entryId);
-  if (!linha) return;
+  const exonerados = Array.isArray(entry.exonerados) ? entry.exonerados : [];
 
-  const raw = linha.dataset.exonerados || "[]";
-  let exonerados = [];
-  try {
-    exonerados = JSON.parse(raw);
-  } catch (_) {}
-
-  if (!Array.isArray(exonerados) || exonerados.length === 0) {
-    conteudo.innerHTML =
-      '<p style="color:#aaa; margin:0;">Nenhum oficial exonerado registrado neste relatorio.</p>';
+  if (exonerados.length === 0) {
+    body.innerHTML = '<div class="logs-empty"><span>Nenhum oficial exonerado registrado neste relatório.</span></div>';
   } else {
-    conteudo.innerHTML = `
-      <div class="overlay-lista-exonerados">
-        ${exonerados
-          .map(
-            (item) => `
-              <div class="overlay-exonerado-item">
-                <strong>${escaparHtml(item.nomeCidade || "Nao identificado")}</strong>
-                <span>ID Discord: ${escaparHtml(item.discordUser || "-")}</span>
-                <span>Passaporte: ${escaparHtml(item.idPassaporte || "-")}</span>
-                <span>Cargo: ${escaparHtml(item.cargo || "Oficial")}</span>
-              </div>
-            `
-          )
-          .join("")}
+    body.innerHTML = exonerados.map((item) => `
+      <div class="exonerado-item">
+        <span class="exonerado-nome">${escaparHtml(item.nomeCidade || "Nao identificado")}</span>
+        <div class="exonerado-detalhes">
+          <span>ID: ${escaparHtml(item.discordUser || "-")} &middot; Pass: ${escaparHtml(item.idPassaporte || "-")}</span>
+          <span style="color:#aaa;">${escaparHtml(item.cargo || "Oficial")}</span>
+        </div>
+        <span class="exonerado-badge">EXONERADO</span>
       </div>
-    `;
+    `).join("");
   }
 
   overlay.style.display = "flex";
 };
 
+// Fechar overlay clicando fora
 window.carregarLogs = async function () {
   const sessao = obterSessao();
-  const corpo = document.getElementById("corpo-logs");
+  const lista = document.getElementById("corpo-logs-list");
   const filtro = document.getElementById("filtro-tipo-log");
-  const cabecalho = document.getElementById("cabecalho-logs");
-  if (!sessao || !corpo || !filtro || !cabecalho) return;
+  if (!sessao || !lista || !filtro) return;
 
-  const tipoSelecionado =
-    filtro.value === "exoneracao" ? "exoneracao" : "ferias";
+  const tipoSelecionado = filtro.value;
 
-  if (tipoSelecionado === "ferias") {
-    cabecalho.innerHTML = `
-      <tr>
-        <th>Solicitante</th>
-        <th>Data Início</th>
-        <th>Data Fim</th>
-        <th>Período Total</th>
-        <th>Status</th>
-        <th>Registrado Em</th>
-      </tr>
-    `;
-    corpo.innerHTML =
-      '<tr><td colspan="6" style="text-align:center; padding:30px; color:#888;">Carregando logs de férias...</td></tr>';
-  } else {
-    cabecalho.innerHTML = `
-      <tr>
-        <th>Emissor</th>
-        <th>ID Discord</th>
-        <th>Data da Emissão</th>
-        <th>Horário</th>
-        <th>Exonerados</th>
-        <th>Ação</th>
-      </tr>
-    `;
-    corpo.innerHTML =
-      '<tr><td colspan="6" style="text-align:center; padding:30px; color:#888;">Carregando logs de exonerações...</td></tr>';
-  }
+  lista.innerHTML = '<div class="logs-empty"><i class="fa-solid fa-spinner fa-spin"></i><span>Carregando logs...</span></div>';
 
   try {
     const res = await fetch(
-      `${API_BASE}/api/logs.js?org=${encodeURIComponent(
-        sessao.org
-      )}&type=${encodeURIComponent(tipoSelecionado)}`
+      `${API_BASE}/api/logs.js?org=${encodeURIComponent(sessao.org)}&type=${encodeURIComponent(tipoSelecionado)}`
     );
     if (!res.ok) throw new Error(`Erro ao carregar logs: ${res.status}`);
     const data = await res.json();
     const entries = Array.isArray(data.entries) ? data.entries : [];
 
     if (entries.length === 0) {
-      corpo.innerHTML =
-        `<tr><td colspan="6" style="text-align:center; padding:30px; color:#888;">Nenhum log de ${
-          tipoSelecionado === "ferias" ? "férias" : "exonerações"
-        } encontrado.</td></tr>`;
+      lista.innerHTML = `<div class="logs-empty">
+        <i class="fa-solid fa-clipboard-list"></i>
+        <span>Nenhum log de ${tipoSelecionado === "ferias" ? "férias" : "exonerações"} encontrado.</span>
+      </div>`;
       return;
     }
 
-    corpo.innerHTML = "";
+    lista.innerHTML = "";
 
-    entries.forEach((entry) => {
-      const tr = document.createElement("tr");
-      tr.dataset.logId = entry.id;
+    if (tipoSelecionado === "exoneracao") {
+      entries.forEach((entry) => {
+        const emissor = entry.emissor || {};
+        const nomeExibicao = emissor.nick || emissor.nome || "Nao identificado";
+        const avatarUrl = emissor.avatar || "https://cdn.discordapp.com/embed/avatars/0.png";
+        const qtd = entry.quantidadeExonerados || 0;
+        const dataHora = entry.createdAt
+          ? `${formatarData(entry.createdAt)} ${new Date(entry.createdAt).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" })}`
+          : "-";
 
-      if (tipoSelecionado === "ferias") {
-        tr.innerHTML = `
-          <td>${escaparHtml(entry.solicitante?.nome || "-")}</td>
-          <td>${formatarData(entry.dataInicio)}</td>
-          <td>${formatarData(entry.dataFim)}</td>
-          <td>${escaparHtml(entry.periodoTotalDias || 0)} dia(s)</td>
-          <td><span class="${
-            entry.status === "aprovado" ? "badge-success" : "badge-danger"
-          }">${escaparHtml((entry.status || "-").toUpperCase())}</span></td>
-          <td>${formatarDataHora(entry.createdAt)}</td>
+        const card = document.createElement("div");
+        card.className = "log-card-exoneracao";
+
+        card.innerHTML = `
+          <img src="${escaparHtml(avatarUrl)}" alt="Avatar" class="log-card-avatar" onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
+          <div class="log-card-info">
+            <span class="log-card-nome">${escaparHtml(nomeExibicao)}</span>
+            <div class="log-card-meta">
+              <span><i class="fa-solid fa-user-slash"></i> <span class="log-card-qtd"><i class="fa-solid fa-users"></i> ${qtd} exonerado${qtd !== 1 ? "s" : ""}</span></span>
+              <span><i class="fa-solid fa-calendar"></i> ${escaparHtml(dataHora)}</span>
+            </div>
+          </div>
+          <button class="log-card-btn" data-entry='${escaparHtml(JSON.stringify(entry))}'>VER MAIS</button>
         `;
-      } else {
-        tr.dataset.exonerados = JSON.stringify(entry.exonerados || []);
-        tr.innerHTML = `
-          <td>${escaparHtml(entry.emissor?.nome || "-")}</td>
-          <td>${escaparHtml(entry.emissor?.id || "-")}</td>
-          <td>${formatarData(entry.createdAt)}</td>
-          <td>${new Date(entry.createdAt).toLocaleTimeString("pt-BR", {
-            timeZone: "America/Sao_Paulo",
-          })}</td>
-          <td>${escaparHtml(entry.quantidadeExonerados || 0)}</td>
-          <td><button class="btn-outline-gold btn-log-detalhes" onclick="abrirDetalhesLog('${escaparHtml(
-            entry.id
-          )}')">VER MAIS</button></td>
+
+        card.querySelector(".log-card-btn").addEventListener("click", () => {
+          window.abrirDetalhesExoneracao(entry);
+        });
+
+        lista.appendChild(card);
+      });
+    } else {
+      // Logs de férias
+      entries.forEach((entry) => {
+        const solicitante = entry.solicitante || {};
+        const nome = solicitante.nome || "Nao identificado";
+        const dataInicio = entry.dataInicio ? formatarData(entry.dataInicio) : "-";
+        const dataFim = entry.dataFim ? formatarData(entry.dataFim) : "-";
+        const periodo = entry.periodoTotalDias || 0;
+        const status = entry.status || "-";
+        const isAprovado = status === "aprovado";
+        const isAntecipado = entry.subType === "antecipacao";
+        const observacao = entry.observacao || "";
+
+        let badgeClass = "badge-danger";
+        let badgeText = status.toUpperCase();
+        if (isAprovado) { badgeClass = "badge-success"; badgeText = "APROVADO"; }
+        if (isAntecipado) { badgeClass = "badge-warning"; badgeText = "ANTECIPADO"; }
+
+        const card = document.createElement("div");
+        card.className = "log-card-ferias";
+
+        card.innerHTML = `
+          <div class="log-card-info" style="flex:1;">
+            <span class="log-card-nome">${escaparHtml(nome)}</span>
+            <div class="log-card-periodo">
+              <span><i class="fa-solid fa-calendar-check"></i> ${escaparHtml(dataInicio)} a ${escaparHtml(dataFim)}</span>
+              ${!isAntecipado ? `<span><i class="fa-solid fa-clock"></i> ${periodo} dia(s)</span>` : ""}
+              ${observacao ? `<span style="color:#999;font-size:0.78rem;"><i class="fa-solid fa-comment"></i> ${escaparHtml(observacao)}</span>` : ""}
+            </div>
+          </div>
+          <span class="${badgeClass}">${badgeText}</span>
         `;
-      }
 
-      corpo.appendChild(tr);
-    });
-  } catch (error) {
-    console.error(error);
-    corpo.innerHTML =
-      '<tr><td colspan="6" style="text-align:center; padding:30px; color:#ff4d4d;">Falha ao carregar os logs.</td></tr>';
-  }
-};
-
-window.carregarLogs = async function () {
-  const sessao = obterSessao();
-  const corpo = document.getElementById("corpo-logs");
-  const filtro = document.getElementById("filtro-tipo-log");
-  const cabecalho = document.getElementById("cabecalho-logs");
-  if (!sessao || !corpo || !filtro || !cabecalho) return;
-
-  const tipoSelecionado =
-    filtro.value === "exoneracao" ? "exoneracao" : "ferias";
-
-  if (tipoSelecionado === "ferias") {
-    cabecalho.innerHTML = `
-      <tr>
-        <th>Solicitante</th>
-        <th>ID do Solicitante</th>
-        <th>Data Inicio</th>
-        <th>Data Fim</th>
-        <th>Motivo</th>
-      </tr>
-    `;
-    corpo.innerHTML =
-      '<tr><td colspan="5" style="text-align:center; padding:30px; color:#888;">Carregando logs de ferias...</td></tr>';
-  } else {
-    cabecalho.innerHTML = `
-      <tr>
-        <th>Emissor</th>
-        <th>ID Discord</th>
-        <th>Data da Emissao</th>
-        <th>Horario</th>
-        <th>Exonerados</th>
-        <th>Acao</th>
-      </tr>
-    `;
-    corpo.innerHTML =
-      '<tr><td colspan="6" style="text-align:center; padding:30px; color:#888;">Carregando logs de exoneracoes...</td></tr>';
-  }
-
-  try {
-    const res = await fetch(
-      `${API_BASE}/api/logs.js?org=${encodeURIComponent(
-        sessao.org
-      )}&type=${encodeURIComponent(tipoSelecionado)}`
-    );
-    if (!res.ok) throw new Error(`Erro ao carregar logs: ${res.status}`);
-    const data = await res.json();
-    const entries = Array.isArray(data.entries) ? data.entries : [];
-
-    if (entries.length === 0) {
-      corpo.innerHTML =
-        `<tr><td colspan="${tipoSelecionado === "ferias" ? "5" : "6"}" style="text-align:center; padding:30px; color:#888;">Nenhum log de ${
-          tipoSelecionado === "ferias" ? "ferias" : "exoneracoes"
-        } encontrado.</td></tr>`;
-      return;
+        lista.appendChild(card);
+      });
     }
-
-    corpo.innerHTML = "";
-
-    entries.forEach((entry) => {
-      const tr = document.createElement("tr");
-      tr.dataset.logId = entry.id;
-
-      if (tipoSelecionado === "ferias") {
-        tr.innerHTML = `
-          <td>${escaparHtml(entry.solicitante?.nome || "-")}</td>
-          <td>${escaparHtml(entry.solicitante?.id || "-")}</td>
-          <td>${formatarData(entry.dataInicio)}</td>
-          <td>${formatarData(entry.dataFim)}</td>
-          <td>${escaparHtml(entry.motivoSolicitacao || "-")}</td>
-        `;
-      } else {
-        tr.dataset.exonerados = JSON.stringify(entry.exonerados || []);
-        tr.innerHTML = `
-          <td>${escaparHtml(entry.emissor?.nome || "-")}</td>
-          <td>${escaparHtml(entry.emissor?.id || "-")}</td>
-          <td>${formatarData(entry.createdAt)}</td>
-          <td>${new Date(entry.createdAt).toLocaleTimeString("pt-BR", {
-            timeZone: "America/Sao_Paulo",
-          })}</td>
-          <td>${escaparHtml(entry.quantidadeExonerados || 0)}</td>
-          <td><button class="btn-outline-gold btn-log-detalhes" onclick="abrirDetalhesLog('${escaparHtml(
-            entry.id
-          )}')">VER MAIS</button></td>
-        `;
-      }
-
-      corpo.appendChild(tr);
-    });
   } catch (error) {
     console.error(error);
-    corpo.innerHTML =
-      `<tr><td colspan="${tipoSelecionado === "ferias" ? "5" : "6"}" style="text-align:center; padding:30px; color:#ff4d4d;">Falha ao carregar os logs.</td></tr>`;
+    lista.innerHTML = '<div class="logs-empty"><i class="fa-solid fa-triangle-exclamation" style="color:#ff4d4d;"></i><span style="color:#ff4d4d;">Falha ao carregar os logs.</span></div>';
   }
 };
 

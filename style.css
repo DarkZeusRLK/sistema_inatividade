@@ -313,12 +313,13 @@ body {
 }
 
 .badge-warning {
-  background: rgba(212, 175, 55, 0.1);
+  background: rgba(212, 175, 55, 0.15);
   color: var(--gold);
   padding: 5px 12px;
   border: 1px solid var(--gold);
   border-radius: 4px;
   font-size: 0.75rem;
+  font-weight: 600;
 }
 
 /* =========================================================
@@ -924,76 +925,635 @@ body.tema-pf {
   border: 1px solid #333;
   padding: 10px 12px;
   border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s;
 }
 
-.btn-log-detalhes {
-  padding: 10px 14px;
+.logs-filter:hover,
+.logs-filter:focus {
+  border-color: var(--gold);
+  outline: none;
+}
+
+/* =========================================================
+   LOGS LISTA DE CARDS
+   ========================================================= */
+.logs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  min-height: 200px;
+}
+
+.logs-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 50px 20px;
+  color: #666;
+  text-align: center;
+}
+
+.logs-empty i {
+  font-size: 2.5rem;
+  opacity: 0.4;
+}
+
+.logs-empty span {
+  font-size: 0.95rem;
+}
+
+/* Card de log de exoneração */
+.log-card-exoneracao {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  transition: all 0.25s ease;
+  cursor: default;
+}
+
+.log-card-exoneracao:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--gold);
+  transform: translateX(4px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.log-card-avatar {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  border-radius: 50%;
+  border: 2px solid var(--gold);
+  object-fit: cover;
+  background: #222;
+}
+
+.log-card-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.log-card-info .log-card-nome {
+  font-weight: 700;
+  color: #fff;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.log-card-info .log-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 0.82rem;
+  color: #999;
+}
+
+.log-card-info .log-card-meta span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.log-card-info .log-card-meta i {
+  color: var(--gold);
+  font-size: 0.75rem;
+}
+
+.log-card-info .log-card-qtd {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 77, 77, 0.1);
+  color: #ff6b6b;
+  padding: 2px 10px;
+  border-radius: 20px;
   font-size: 0.78rem;
+  font-weight: 600;
+  border: 1px solid rgba(255, 77, 77, 0.2);
 }
 
-.logs-overlay {
+.log-card-info .log-card-data {
+  color: #aaa;
+}
+
+.log-card-btn {
+  background: transparent;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  padding: 8px 18px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  min-width: 90px;
+  text-align: center;
+}
+
+.log-card-btn:hover {
+  background: var(--gold);
+  color: #000;
+  transform: scale(1.05);
+}
+
+/* Card de log de férias */
+.log-card-ferias {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  transition: all 0.25s ease;
+}
+
+.log-card-ferias:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--gold);
+  transform: translateX(4px);
+}
+
+.log-card-ferias .log-card-nome {
+  font-weight: 700;
+  color: #fff;
+  font-size: 0.95rem;
+}
+
+.log-card-ferias .log-card-periodo {
+  font-size: 0.82rem;
+  color: #aaa;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.log-card-ferias .log-card-periodo i {
+  color: var(--gold);
+  margin-right: 3px;
+}
+
+.log-card-ferias .badge-success {
+  font-size: 0.72rem;
+  padding: 3px 10px;
+}
+
+.log-card-ferias .badge-danger {
+  font-size: 0.72rem;
+  padding: 3px 10px;
+}
+
+/* =========================================================
+   OVERLAY MODAL (genérico)
+   ========================================================= */
+.overlay-modal {
   position: fixed;
   inset: 0;
   z-index: 10002;
-  background: rgba(0, 0, 0, 0.82);
+  background: rgba(0, 0, 0, 0.85);
   backdrop-filter: blur(4px);
+  display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
 }
 
-.logs-overlay-card {
-  position: relative;
-  width: min(760px, 100%);
+.overlay-card {
+  width: min(700px, 100%);
   max-height: 80vh;
-  overflow: auto;
-  background: #111318;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #131418;
   border: 1px solid var(--gold);
   border-radius: 16px;
-  padding: 28px;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+  animation: overlayFadeIn 0.25s ease;
 }
 
-.logs-overlay-card h3 {
+@keyframes overlayFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.overlay-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.overlay-header h3 {
   color: var(--gold);
-  margin-bottom: 20px;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.logs-overlay-close {
-  position: absolute;
-  top: 10px;
-  right: 12px;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  border: 1px solid #444;
+.overlay-header h3 i {
+  color: var(--gold);
+}
+
+.overlay-close-btn {
   background: transparent;
-  color: #fff;
-  font-size: 1.5rem;
+  border: 1px solid #444;
+  color: #aaa;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 1.3rem;
   cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.overlay-lista-exonerados {
+.overlay-close-btn:hover {
+  background: rgba(255, 77, 77, 0.15);
+  border-color: #ff4d4d;
+  color: #ff4d4d;
+}
+
+.overlay-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
   display: flex;
   flex-direction: column;
+  gap: 8px;
+}
+
+/* Item compacto de exonerado no overlay */
+.exonerado-item {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: center;
   gap: 12px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  transition: background 0.2s;
 }
 
-.overlay-exonerado-item {
+.exonerado-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.exonerado-item .exonerado-nome {
+  font-weight: 600;
+  color: #fff;
+  font-size: 0.88rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.exonerado-item .exonerado-detalhes {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 10px;
+  gap: 2px;
+  font-size: 0.78rem;
+  color: #999;
 }
 
-.overlay-exonerado-item strong {
-  color: #fff;
+.exonerado-item .exonerado-badge {
+  font-size: 0.7rem;
+  background: rgba(255, 77, 77, 0.08);
+  color: #ff6b6b;
+  border: 1px solid rgba(255, 77, 77, 0.15);
+  padding: 3px 10px;
+  border-radius: 20px;
+  text-align: center;
+  white-space: nowrap;
 }
 
-.overlay-exonerado-item span {
-  color: #bbb;
-  font-size: 0.9rem;
+/* =========================================================
+   RESPONSIVIDADE
+   ========================================================= */
+@media (max-width: 1024px) {
+  .sidebar {
+    width: 240px;
+  }
+
+  .sidebar-header h2 {
+    font-size: 1rem;
+  }
+
+  .top-bar {
+    padding: 16px 20px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .header-actions {
+    width: 100%;
+    overflow-x: auto;
+    display: flex;
+    gap: 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .header-actions .btn-gold,
+  .header-actions .btn-outline-gold {
+    white-space: nowrap;
+    padding: 10px 16px;
+    font-size: 0.78rem;
+  }
 }
+
+@media (max-width: 768px) {
+  body {
+    overflow: auto;
+  }
+
+  .app-container {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    max-height: 60px;
+    overflow: hidden;
+    transition: max-height 0.4s ease;
+  }
+
+  .sidebar.mobile-open {
+    max-height: 100vh;
+  }
+
+  .sidebar-header {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .sidebar-header img {
+    width: 40px;
+    margin-bottom: 0;
+  }
+
+  .sidebar-header h2 {
+    font-size: 0.9rem;
+    flex: 1;
+  }
+
+  .sidebar-header p {
+    display: none;
+  }
+
+  .sidebar-header::after {
+    content: "\f0c9";
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    color: var(--gold);
+    font-size: 1.2rem;
+    transition: transform 0.3s;
+  }
+
+  .sidebar.mobile-open .sidebar-header::after {
+    transform: rotate(90deg);
+  }
+
+  .sidebar-nav {
+    padding: 10px 16px;
+  }
+
+  .sidebar-footer {
+    padding: 10px 16px;
+  }
+
+  .main-content {
+    overflow: visible;
+  }
+
+  .page-title h1 {
+    font-size: 1.1rem;
+  }
+
+  .content-body {
+    padding: 16px;
+  }
+
+  .info-alert-gold {
+    padding: 14px;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .alert-icon {
+    font-size: 1.4rem;
+  }
+
+  .alert-text h3 {
+    font-size: 0.9rem;
+  }
+
+  .alert-text p {
+    font-size: 0.8rem;
+  }
+
+  .table-card {
+    border-radius: 8px;
+  }
+
+  .audit-table {
+    font-size: 0.8rem;
+  }
+
+  .audit-table th,
+  .audit-table td {
+    padding: 10px 8px;
+  }
+
+  /* Logs cards em mobile */
+  .log-card-exoneracao {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .log-card-avatar {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+  }
+
+  .log-card-info {
+    min-width: calc(100% - 56px);
+  }
+
+  .log-card-btn {
+    width: 100%;
+    margin-top: 4px;
+  }
+
+  .log-card-ferias {
+    flex-wrap: wrap;
+  }
+
+  .overlay-card {
+    width: 95%;
+    max-height: 90vh;
+    border-radius: 12px;
+  }
+
+  .overlay-body {
+    padding: 16px;
+  }
+
+  .exonerado-item {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 10px 12px;
+  }
+
+  .exonerado-item .exonerado-badge {
+    justify-self: start;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-title h1 {
+    font-size: 0.95rem;
+  }
+
+  .top-bar {
+    padding: 12px 14px;
+  }
+
+  .logs-list {
+    padding: 12px;
+  }
+
+  .log-card-exoneracao {
+    padding: 12px 14px;
+  }
+
+  .log-card-info .log-card-meta {
+    font-size: 0.75rem;
+    gap: 8px;
+  }
+
+  .log-card-info .log-card-qtd {
+    font-size: 0.72rem;
+    padding: 2px 8px;
+  }
+
+  .btn-gold,
+  .btn-outline-gold {
+    padding: 10px 16px;
+    font-size: 0.75rem;
+  }
+
+  .overlay-header {
+    padding: 14px 16px;
+  }
+
+  .overlay-header h3 {
+    font-size: 0.85rem;
+  }
+}
+
+/* =========================================================
+   ANIMAÇÕES NA NAVBAR
+   ========================================================= */
+.nav-item {
+  position: relative;
+  overflow: hidden;
+}
+
+.nav-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--gold);
+  transform: scaleY(0);
+  transition: transform 0.25s ease;
+  border-radius: 0 3px 3px 0;
+}
+
+.nav-item.active::before {
+  transform: scaleY(1);
+}
+
+.nav-item:hover::before {
+  transform: scaleY(0.6);
+}
+
+.nav-item i {
+  transition: transform 0.3s ease, color 0.3s ease;
+}
+
+.nav-item:hover i {
+  transform: scale(1.15);
+}
+
+.nav-item span {
+  transition: letter-spacing 0.3s ease;
+}
+
+.nav-item:hover span {
+  letter-spacing: 0.5px;
+}
+
+/* Animação de entrada da sidebar */
+@keyframes sidebarItemIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.sidebar-nav .nav-item {
+  animation: sidebarItemIn 0.4s ease backwards;
+}
+
+.sidebar-nav .nav-item:nth-child(1) { animation-delay: 0.05s; }
+.sidebar-nav .nav-item:nth-child(2) { animation-delay: 0.1s; }
+.sidebar-nav .nav-item:nth-child(3) { animation-delay: 0.15s; }
+.sidebar-nav .nav-item:nth-child(4) { animation-delay: 0.2s; }
+.sidebar-nav .nav-item:nth-child(5) { animation-delay: 0.25s; }
+.sidebar-nav .nav-item:nth-child(6) { animation-delay: 0.3s; }
+.sidebar-nav .nav-item:nth-child(7) { animation-delay: 0.35s; }
+.sidebar-nav .nav-item:nth-child(8) { animation-delay: 0.4s; }

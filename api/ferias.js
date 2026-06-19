@@ -5,6 +5,27 @@ const {
   normalizarTextoFerias,
 } = require("./_utils/ferias");
 
+const path = require("path");
+
+async function appendLogEntry(entry) {
+  const fs = require("fs");
+  const logsPath = path.join(process.cwd(), "data", "logs.json");
+  let logs = { entries: [] };
+  try {
+    const raw = await fs.promises.readFile(logsPath, "utf8");
+    logs = JSON.parse(raw || '{"entries":[]}');
+  } catch (_) {}
+  if (!Array.isArray(logs.entries)) logs.entries = [];
+
+  logs.entries.unshift({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+    createdAt: new Date().toISOString(),
+    ...entry,
+  });
+
+  await fs.promises.writeFile(logsPath, JSON.stringify(logs, null, 2), "utf8");
+}
+
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -101,10 +122,44 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === "POST" && action === "remover") {
+      // Buscar dados do membro antes de remover para o log
+      let nomeMembro = userId;
+      let avatarMembro = null;
+      try {
+        const memberRes = await fetch(
+          `https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userId}`,
+          { headers }
+        );
+        if (memberRes.ok) {
+          const memberData = await memberRes.json();
+          nomeMembro = memberData.nick || memberData.user?.global_name || memberData.user?.username || userId;
+          const av = memberData.user?.avatar;
+          if (av) {
+            avatarMembro = `https://cdn.discordapp.com/avatars/${memberData.user.id}/${av}.${av.startsWith("a_") ? "gif" : "png"}`;
+          }
+        }
+      } catch (_) {}
+
+      // Remove a role de férias
       await fetch(
         `https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userId}/roles/${FERIAS_ROLE_ID}`,
         { method: "DELETE", headers }
       );
+
+      // Registrar log de antecipação
+      await appendLogEntry({
+        type: "ferias",
+        subType: "antecipacao",
+        org: org || null,
+        solicitante: {
+          id: userId,
+          nome: nomeMembro,
+          avatar: avatarMembro,
+        },
+        observacao: "Ferias antecipadas (retorno voluntario antes do prazo)",
+        status: "antecipado",
+      });
+
       return res.status(200).json({ message: "Operacao processada com sucesso." });
     }
 

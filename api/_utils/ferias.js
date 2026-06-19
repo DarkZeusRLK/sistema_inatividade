@@ -435,6 +435,38 @@ async function processarSolicitacoesFerias(env) {
         `https://discord.com/api/v10/channels/${FERIAS_CHANNEL_ID}/messages/${msg.id}/reactions/%E2%9C%85/@me`,
         { method: "PUT", headers }
       );
+    } else if (
+      status === "reprovado" &&
+      solicitacao.periodoDias > MAX_FERIAS_DIAS
+    ) {
+      // Reage com ❌ se ultrapassou o limite de dias
+      await fetchDiscord(
+        `https://discord.com/api/v10/channels/${FERIAS_CHANNEL_ID}/messages/${msg.id}/reactions/%E2%9D%8C/@me`,
+        { method: "PUT", headers }
+      ).catch(() => {});
+
+      // Envia DM notificando o usuario
+      const dmChannelRes = await fetchDiscord(
+        `https://discord.com/api/v10/users/${solicitacao.userId}/channels`,
+        {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ recipient_id: solicitacao.userId }),
+        }
+      );
+      if (dmChannelRes.ok) {
+        const dmChannel = await dmChannelRes.json();
+        await fetchDiscord(
+          `https://discord.com/api/v10/channels/${dmChannel.id}/messages`,
+          {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+              content: `**MENSAGEM AUTOMATICA DO SISTEMA DE FERIAS**\nPrezado(a), sua solicitacao de ferias foi rejeitada pelo seguinte motivo:\nUltrapassa o prazo maximo estabelecido que seria de **15 dias**, caso tenha errado, ou solicitado incorretamente, favor solicite suas ferias novamente com o periodo sendo menor que 15 dias.`,
+            }),
+          }
+        ).catch(() => {});
+      }
     }
 
     if (messageIdsJaAprovados.has(msg.id)) continue;

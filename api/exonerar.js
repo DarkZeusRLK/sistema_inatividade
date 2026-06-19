@@ -5,6 +5,51 @@ require("dotenv").config({ path: path.join(process.cwd(), ".env") });
 
 const fetch = global.fetch || require("node-fetch");
 
+async function appendLogEntry(entry) {
+  const fs = require("fs");
+  const logsPath = path.join(process.cwd(), "data", "logs.json");
+  let logs = { entries: [] };
+  try {
+    const raw = await fs.promises.readFile(logsPath, "utf8");
+    logs = JSON.parse(raw || '{"entries":[]}');
+  } catch (_) {}
+  if (!Array.isArray(logs.entries)) logs.entries = [];
+
+  logs.entries.unshift({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+    createdAt: new Date().toISOString(),
+    ...entry,
+  });
+
+  await fs.promises.writeFile(logsPath, JSON.stringify(logs, null, 2), "utf8");
+}
+
+async function buscarNicknameEAvatar(discordId, botToken, guildId) {
+  try {
+    const res = await fetch(
+      `https://discord.com/api/v10/guilds/${guildId}/members/${discordId}`,
+      {
+        headers: {
+          Authorization: `Bot ${botToken}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    if (!res.ok) return { nick: null, avatar: null };
+    const data = await res.json();
+    const nick = data.nick || data.user?.global_name || data.user?.username || null;
+    let avatar = null;
+    if (data.user?.avatar) {
+      avatar = `https://cdn.discordapp.com/avatars/${data.user.id}/${data.user.avatar}.${data.user.avatar.startsWith("a_") ? "gif" : "png"}`;
+    } else if (data.user?.discriminator) {
+      avatar = `https://cdn.discordapp.com/embed/avatars/${Number(data.user.discriminator) % 5}.png`;
+    }
+    return { nick, avatar };
+  } catch {
+    return { nick: null, avatar: null };
+  }
+}
+
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -121,15 +166,35 @@ module.exports = async (req, res) => {
     if (Array.isArray(users) && users.length > 0) {
       console.log(`Iniciando exoneracao em massa: ${users.length} usuarios.`);
 
+      const exonerados = [];
       for (const u of users) {
-        await processarExoneracao(
+        const result = await processarExoneracao(
           u.discordUser,
           u.nomeCidade,
           u.idPassaporte,
           u.cargo
         );
+        exonerados.push(result);
         await new Promise((r) => setTimeout(r, 300));
       }
+
+      // Buscar nickname e avatar do emissor
+      const emissorInfo = emissor?.id
+        ? await buscarNicknameEAvatar(emissor.id, Discord_Bot_Token, GUILD_ID)
+        : { nick: null, avatar: null };
+
+      await appendLogEntry({
+        type: "exoneracao",
+        org: org || null,
+        emissor: {
+          id: emissor?.id || null,
+          nome: emissor?.nome || "Nao identificado",
+          nick: emissorInfo.nick,
+          avatar: emissorInfo.avatar,
+        },
+        exonerados,
+        quantidadeExonerados: exonerados.length,
+      });
 
       return res.status(200).json({
         success: true,
@@ -138,12 +203,30 @@ module.exports = async (req, res) => {
     }
 
     if (discordUser) {
-      await processarExoneracao(
+      const result = await processarExoneracao(
         discordUser,
         nomeCidade,
         idPassaporte,
         cargo
       );
+
+      // Buscar nickname e avatar do emissor
+      const emissorInfo = emissor?.id
+        ? await buscarNicknameEAvatar(emissor.id, Discord_Bot_Token, GUILD_ID)
+        : { nick: null, avatar: null };
+
+      await appendLogEntry({
+        type: "exoneracao",
+        org: org || null,
+        emissor: {
+          id: emissor?.id || null,
+          nome: emissor?.nome || "Nao identificado",
+          nick: emissorInfo.nick,
+          avatar: emissorInfo.avatar,
+        },
+        exonerados: [result],
+        quantidadeExonerados: 1,
+      });
 
       return res.status(200).json({
         success: true,

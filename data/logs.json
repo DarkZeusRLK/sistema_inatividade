@@ -1,3 +1,31 @@
 {
-  "entries": []
+  "entries": [
+    {
+      "id": "1781917365587-gktbs6k6",
+      "createdAt": "2026-06-20T01:02:45.587Z",
+      "type": "exoneracao",
+      "org": "PCERJ",
+      "emissor": {
+        "id": "698368546094186578",
+        "nome": "![DEL ADJ.] Dark Tenebras",
+        "nick": "![DEL ADJ.] Dark Tenebras",
+        "avatar": "https://cdn.discordapp.com/avatars/698368546094186578/a_bf5810a23e01422de04d5e121e8b8d7f.gif"
+      },
+      "exonerados": [
+        {
+          "discordUser": "704449666732916838",
+          "nomeCidade": "mauro borges",
+          "idPassaporte": "3860",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1172231285725470864",
+          "nomeCidade": "zaio faeis",
+          "idPassaporte": "12445",
+          "cargo": "・Aluno PCERJ"
+        }
+      ],
+      "quantidadeExonerados": 2
+    }
+  ]
 }

@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/ferias.js?action=sincronizar",
-      "schedule": "0 */12 * * *"
+      "schedule": "0 6 * * *"
     }
   ],
   "headers": [

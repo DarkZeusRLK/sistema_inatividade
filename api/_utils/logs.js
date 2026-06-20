@@ -1,26 +1,13 @@
 const fs = require("fs");
 const path = require("path");
 
-// No Vercel, funções serverless podem ter cwd diferente entre instâncias.
-// Usar __dirname + subir até api/ garante o mesmo caminho independente da instância.
-const API_DIR = path.resolve(__dirname, "..");
-const DATA_DIR = path.join(API_DIR, "data");
-const LOGS_FILE = path.join(DATA_DIR, "logs.json");
 const MEMORY_KEY = "__AUDITORIA_LOGS_STORE__";
 
-const DEFAULT_LOGS = {
-  entries: [],
-};
-
-function cloneDefaultLogs() {
-  return {
-    entries: [],
-  };
-}
+const DEFAULT_LOGS = { entries: [] };
 
 function getMemoryStore() {
   if (!global[MEMORY_KEY]) {
-    global[MEMORY_KEY] = cloneDefaultLogs();
+    global[MEMORY_KEY] = { entries: [] };
   }
   return global[MEMORY_KEY];
 }
@@ -43,58 +30,45 @@ function limparLogsExpirados(store) {
   const filtrados = entries.filter((entry) => {
     if (entry?.type !== "ferias") return true;
     if (entry?.status !== "aprovado") return true;
-
     const indiceFim = obterIndiceDia(entry.dataFim);
     if (indiceFim === null || indiceHoje === null) return true;
-
     return indiceFim >= indiceHoje;
   });
 
-  return {
-    entries: filtrados,
-  };
+  return { entries: filtrados };
 }
 
 async function readLogs() {
-  // Tenta o caminho novo primeiro, depois o legado (process.cwd())
-  const caminhos = [LOGS_FILE, path.join(process.cwd(), "data", "logs.json")];
-  // Deduplica mantendo ordem
-  const tentados = new Set();
-  for (const caminho of caminhos) {
-    if (tentados.has(caminho)) continue;
-    tentados.add(caminho);
-    try {
-      await fs.promises.access(caminho, fs.constants.F_OK);
-      const raw = await fs.promises.readFile(caminho, "utf8");
-      const parsed = JSON.parse(raw || "{}");
-      if (parsed && Array.isArray(parsed.entries)) {
-        const sanitized = limparLogsExpirados(parsed);
-        global[MEMORY_KEY] = sanitized;
-        if (sanitized.entries.length !== parsed.entries.length) {
-          await writeLogs(sanitized);
-        }
-        return sanitized;
-      }
-    } catch (_) {}
-  }
-  const memoryStore = limparLogsExpirados(getMemoryStore());
-  global[MEMORY_KEY] = memoryStore;
-  return memoryStore;
+  // Tenta restaurar do disco se disponível (apenas local, não no Vercel)
+  const logsPath = path.join(__dirname, "..", "data", "logs.json");
+  try {
+    await fs.promises.access(logsPath, fs.constants.F_OK);
+    const raw = await fs.promises.readFile(logsPath, "utf8");
+    const parsed = JSON.parse(raw || "{}");
+    if (parsed && Array.isArray(parsed.entries)) {
+      const sanitized = limparLogsExpirados(parsed);
+      global[MEMORY_KEY] = sanitized;
+      return sanitized;
+    }
+  } catch (_) {}
+  // Fallback: memória
+  return limparLogsExpirados(getMemoryStore());
 }
 
 async function writeLogs(data) {
-  const sanitized = limparLogsExpirados(data || cloneDefaultLogs());
+  const sanitized = limparLogsExpirados(data || { entries: [] });
   global[MEMORY_KEY] = sanitized;
 
+  // Tenta persistir em disco (pode falhar no Vercel - EROFS)
+  const logsPath = path.join(__dirname, "..", "data", "logs.json");
   try {
-    await fs.promises.mkdir(DATA_DIR, { recursive: true });
-    await fs.promises.writeFile(
-      LOGS_FILE,
-      JSON.stringify(sanitized, null, 2),
-      "utf8"
-    );
+    await fs.promises.mkdir(path.dirname(logsPath), { recursive: true });
+    await fs.promises.writeFile(logsPath, JSON.stringify(sanitized, null, 2), "utf8");
   } catch (error) {
-    console.error("Falha ao persistir logs em disco, mantendo em memoria:", error);
+    // EROFS no Vercel é esperado, manter só em memória
+    if (error.code !== "EROFS") {
+      console.error("Falha ao persistir logs em disco:", error);
+    }
   }
 }
 
@@ -105,13 +79,14 @@ async function appendLog(entry) {
     createdAt: new Date().toISOString(),
     ...entry,
   });
+  global[MEMORY_KEY] = logs;
+  // writeLogs tem try/catch interno, nunca lança
   await writeLogs(logs);
-  return global[MEMORY_KEY].entries[0];
+  return logs.entries[0];
 }
 
 module.exports = {
   readLogs,
   writeLogs,
   appendLog,
-  LOGS_FILE,
 };

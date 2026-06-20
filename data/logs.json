@@ -1,6 +1,75 @@
 {
   "entries": [
     {
+      "id": "1781923185902-xr4gm1k7",
+      "createdAt": "2026-06-20T02:39:45.902Z",
+      "type": "exoneracao",
+      "org": "PRF",
+      "emissor": {
+        "id": "930515445017092116",
+        "nome": "[CMD GRR] lpftw 🏹",
+        "nick": "[CMD GRR] lpftw 🏹",
+        "avatar": "https://cdn.discordapp.com/avatars/930515445017092116/28ce71525d0c55994f9ee22a2bc222b7.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1199778964948910190",
+          "nomeCidade": "Larajinha",
+          "idPassaporte": "5770",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1199799099214549103",
+          "nomeCidade": "May Terumi",
+          "idPassaporte": "11925",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "360123265743716355",
+          "nomeCidade": "Robertin",
+          "idPassaporte": "6110",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "653369044631552027",
+          "nomeCidade": "NASCIMENTO",
+          "idPassaporte": "1887",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1059518841924886578",
+          "nomeCidade": "galego tryy",
+          "idPassaporte": "4586",
+          "cargo": "・Agente 3ª Classe"
+        },
+        {
+          "discordUser": "1226586767096942663",
+          "nomeCidade": "AleeMonkTryy",
+          "idPassaporte": "2012",
+          "cargo": "・Agente 3ª Classe"
+        },
+        {
+          "discordUser": "1229230263880384605",
+          "nomeCidade": "menezes",
+          "idPassaporte": "12471",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1410689732702371943",
+          "nomeCidade": "Taylor Silva",
+          "idPassaporte": "12477",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1449104557333549247",
+          "nomeCidade": "TulioMaldini",
+          "idPassaporte": "12511",
+          "cargo": "・Aluno PRF"
+        }
+      ],
+      "quantidadeExonerados": 9
+    },
+    {
       "id": "1781923170811-zfc0yjp2",
       "createdAt": "2026-06-20T02:39:30.811Z",
       "type": "exoneracao",

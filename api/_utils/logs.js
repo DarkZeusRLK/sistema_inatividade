@@ -1,7 +1,10 @@
 const fs = require("fs");
 const path = require("path");
 
-const DATA_DIR = path.join(process.cwd(), "data");
+// No Vercel, funções serverless podem ter cwd diferente entre instâncias.
+// Usar __dirname + subir até api/ garante o mesmo caminho independente da instância.
+const API_DIR = path.resolve(__dirname, "..");
+const DATA_DIR = path.join(API_DIR, "data");
 const LOGS_FILE = path.join(DATA_DIR, "logs.json");
 const MEMORY_KEY = "__AUDITORIA_LOGS_STORE__";
 
@@ -53,29 +56,30 @@ function limparLogsExpirados(store) {
 }
 
 async function readLogs() {
-  try {
-    await fs.promises.access(LOGS_FILE, fs.constants.F_OK);
-    const raw = await fs.promises.readFile(LOGS_FILE, "utf8");
-    const parsed = JSON.parse(raw || "{}");
-    if (!parsed || !Array.isArray(parsed.entries)) {
-      return getMemoryStore();
-    }
-    const sanitized = limparLogsExpirados(parsed);
-    global[MEMORY_KEY] = sanitized;
-
-    if (sanitized.entries.length !== parsed.entries.length) {
-      await writeLogs(sanitized);
-    }
-
-    return sanitized;
-  } catch (error) {
-    if (error && error.code !== "ENOENT") {
-      console.error("Falha ao ler arquivo de logs, usando memoria:", error);
-    }
-    const memoryStore = limparLogsExpirados(getMemoryStore());
-    global[MEMORY_KEY] = memoryStore;
-    return memoryStore;
+  // Tenta o caminho novo primeiro, depois o legado (process.cwd())
+  const caminhos = [LOGS_FILE, path.join(process.cwd(), "data", "logs.json")];
+  // Deduplica mantendo ordem
+  const tentados = new Set();
+  for (const caminho of caminhos) {
+    if (tentados.has(caminho)) continue;
+    tentados.add(caminho);
+    try {
+      await fs.promises.access(caminho, fs.constants.F_OK);
+      const raw = await fs.promises.readFile(caminho, "utf8");
+      const parsed = JSON.parse(raw || "{}");
+      if (parsed && Array.isArray(parsed.entries)) {
+        const sanitized = limparLogsExpirados(parsed);
+        global[MEMORY_KEY] = sanitized;
+        if (sanitized.entries.length !== parsed.entries.length) {
+          await writeLogs(sanitized);
+        }
+        return sanitized;
+      }
+    } catch (_) {}
   }
+  const memoryStore = limparLogsExpirados(getMemoryStore());
+  global[MEMORY_KEY] = memoryStore;
+  return memoryStore;
 }
 
 async function writeLogs(data) {

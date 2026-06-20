@@ -1,5 +1,4 @@
-const path = require("path");
-const fs = require("fs");
+const { readLogs } = require("./_utils/logs");
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -16,27 +15,15 @@ module.exports = async (req, res) => {
   const type = query.type || "exoneracao";
 
   try {
-    const logsPath = path.join(process.cwd(), "data", "logs.json");
-    let logs = { entries: [] };
-    try {
-      const raw = await fs.promises.readFile(logsPath, "utf8");
-      logs = JSON.parse(raw || '{"entries":[]}');
-    } catch (_) {}
+    const logs = await readLogs();
+    let entries = Array.isArray(logs?.entries) ? logs.entries : [];
 
-    if (!Array.isArray(logs.entries)) {
-      return res.status(200).json({ entries: [] });
-    }
-
-    let entries = logs.entries;
-
-    // Filtrar por tipo
     if (type === "exoneracao") {
       entries = entries.filter((e) => e.type === "exoneracao");
     } else if (type === "ferias") {
       entries = entries.filter((e) => e.type === "ferias");
     }
 
-    // Filtrar por org se especificado
     if (org) {
       entries = entries.filter((e) => e.org === org);
     }

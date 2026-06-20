@@ -175,7 +175,8 @@ module.exports = async (req, res) => {
           u.cargo
         );
         exonerados.push(result);
-        await new Promise((r) => setTimeout(r, 300));
+        // Delay reduzido: 150ms entre cada usuário para evitar rate limit do Discord
+        await new Promise((r) => setTimeout(r, 150));
       }
 
       // Buscar nickname e avatar do emissor

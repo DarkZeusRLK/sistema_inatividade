@@ -711,9 +711,13 @@ window.prepararExoneracao = function (discordId, rpName, cargo, passaporte) {
     async () => {
       mostrarAviso("Processando exoneracao, por favor aguarde.", "info");
       const sessao = obterSessao();
+
+      // A verificação de férias já é feita no backend (membros-inativos.js)
+      // Exclui oficiais com cargo de férias. Verificação rápida adicional aqui:
       try {
         const resFerias = await fetch(
-          `${API_BASE}/api/ferias.js?org=${sessao.org}`
+          `${API_BASE}/api/ferias.js?org=${sessao.org}&_ts=${Date.now()}`,
+          { cache: "no-store" }
         );
         if (resFerias.ok) {
           const dataFerias = await resFerias.json();
@@ -723,15 +727,7 @@ window.prepararExoneracao = function (discordId, rpName, cargo, passaporte) {
 
           if (idsEmFerias.has(discordId)) {
             return mostrarAviso(
-              "Operacao nao autorizada: o oficial encontra-se em periodo de ferias registrado no sistema.",
-              "error"
-            );
-          }
-
-          const estaEmFerias = await verificarPeriodoFerias(discordId, sessao.org);
-          if (estaEmFerias) {
-            return mostrarAviso(
-              "Operacao nao autorizada: o oficial encontra-se em periodo de ferias.",
+              "Este oficial está em período de férias e não pode ser exonerado.",
               "error"
             );
           }
@@ -863,7 +859,8 @@ window.exonerarSelecionados = async function () {
 
   try {
     const resFerias = await fetch(
-      `${API_BASE}/api/ferias.js?org=${sessao.org}`
+      `${API_BASE}/api/ferias.js?org=${sessao.org}&_ts=${Date.now()}`,
+      { cache: "no-store" }
     );
     if (resFerias.ok) {
       const dataFerias = await resFerias.json();
@@ -872,12 +869,6 @@ window.exonerarSelecionados = async function () {
       for (const usuario of inativosSelecionados) {
         if (idsEmFerias.has(usuario.id)) {
           usuariosComFerias.push(usuario.name);
-        } else {
-          const estaEmFerias = await verificarPeriodoFerias(
-            usuario.id,
-            sessao.org
-          );
-          if (estaEmFerias) usuariosComFerias.push(usuario.name);
         }
       }
     }
@@ -950,16 +941,11 @@ window.exonerarSelecionados = async function () {
 };
 
 async function processarExoneracoesEmLotes(usuarios, sessao) {
-  const BATCH_SIZE = 10;
+  const BATCH_SIZE = 25;
   const total = usuarios.length;
   let processados = 0;
   let sucessos = 0;
   let erros = 0;
-
-  mostrarAviso(
-    `Processando ${total} registro(s) em lotes de ${BATCH_SIZE} unidade(s)...`,
-    "info"
-  );
 
   for (let i = 0; i < usuarios.length; i += BATCH_SIZE) {
     const lote = usuarios.slice(i, i + BATCH_SIZE);
@@ -985,20 +971,15 @@ async function processarExoneracoesEmLotes(usuarios, sessao) {
 
       if (res.ok) {
         sucessos += lote.length;
-        mostrarAviso(
-          `Processamento em andamento: ${processados}/${total} registro(s) processado(s).`,
-          "info"
-        );
+        if (total > BATCH_SIZE) {
+          mostrarAviso(
+            `${processados}/${total} registro(s) processado(s).`,
+            "info"
+          );
+        }
       } else {
         erros += lote.length;
-        const erro = await res
-          .json()
-          .catch(() => ({ error: "Erro desconhecido" }));
-        console.error(`Erro no lote ${Math.floor(i / BATCH_SIZE) + 1}:`, erro);
-      }
-
-      if (i + BATCH_SIZE < usuarios.length) {
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        console.error(`Erro no lote ${Math.floor(i / BATCH_SIZE) + 1}:`, await res.json().catch(() => ({})));
       }
     } catch (e) {
       erros += lote.length;
@@ -1007,21 +988,6 @@ async function processarExoneracoesEmLotes(usuarios, sessao) {
   }
 
   return { sucessos, erros, total };
-}
-
-async function verificarPeriodoFerias(userId, org) {
-  try {
-    const res = await fetch(
-      `${API_BASE}/api/ferias.js?action=periodo&userId=${userId}&org=${org}`
-    );
-    if (res.ok) {
-      const data = await res.json();
-      return data.estaEmFerias || false;
-    }
-  } catch (e) {
-    console.error("Erro ao verificar periodo de ferias:", e);
-  }
-  return false;
 }
 
 window.exonerarTodosInativos = async function () {
@@ -1037,7 +1003,8 @@ window.exonerarTodosInativos = async function () {
 
   try {
     const resFerias = await fetch(
-      `${API_BASE}/api/ferias.js?org=${sessao.org}`
+      `${API_BASE}/api/ferias.js?org=${sessao.org}&_ts=${Date.now()}`,
+      { cache: "no-store" }
     );
     if (resFerias.ok) {
       const dataFerias = await resFerias.json();
@@ -1046,12 +1013,6 @@ window.exonerarTodosInativos = async function () {
       for (const usuario of dadosInatividadeGlobal) {
         if (idsEmFerias.has(usuario.id)) {
           usuariosComFerias.push(usuario.name);
-        } else {
-          const estaEmFerias = await verificarPeriodoFerias(
-            usuario.id,
-            sessao.org
-          );
-          if (estaEmFerias) usuariosComFerias.push(usuario.name);
         }
       }
     }

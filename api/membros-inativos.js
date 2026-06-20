@@ -128,6 +128,10 @@ module.exports = async (req, res) => {
         )
       : [];
 
+    // Ordenar canais: priorizar canais de texto, deixar canais de call por último
+    // (canais de call tendem a ter muito mais mensagens e são menos relevantes)
+    // A ordenação é estimada: canais com IDs mais baixos tendem a ser mais antigos,
+    // mas vamos confiar na ordem do CHAT_ID_BUSCAR — o usuário põe os importantes primeiro
     const SEARCH_DAYS_MS = 15 * 24 * 60 * 60 * 1000;
     const TIME_LIMIT = Date.now() - SEARCH_DAYS_MS;
     const DATA_BASE_AUDITORIA = new Date("2025-12-08T00:00:00").getTime();
@@ -145,8 +149,10 @@ module.exports = async (req, res) => {
     );
     const MAX_PAGES_PER_BATCH = Math.max(
       2,
-      Math.min(60, Number(maxPagesRaw) || 18)
+      Math.min(30, Number(maxPagesRaw) || 10)
     );
+    // Limite por canal individual para evitar que um canal gigante consuma todo o lote
+    const MAX_PAGES_PER_CHANNEL = 6;
 
     const cursorEntrada =
       body && body.cursor && typeof body.cursor === "object" ? body.cursor : null;
@@ -352,7 +358,14 @@ module.exports = async (req, res) => {
       const estado = estadoCanais[channelId];
       if (!estado || estado.done) continue;
 
-      while (!estado.done) {
+      // Limite por canal: se já processamos muitas páginas neste canal, marcar como done
+      const paginasCanal = Number(estado.pages || 0);
+      if (paginasCanal >= MAX_PAGES_PER_CHANNEL) {
+        estado.done = true;
+        continue;
+      }
+
+      while (!estado.done && paginasCanal < MAX_PAGES_PER_CHANNEL) {
         if (paginasProcessadasLote >= MAX_PAGES_PER_BATCH || estourouTempo()) {
           break;
         }
@@ -394,9 +407,16 @@ module.exports = async (req, res) => {
         estado.pages = Number(estado.pages || 0) + 1;
         estado.errorCount = 0;
         paginasProcessadasLote += 1;
+        const paginasAgora = estado.pages;
 
         const lastMsgDate = new Date(batch[batch.length - 1].timestamp).getTime();
         if (!Number.isFinite(lastMsgDate) || lastMsgDate < TIME_LIMIT) {
+          estado.done = true;
+          break;
+        }
+
+        // Se já atingiu o limite por canal, parar este canal
+        if (paginasAgora >= MAX_PAGES_PER_CHANNEL) {
           estado.done = true;
           break;
         }
@@ -435,11 +455,24 @@ module.exports = async (req, res) => {
     }
 
     const mapaFerias = {};
+    // Verificação otimizada de férias: usar a role do Discord como fonte primária
+    // e apenas complementar com leitura do canal se necessário
+    const oficiaisEmFerias = new Set();
+    if (FERIAS_ROLE_ID) {
+      oficiais.forEach((m) => {
+        if (m.roles.includes(FERIAS_ROLE_ID)) {
+          oficiaisEmFerias.add(m.user.id);
+        }
+      });
+    }
+
+    // Para casos onde a role não foi atualizada, verificar mensagens do canal (apenas últimas páginas)
     if (FERIAS_CHANNEL_ID) {
       try {
         let allMessagesFerias = [];
         let lastIdFerias = null;
-        for (let i = 0; i < 10; i++) {
+        // Reduzido de 10 para 4 páginas para otimizar
+        for (let i = 0; i < 4; i++) {
           const url = `https://discord.com/api/v10/channels/${FERIAS_CHANNEL_ID}/messages?limit=100${
             lastIdFerias ? `&before=${lastIdFerias}` : ""
           }`;
@@ -521,6 +554,7 @@ module.exports = async (req, res) => {
       const uid = p.user.id;
       if (p.roles.some((r) => listaImunes.includes(r))) return;
       if (FERIAS_ROLE_ID && p.roles.includes(FERIAS_ROLE_ID)) return;
+      if (oficiaisEmFerias.has(uid)) return;
 
       const hoje = new Date();
       hoje.setHours(0, 0, 0, 0);

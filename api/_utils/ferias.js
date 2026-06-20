@@ -435,6 +435,29 @@ async function processarSolicitacoesFerias(env) {
         `https://discord.com/api/v10/channels/${FERIAS_CHANNEL_ID}/messages/${msg.id}/reactions/%E2%9C%85/@me`,
         { method: "PUT", headers }
       );
+
+      // Envia DM desejando boas ferias
+      const dmChannelRes = await fetchDiscord(
+        `https://discord.com/api/v10/users/${solicitacao.userId}/channels`,
+        {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ recipient_id: solicitacao.userId }),
+        }
+      ).catch(() => null);
+      if (dmChannelRes && dmChannelRes.ok) {
+        const dmChannel = await dmChannelRes.json();
+        await fetchDiscord(
+          `https://discord.com/api/v10/channels/${dmChannel.id}/messages`,
+          {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+              content: `🎉 **MENSAGEM AUTOMATICA DO SISTEMA DE FERIAS** 🎉\n\nOlá! Sua solicitação de férias foi **aprovada** com sucesso! ✅\n\nAproveite bem esse merecido descanso, curta cada momento, recarregue as energias e volte ainda mais forte! 🏖️🌴☀️\n\nDesejamos a você ótimas férias! 🥳✨`,
+            }),
+          }
+        ).catch(() => {});
+      }
     } else if (
       status === "reprovado" &&
       solicitacao.periodoDias > MAX_FERIAS_DIAS

@@ -392,7 +392,10 @@ module.exports = async (req, res) => {
       throw new Error(`Variavel ${org}_ENSINO_CH nao encontrada no .env`);
     }
 
-    const canaisEnsino = CHANNELS_ENV.split(",").map((id) => id.trim());
+    const canaisEnsino = [...new Set(CHANNELS_ENV.split(",").map((id) => id.trim()))];
+    if (canaisEnsino.length !== CHANNELS_ENV.split(",").length) {
+      console.warn(`[${org}] Canais duplicados encontrados em ${org}_ENSINO_CH`);
+    }
     let instructorRoles = ENSINO_ROLES_MATRIZES_ID
       ? ENSINO_ROLES_MATRIZES_ID.split(",").map((id) => id.trim())
       : [];
@@ -426,6 +429,8 @@ module.exports = async (req, res) => {
 
     for (let i = 0; i < canaisEnsino.length; i++) {
       const channelId = canaisEnsino[i];
+      // Org não-PMERJ com 2 canais: [0]=curso, [1]=recrutamento
+      // PMERJ com 3 canais: [0]=curso_basico, [1]=curso_acoes, [2]=recrutamento
       const isRecrutamento =
         (org === "PMERJ" && i === 2) || (org !== "PMERJ" && i === 1);
 

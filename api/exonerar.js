@@ -5,24 +5,8 @@ require("dotenv").config({ path: path.join(process.cwd(), ".env") });
 
 const fetch = global.fetch || require("node-fetch");
 
-async function appendLogEntry(entry) {
-  const fs = require("fs");
-  const logsPath = path.join(process.cwd(), "data", "logs.json");
-  let logs = { entries: [] };
-  try {
-    const raw = await fs.promises.readFile(logsPath, "utf8");
-    logs = JSON.parse(raw || '{"entries":[]}');
-  } catch (_) {}
-  if (!Array.isArray(logs.entries)) logs.entries = [];
-
-  logs.entries.unshift({
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
-    createdAt: new Date().toISOString(),
-    ...entry,
-  });
-
-  await fs.promises.writeFile(logsPath, JSON.stringify(logs, null, 2), "utf8");
-}
+// Usa o mesmo módulo de logs que o sistema de férias
+const { appendLog } = require("./_utils/logs");
 
 async function buscarNicknameEAvatar(discordId, botToken, guildId) {
   try {
@@ -122,13 +106,6 @@ module.exports = async (req, res) => {
       minute: "2-digit",
     });
 
-    const mensagemTexto = `**Discord:** <@${idDiscord}>
-**Nome na cidade:** ${nome || "---"}
-**ID:** ${passaporte || "---"}
-**Patente/Cargo:** ${cargoExibicao}
-**Data e hora:** ${dataFormatada}
-**Motivo:** Inatividade`;
-
     await fetch(
       `https://discord.com/api/v10/channels/${EXONERACAO_CHANNEL_ID}/messages`,
       {
@@ -137,7 +114,9 @@ module.exports = async (req, res) => {
           Authorization: `Bot ${Discord_Bot_Token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ content: mensagemTexto }),
+        body: JSON.stringify({
+          content: `**Discord:** <@${idDiscord}>\n**Nome na cidade:** ${nome || "---"}\n**ID:** ${passaporte || "---"}\n**Patente/Cargo:** ${cargoExibicao}\n**Data e hora:** ${dataFormatada}\n**Motivo:** Inatividade`,
+        }),
       }
     );
 
@@ -184,7 +163,7 @@ module.exports = async (req, res) => {
         ? await buscarNicknameEAvatar(emissor.id, Discord_Bot_Token, GUILD_ID)
         : { nick: null, avatar: null };
 
-      await appendLogEntry({
+      await appendLog({
         type: "exoneracao",
         org: org || null,
         emissor: {
@@ -216,7 +195,7 @@ module.exports = async (req, res) => {
         ? await buscarNicknameEAvatar(emissor.id, Discord_Bot_Token, GUILD_ID)
         : { nick: null, avatar: null };
 
-      await appendLogEntry({
+      await appendLog({
         type: "exoneracao",
         org: org || null,
         emissor: {

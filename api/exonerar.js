@@ -163,7 +163,7 @@ module.exports = async (req, res) => {
         ? await buscarNicknameEAvatar(emissor.id, Discord_Bot_Token, GUILD_ID)
         : { nick: null, avatar: null };
 
-      await appendLog({
+      const logEntry = await appendLog({
         type: "exoneracao",
         org: org || null,
         emissor: {
@@ -179,6 +179,7 @@ module.exports = async (req, res) => {
       return res.status(200).json({
         success: true,
         msg: `${users.length} oficiais processados.`,
+        log: logEntry,
       });
     }
 
@@ -195,7 +196,7 @@ module.exports = async (req, res) => {
         ? await buscarNicknameEAvatar(emissor.id, Discord_Bot_Token, GUILD_ID)
         : { nick: null, avatar: null };
 
-      await appendLog({
+      const logEntry = await appendLog({
         type: "exoneracao",
         org: org || null,
         emissor: {
@@ -211,6 +212,7 @@ module.exports = async (req, res) => {
       return res.status(200).json({
         success: true,
         msg: "Oficial processado individualmente.",
+        log: logEntry,
       });
     }
 

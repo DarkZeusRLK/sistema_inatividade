@@ -22,6 +22,24 @@ const CARGOS_PROTEGIDOS = [
 
 const DATA_BASE_AUDITORIA = new Date("2025-12-08T00:00:00").getTime();
 
+// Cache local de logs para persistir entre instâncias Vercel
+const LOGS_LOCAL_KEY = "auditoria_logs_cache";
+
+function getLogsLocal() {
+  try {
+    const raw = localStorage.getItem(LOGS_LOCAL_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function addLogLocal(entry) {
+  const logs = getLogsLocal();
+  logs.unshift(entry);
+  // Mantém só os últimos 500 logs
+  if (logs.length > 500) logs.length = 500;
+  localStorage.setItem(LOGS_LOCAL_KEY, JSON.stringify(logs));
+}
+
 const obterSessao = () => {
   const sessionStr = localStorage.getItem("pc_session");
   if (!sessionStr) {
@@ -395,94 +413,120 @@ window.carregarLogs = async function () {
 
   lista.innerHTML = '<div class="logs-empty"><i class="fa-solid fa-spinner fa-spin"></i><span>Carregando logs...</span></div>';
 
+  // Junta logs da API (server) com cache local (persiste entre instâncias Vercel)
+  let entries = [];
+
   try {
     const res = await fetch(
       `${API_BASE}/api/logs.js?org=${encodeURIComponent(sessao.org)}&type=${encodeURIComponent(tipoSelecionado)}`
     );
-    if (!res.ok) throw new Error(`Erro ao carregar logs: ${res.status}`);
+    if (!res.ok) throw new Error(`Erro: ${res.status}`);
     const data = await res.json();
-    const entries = Array.isArray(data.entries) ? data.entries : [];
-
-    if (entries.length === 0) {
-      lista.innerHTML = `<div class="logs-empty">
-        <i class="fa-solid fa-clipboard-list"></i>
-        <span>Nenhum log de ${tipoSelecionado === "ferias" ? "férias" : "exonerações"} encontrado.</span>
-      </div>`;
-      return;
-    }
-
-    lista.innerHTML = "";
-
-    if (tipoSelecionado === "exoneracao") {
-      entries.forEach((entry) => {
-        const emissor = entry.emissor || {};
-        const nomeExibicao = emissor.nick || emissor.nome || "Nao identificado";
-        const avatarUrl = emissor.avatar || "https://cdn.discordapp.com/embed/avatars/0.png";
-        const qtd = entry.quantidadeExonerados || 0;
-        const dataHora = entry.createdAt
-          ? `${formatarData(entry.createdAt)} ${new Date(entry.createdAt).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" })}`
-          : "-";
-
-        const card = document.createElement("div");
-        card.className = "log-card-exoneracao";
-
-        card.innerHTML = `
-          <img src="${escaparHtml(avatarUrl)}" alt="Avatar" class="log-card-avatar" onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
-          <div class="log-card-info">
-            <span class="log-card-nome">${escaparHtml(nomeExibicao)}</span>
-            <div class="log-card-meta">
-              <span><i class="fa-solid fa-user-slash"></i> <span class="log-card-qtd"><i class="fa-solid fa-users"></i> ${qtd} exonerado${qtd !== 1 ? "s" : ""}</span></span>
-              <span><i class="fa-solid fa-calendar"></i> ${escaparHtml(dataHora)}</span>
-            </div>
-          </div>
-          <button class="log-card-btn" data-entry='${escaparHtml(JSON.stringify(entry))}'>VER MAIS</button>
-        `;
-
-        card.querySelector(".log-card-btn").addEventListener("click", () => {
-          window.abrirDetalhesExoneracao(entry);
-        });
-
-        lista.appendChild(card);
-      });
-    } else {
-      // Logs de férias
-      entries.forEach((entry) => {
-        const solicitante = entry.solicitante || {};
-        const nome = solicitante.nome || "Nao identificado";
-        const dataInicio = entry.dataInicio ? formatarData(entry.dataInicio) : "-";
-        const dataFim = entry.dataFim ? formatarData(entry.dataFim) : "-";
-        const periodo = entry.periodoTotalDias || 0;
-        const status = entry.status || "-";
-        const isAprovado = status === "aprovado";
-        const isAntecipado = entry.subType === "antecipacao";
-        const observacao = entry.observacao || "";
-
-        let badgeClass = "badge-danger";
-        let badgeText = status.toUpperCase();
-        if (isAprovado) { badgeClass = "badge-success"; badgeText = "APROVADO"; }
-        if (isAntecipado) { badgeClass = "badge-warning"; badgeText = "ANTECIPADO"; }
-
-        const card = document.createElement("div");
-        card.className = "log-card-ferias";
-
-        card.innerHTML = `
-          <div class="log-card-info" style="flex:1;">
-            <span class="log-card-nome">${escaparHtml(nome)}</span>
-            <div class="log-card-periodo">
-              <span><i class="fa-solid fa-calendar-check"></i> ${escaparHtml(dataInicio)} a ${escaparHtml(dataFim)}</span>
-              ${!isAntecipado ? `<span><i class="fa-solid fa-clock"></i> ${periodo} dia(s)</span>` : ""}
-              ${observacao ? `<span style="color:#999;font-size:0.78rem;"><i class="fa-solid fa-comment"></i> ${escaparHtml(observacao)}</span>` : ""}
-            </div>
-          </div>
-          <span class="${badgeClass}">${badgeText}</span>
-        `;
-
-        lista.appendChild(card);
-      });
+    if (Array.isArray(data.entries)) {
+      entries = data.entries;
     }
   } catch (error) {
-    console.error(error);
-    lista.innerHTML = '<div class="logs-empty"><i class="fa-solid fa-triangle-exclamation" style="color:#ff4d4d;"></i><span style="color:#ff4d4d;">Falha ao carregar os logs.</span></div>';
+    console.error("API de logs indisponivel, usando cache local:", error);
+  }
+
+  // Complementa com cache local (logs de requisições anteriores nesta máquina)
+  const logsLocal = getLogsLocal();
+  const seenIds = new Set(entries.map(e => e.id));
+  for (const log of logsLocal) {
+    if (!seenIds.has(log.id)) {
+      entries.push(log);
+      seenIds.add(log.id);
+    }
+  }
+
+  // Filtra por tipo (redundante mas seguro)
+  if (tipoSelecionado === "exoneracao") {
+    entries = entries.filter(e => e.type === "exoneracao");
+  } else if (tipoSelecionado === "ferias") {
+    entries = entries.filter(e => e.type === "ferias");
+  }
+
+  // Filtra por org
+  entries = entries.filter(e => !e.org || e.org === sessao.org);
+
+  // Ordena por data decrescente
+  entries.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+  if (entries.length === 0) {
+    lista.innerHTML = `<div class="logs-empty">
+      <i class="fa-solid fa-clipboard-list"></i>
+      <span>Nenhum log de ${tipoSelecionado === "ferias" ? "férias" : "exonerações"} encontrado.</span>
+    </div>`;
+    return;
+  }
+
+  lista.innerHTML = "";
+
+  if (tipoSelecionado === "exoneracao") {
+    entries.forEach((entry) => {
+      const emissor = entry.emissor || {};
+      const nomeExibicao = emissor.nick || emissor.nome || "Nao identificado";
+      const avatarUrl = emissor.avatar || "https://cdn.discordapp.com/embed/avatars/0.png";
+      const qtd = entry.quantidadeExonerados || 0;
+      const dataHora = entry.createdAt
+        ? `${formatarData(entry.createdAt)} ${new Date(entry.createdAt).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" })}`
+        : "-";
+
+      const card = document.createElement("div");
+      card.className = "log-card-exoneracao";
+
+      card.innerHTML = `
+        <img src="${escaparHtml(avatarUrl)}" alt="Avatar" class="log-card-avatar" onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
+        <div class="log-card-info">
+          <span class="log-card-nome">${escaparHtml(nomeExibicao)}</span>
+          <div class="log-card-meta">
+            <span><i class="fa-solid fa-user-slash"></i> <span class="log-card-qtd"><i class="fa-solid fa-users"></i> ${qtd} exonerado${qtd !== 1 ? "s" : ""}</span></span>
+            <span><i class="fa-solid fa-calendar"></i> ${escaparHtml(dataHora)}</span>
+          </div>
+        </div>
+        <button class="log-card-btn" data-entry='${escaparHtml(JSON.stringify(entry))}'>VER MAIS</button>
+      `;
+
+      card.querySelector(".log-card-btn").addEventListener("click", () => {
+        window.abrirDetalhesExoneracao(entry);
+      });
+
+      lista.appendChild(card);
+    });
+  } else {
+    entries.forEach((entry) => {
+      const solicitante = entry.solicitante || {};
+      const nome = solicitante.nome || "Nao identificado";
+      const dataInicio = entry.dataInicio ? formatarData(entry.dataInicio) : "-";
+      const dataFim = entry.dataFim ? formatarData(entry.dataFim) : "-";
+      const periodo = entry.periodoTotalDias || 0;
+      const status = entry.status || "-";
+      const isAprovado = status === "aprovado";
+      const isAntecipado = entry.subType === "antecipacao";
+      const observacao = entry.observacao || "";
+
+      let badgeClass = "badge-danger";
+      let badgeText = status.toUpperCase();
+      if (isAprovado) { badgeClass = "badge-success"; badgeText = "APROVADO"; }
+      if (isAntecipado) { badgeClass = "badge-warning"; badgeText = "ANTECIPADO"; }
+
+      const card = document.createElement("div");
+      card.className = "log-card-ferias";
+
+      card.innerHTML = `
+        <div class="log-card-info" style="flex:1;">
+          <span class="log-card-nome">${escaparHtml(nome)}</span>
+          <div class="log-card-periodo">
+            <span><i class="fa-solid fa-calendar-check"></i> ${escaparHtml(dataInicio)} a ${escaparHtml(dataFim)}</span>
+            ${!isAntecipado ? `<span><i class="fa-solid fa-clock"></i> ${periodo} dia(s)</span>` : ""}
+            ${observacao ? `<span style="color:#999;font-size:0.78rem;"><i class="fa-solid fa-comment"></i> ${escaparHtml(observacao)}</span>` : ""}
+          </div>
+        </div>
+        <span class="${badgeClass}">${badgeText}</span>
+      `;
+
+      lista.appendChild(card);
+    });
   }
 };
 
@@ -768,6 +812,10 @@ async function executarExoneracaoBot(
     });
 
     if (res.ok) {
+      const data = await res.json();
+      if (data.log) {
+        addLogLocal(data.log);
+      }
       mostrarAviso("Exoneracao realizada com sucesso!", "success");
       window.carregarInatividade();
     } else {
@@ -971,6 +1019,10 @@ async function processarExoneracoesEmLotes(usuarios, sessao) {
 
       if (res.ok) {
         sucessos += lote.length;
+        const data = await res.json();
+        if (data.log) {
+          addLogLocal(data.log);
+        }
         if (total > BATCH_SIZE) {
           mostrarAviso(
             `${processados}/${total} registro(s) processado(s).`,
@@ -1060,6 +1112,10 @@ window.exonerarTodosInativos = async function () {
         });
 
         if (res.ok) {
+          const data = await res.json();
+          if (data.log) {
+            addLogLocal(data.log);
+          }
           mostrarAviso("Exoneracao realizada com sucesso!", "success");
           window.carregarInatividade();
           if (document.getElementById("secao-logs")?.style.display === "block") {

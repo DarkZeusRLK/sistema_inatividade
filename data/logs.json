@@ -1,6 +1,99 @@
 {
   "entries": [
     {
+      "id": "1782065768850-zecn2wq9",
+      "createdAt": "2026-06-21T18:16:08.850Z",
+      "type": "exoneracao",
+      "org": "PCERJ",
+      "emissor": {
+        "id": "632990574479278090",
+        "nome": "[ESC] Redy | 165",
+        "nick": "[ESC] Redy | 165",
+        "avatar": "https://cdn.discordapp.com/avatars/632990574479278090/c39c761582c066e09bbb1360f95c1390.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "973392581138468874",
+          "nomeCidade": "Anubis",
+          "idPassaporte": "3702",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "697710166619062342",
+          "nomeCidade": "Nina Lamark",
+          "idPassaporte": "8134",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "739809140452491266",
+          "nomeCidade": "Herbert",
+          "idPassaporte": "5817",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "884098110903693323",
+          "nomeCidade": "Fernandinho Beiramar",
+          "idPassaporte": "5815",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1440332204122312804",
+          "nomeCidade": "Fantasma real",
+          "idPassaporte": "9605",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "722174361787826277",
+          "nomeCidade": "Hetfield",
+          "idPassaporte": "11194",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "214431253741436929",
+          "nomeCidade": "Tiago",
+          "idPassaporte": "12509",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1220716519483506688",
+          "nomeCidade": "vitin",
+          "idPassaporte": "12260",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1278757765699080194",
+          "nomeCidade": "cobra",
+          "idPassaporte": "12265",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "722530853053267978",
+          "nomeCidade": "Eli Pierri",
+          "idPassaporte": "13191",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1212153635044073553",
+          "nomeCidade": "rafael navarro",
+          "idPassaporte": "13170",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1451977583708344425",
+          "nomeCidade": "Julio",
+          "idPassaporte": "2190",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1244129935468007462",
+          "nomeCidade": "Souza Fortune",
+          "idPassaporte": "2371",
+          "cargo": "・Aluno PCERJ"
+        }
+      ],
+      "quantidadeExonerados": 13
+    },
+    {
       "id": "1781923185902-xr4gm1k7",
       "createdAt": "2026-06-20T02:39:45.902Z",
       "type": "exoneracao",

@@ -1,6 +1,33 @@
 {
   "entries": [
     {
+      "id": "1782441339046-uy05o9jy",
+      "createdAt": "2026-06-26T02:35:39.047Z",
+      "type": "exoneracao",
+      "org": "PRF",
+      "emissor": {
+        "id": "532906657987035136",
+        "nome": "[COORD PRF] PH Try RealDemon",
+        "nick": "[COORD PRF] PH Try RealDemon",
+        "avatar": "https://cdn.discordapp.com/avatars/532906657987035136/7ac1f2bd4b26e823864f3286269c7245.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1281696070656721058",
+          "nomeCidade": "wilson prado",
+          "idPassaporte": "14225",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1328529367780954124",
+          "nomeCidade": "Vini James",
+          "idPassaporte": "12928",
+          "cargo": "・Aluno PRF"
+        }
+      ],
+      "quantidadeExonerados": 2
+    },
+    {
       "id": "1782440967889-5vwdibp7",
       "createdAt": "2026-06-26T02:29:27.889Z",
       "type": "exoneracao",

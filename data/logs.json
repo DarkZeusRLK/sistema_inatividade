@@ -1,6 +1,51 @@
 {
   "entries": [
     {
+      "id": "1782440967889-5vwdibp7",
+      "createdAt": "2026-06-26T02:29:27.889Z",
+      "type": "exoneracao",
+      "org": "PRF",
+      "emissor": {
+        "id": "532906657987035136",
+        "nome": "[COORD PRF] PH Try RealDemon",
+        "nick": "[COORD PRF] PH Try RealDemon",
+        "avatar": "https://cdn.discordapp.com/avatars/532906657987035136/7ac1f2bd4b26e823864f3286269c7245.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "444587661173325826",
+          "nomeCidade": "zower",
+          "idPassaporte": "8526",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "814511703194599464",
+          "nomeCidade": "art creep",
+          "idPassaporte": "13804",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1111685603692642414",
+          "nomeCidade": "Cloud",
+          "idPassaporte": "14221",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1228811640972247312",
+          "nomeCidade": "davi minieri",
+          "idPassaporte": "14224",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1242619655470977035",
+          "nomeCidade": "Diogo Coelho",
+          "idPassaporte": "13802",
+          "cargo": "・Aluno PRF"
+        }
+      ],
+      "quantidadeExonerados": 5
+    },
+    {
       "id": "1782175958136-8xeb4kn9",
       "createdAt": "2026-06-23T00:52:38.136Z",
       "type": "exoneracao",

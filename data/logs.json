@@ -1,6 +1,39 @@
 {
   "entries": [
     {
+      "id": "1782774083787-rlhngigy",
+      "createdAt": "2026-06-29T23:01:23.787Z",
+      "type": "exoneracao",
+      "org": "PMERJ",
+      "emissor": {
+        "id": "465045110506389505",
+        "nome": "[CB] Sofia | 1200",
+        "nick": "[CB] Sofia | 1200",
+        "avatar": "https://cdn.discordapp.com/avatars/465045110506389505/5f4ea77e54df3fe3b22657c07a99d4c8.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1440446068302020750",
+          "nomeCidade": "ruan novak",
+          "idPassaporte": "13338",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "1069792323141128314",
+          "nomeCidade": "Sousa Juan",
+          "idPassaporte": "18112",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "1357445808299184309",
+          "nomeCidade": "Corinthiano",
+          "idPassaporte": "18141",
+          "cargo": "・Aluno PMERJ"
+        }
+      ],
+      "quantidadeExonerados": 3
+    },
+    {
       "id": "1782774075982-7e66k3ew",
       "createdAt": "2026-06-29T23:01:15.982Z",
       "type": "exoneracao",

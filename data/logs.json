@@ -1,6 +1,93 @@
 {
   "entries": [
     {
+      "id": "1783201689945-edlqp6fe",
+      "createdAt": "2026-07-04T21:48:09.945Z",
+      "type": "exoneracao",
+      "org": "PRF",
+      "emissor": {
+        "id": "532906657987035136",
+        "nome": "[COORD PRF] PHTry RD",
+        "nick": "[COORD PRF] PHTry RD",
+        "avatar": "https://cdn.discordapp.com/avatars/532906657987035136/7ac1f2bd4b26e823864f3286269c7245.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1247631133735125024",
+          "nomeCidade": "Vitor James",
+          "idPassaporte": "12915",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "608709729715355658",
+          "nomeCidade": "Omar Vingao",
+          "idPassaporte": "15711",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "654205847408214036",
+          "nomeCidade": "Jeh Badura",
+          "idPassaporte": "15712",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1335047017281486869",
+          "nomeCidade": "pecinha",
+          "idPassaporte": "2976",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1390512001326911530",
+          "nomeCidade": "Pixote Silva",
+          "idPassaporte": "18524",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "539237270549692437",
+          "nomeCidade": "Thiago Santos",
+          "idPassaporte": "16713",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "911648155563614248",
+          "nomeCidade": "Pitoco mesia",
+          "idPassaporte": "18830",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1116215278343311440",
+          "nomeCidade": "meno pecinha",
+          "idPassaporte": "19370",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1393038099679805544",
+          "nomeCidade": "POPO JUNIOR",
+          "idPassaporte": "19497",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1336152049951182913",
+          "nomeCidade": "Nego Trufado",
+          "idPassaporte": "19007",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1344036546248183819",
+          "nomeCidade": "SEBASTIAO",
+          "idPassaporte": "19492",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1337900283249819719",
+          "nomeCidade": "Coldzera",
+          "idPassaporte": "7913",
+          "cargo": "・Aluno PRF"
+        }
+      ],
+      "quantidadeExonerados": 12
+    },
+    {
       "id": "1783186200535-iuortpec",
       "createdAt": "2026-07-04T17:30:00.535Z",
       "type": "exoneracao",

@@ -1,6 +1,171 @@
 {
   "entries": [
     {
+      "id": "1783186190874-kbahsfdi",
+      "createdAt": "2026-07-04T17:29:50.874Z",
+      "type": "exoneracao",
+      "org": "PCERJ",
+      "emissor": {
+        "id": "632990574479278090",
+        "nome": "[COORD] Redy | 🦅",
+        "nick": "[COORD] Redy | 🦅",
+        "avatar": "https://cdn.discordapp.com/avatars/632990574479278090/c39c761582c066e09bbb1360f95c1390.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "354008027055128578",
+          "nomeCidade": "Poeirinha",
+          "idPassaporte": "2837",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "484849854376575007",
+          "nomeCidade": "Rynycolaxs",
+          "idPassaporte": "3767",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1489441968819011654",
+          "nomeCidade": "Anne",
+          "idPassaporte": "12084",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "530055156490960907",
+          "nomeCidade": "scott",
+          "idPassaporte": "13405",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "669016231017316352",
+          "nomeCidade": "Ucrania",
+          "idPassaporte": "14214",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1025500035523301376",
+          "nomeCidade": "yan vivaz",
+          "idPassaporte": "14450",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1240852701588226063",
+          "nomeCidade": "Russia",
+          "idPassaporte": "2610",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1322944835136655370",
+          "nomeCidade": "michael jackson",
+          "idPassaporte": "14448",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1352007138930851923",
+          "nomeCidade": "loirin",
+          "idPassaporte": "8779",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1512760887037919306",
+          "nomeCidade": "stefany lamborghini",
+          "idPassaporte": "13867",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "284816667509391363",
+          "nomeCidade": "Renison Scoll",
+          "idPassaporte": "15572",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "373185740957417472",
+          "nomeCidade": "khoortex",
+          "idPassaporte": "15519",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "910695916695093328",
+          "nomeCidade": "Ribeiro",
+          "idPassaporte": "2469",
+          "cargo": "・Investigador 2ª Classe"
+        },
+        {
+          "discordUser": "1110302846517256294",
+          "nomeCidade": "jamal rlkk",
+          "idPassaporte": "15469",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "722191936668303480",
+          "nomeCidade": "Max Wayne",
+          "idPassaporte": "14017",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "886612981528555571",
+          "nomeCidade": "TKZIN",
+          "idPassaporte": "16523",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1140918546537390141",
+          "nomeCidade": "maispreto",
+          "idPassaporte": "2741",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1289688659187990589",
+          "nomeCidade": "Artscope",
+          "idPassaporte": "5262",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "280464441223675904",
+          "nomeCidade": "caramelo koff",
+          "idPassaporte": "14319",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "617109812672594081",
+          "nomeCidade": "Batista",
+          "idPassaporte": "15409",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "878464663539568701",
+          "nomeCidade": "pele",
+          "idPassaporte": "17436",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1462889905465069754",
+          "nomeCidade": "alice",
+          "idPassaporte": "14619",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1315779404332269631",
+          "nomeCidade": "Figue",
+          "idPassaporte": "8293",
+          "cargo": "・Investigador 2ª Classe"
+        },
+        {
+          "discordUser": "915978891141718057",
+          "nomeCidade": "cleiton taborda",
+          "idPassaporte": "14642",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1307008777387769896",
+          "nomeCidade": "vozinha goleiro",
+          "idPassaporte": "16061",
+          "cargo": "・Aluno PCERJ"
+        }
+      ],
+      "quantidadeExonerados": 25
+    },
+    {
       "id": "1782774083787-rlhngigy",
       "createdAt": "2026-06-29T23:01:23.787Z",
       "type": "exoneracao",

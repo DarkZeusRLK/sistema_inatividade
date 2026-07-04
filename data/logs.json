@@ -1,6 +1,57 @@
 {
   "entries": [
     {
+      "id": "1783186200535-iuortpec",
+      "createdAt": "2026-07-04T17:30:00.535Z",
+      "type": "exoneracao",
+      "org": "PCERJ",
+      "emissor": {
+        "id": "632990574479278090",
+        "nome": "[COORD] Redy | 🦅",
+        "nick": "[COORD] Redy | 🦅",
+        "avatar": "https://cdn.discordapp.com/avatars/632990574479278090/c39c761582c066e09bbb1360f95c1390.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1470537504489865237",
+          "nomeCidade": "quarta jamanta",
+          "idPassaporte": "19687",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "975788823235674163",
+          "nomeCidade": "Linda",
+          "idPassaporte": "1584",
+          "cargo": "・Investigador 2ª Classe"
+        },
+        {
+          "discordUser": "530748788936015875",
+          "nomeCidade": "neves fpss",
+          "idPassaporte": "21057",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "702985678866350171",
+          "nomeCidade": "Blaze",
+          "idPassaporte": "7790",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1378084885306282137",
+          "nomeCidade": "goncalo limar",
+          "idPassaporte": "21239",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1235409921655439391",
+          "nomeCidade": "caroli",
+          "idPassaporte": "5296",
+          "cargo": "・Aluno PCERJ"
+        }
+      ],
+      "quantidadeExonerados": 6
+    },
+    {
       "id": "1783186190874-kbahsfdi",
       "createdAt": "2026-07-04T17:29:50.874Z",
       "type": "exoneracao",

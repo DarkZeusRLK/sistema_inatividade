@@ -1,6 +1,27 @@
 {
   "entries": [
     {
+      "id": "1783218175350-eh29bo59",
+      "createdAt": "2026-07-05T02:22:55.350Z",
+      "type": "exoneracao",
+      "org": "PMERJ",
+      "emissor": {
+        "id": "1417469775776579635",
+        "nome": "[CB] Kleiton | 2382",
+        "nick": "[CB] Kleiton | 2382",
+        "avatar": "https://cdn.discordapp.com/avatars/1417469775776579635/e2a85a9c62b9d29c3c38428139b64607.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1297726475780493363",
+          "nomeCidade": "Tavim manoia",
+          "idPassaporte": "10937",
+          "cargo": "・Aluno PMERJ"
+        }
+      ],
+      "quantidadeExonerados": 1
+    },
+    {
       "id": "1783201689945-edlqp6fe",
       "createdAt": "2026-07-04T21:48:09.945Z",
       "type": "exoneracao",

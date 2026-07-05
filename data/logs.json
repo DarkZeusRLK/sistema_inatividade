@@ -1,6 +1,27 @@
 {
   "entries": [
     {
+      "id": "1783218992771-ubuos1r4",
+      "createdAt": "2026-07-05T02:36:32.771Z",
+      "type": "exoneracao",
+      "org": "PMERJ",
+      "emissor": {
+        "id": "1417469775776579635",
+        "nome": "[CB] Kleiton | 2382",
+        "nick": "[CB] Kleiton | 2382",
+        "avatar": "https://cdn.discordapp.com/avatars/1417469775776579635/e2a85a9c62b9d29c3c38428139b64607.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1363267959677649008",
+          "nomeCidade": "Shadow Duger",
+          "idPassaporte": "20808",
+          "cargo": "・Aluno PMERJ"
+        }
+      ],
+      "quantidadeExonerados": 1
+    },
+    {
       "id": "1783218960209-6jshv8t3",
       "createdAt": "2026-07-05T02:36:00.209Z",
       "type": "exoneracao",

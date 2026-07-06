@@ -1,6 +1,45 @@
 {
   "entries": [
     {
+      "id": "1783304442645-829irt43",
+      "createdAt": "2026-07-06T02:20:42.645Z",
+      "type": "exoneracao",
+      "org": "PMERJ",
+      "emissor": {
+        "id": "623880120612159517",
+        "nome": "![CMD PMERJ] Marcelin Tenebras",
+        "nick": "![CMD PMERJ] Marcelin Tenebras",
+        "avatar": "https://cdn.discordapp.com/avatars/623880120612159517/93c85d51c9f9259491119ba6c69c5b71.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1258668964754624534",
+          "nomeCidade": "Evee",
+          "idPassaporte": "---",
+          "cargo": "・Tenente-Coronel"
+        },
+        {
+          "discordUser": "641289935898542092",
+          "nomeCidade": "Hiro oMKD",
+          "idPassaporte": "14655",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "793831007505088522",
+          "nomeCidade": "Artur alento",
+          "idPassaporte": "5746",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "1443697595162558605",
+          "nomeCidade": "Joao Faria",
+          "idPassaporte": "367731",
+          "cargo": "・Aluno PMERJ"
+        }
+      ],
+      "quantidadeExonerados": 4
+    },
+    {
       "id": "1783219229770-yskv9nbk",
       "createdAt": "2026-07-05T02:40:29.770Z",
       "type": "exoneracao",

@@ -120,6 +120,10 @@
           <i class="fa-solid fa-user-secret"></i>
           <span>Relatório COT (PF)</span>
         </a>
+        <a href="#" id="nav-tesouraria" class="nav-item" onclick="abrirTesouraria()">
+          <i class="fa-solid fa-wallet"></i>
+          <span>Tesouraria</span>
+        </a>
 
         <a href="#" id="nav-ferias" class="nav-item" onclick="abrirGestaoFerias()">
           <i class="fa-solid fa-umbrella-beach"></i>
@@ -306,6 +310,54 @@
       </div>
 
       <section id="secao-ensino" style="display: none; padding: 20px;">
+      <!-- Existing content here -->
+    </section>
+
+    <!-- Treasury Section -->
+    <section id="secao-tesouraria" style="display: none; padding: 20px;">
+      <h2> Tesouraria </h2>
+      <div class="form-group">
+        <label for="select-matriz">Seleciona sua matriz</label>
+        <select id="select-matriz" class="form-control">
+          <option value="">--Selecione--</option>
+          <option value="PCERJ">PCERJ</option>
+          <option value="PMERJ">PMERJ</option>
+          <option value="PRF">PRF</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="select-servico">Seleciona seu serviço</label>
+        <select id="select-servico" class="form-control" multiple size="8">
+          <option value="CORE">CORE</option>
+          <option value="GEM">GEM</option>
+          <option value="SAER">SAER</option>
+          <option value="CGPC">CGPC</option>
+          <option value="BOPE">BOPE</option>
+          <option value="GAM">GAM</option>
+          <option value="BTM">BTM</option>
+          <option value="COE">COE</option>
+          <option value="SPEED">SPEED</option>
+          <option value="BATEDOR">BATEDOR</option>
+          <option value="GRR">GRR</option>
+          <option value="DOA">DOA</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <input type="checkbox" id="chk-ensino" />
+        <label for="chk-ensino">Incluir Divisão de Ensino</label>
+      </div>
+      <div class="form-group" id="cgpc-input-group" style="display:none;">
+        <label for="input-cgpc">Valor personalizado CGPC (R$)</label>
+        <input type="number" id="input-cgpc" class="form-control" placeholder="Valor" />
+      </div>
+      <div class="form-group">
+        <label for="input-assinatura">Assinatura (nome)</label>
+        <input type="text" id="input-assinatura" class="form-control" placeholder="Seu nome" />
+      </div>
+      <button id="btn-calcular-tesouraria" class="btn-outline-gold">Calcular Valores</button>
+      <pre id="resultado-tesouraria" style="white-space: pre-wrap; background:#111; color:#ccc; padding:10px; margin-top:10px; display:none;"></pre>
+      <button id="btn-download-doc" class="btn-outline-gold" style="display:none; margin-top:10px;">Download Documento</button>
+    </section>
         <div class="info-alert-gold">
           <div class="alert-icon"><i class="fa-solid fa-chalkboard-user"></i></div>
           <div class="alert-text">

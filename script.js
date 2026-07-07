@@ -2,6 +2,76 @@
 // 1. CONFIGURACOES GLOBAIS (VERSAO VERCEL)
 // =========================================================
 
+/**
+ * Global array to store report parts for modal handling.
+ */
+let relatorioPartes = [];
+
+/**
+ * Opens the modal that shows divided report parts.
+ * @param {string[]} partes - Array of report string parts.
+ */
+function abrirModalRelatorioDividido(partes) {
+  relatorioPartes = partes;
+  const container = document.getElementById("container-botoes-partes");
+  if (!container) return;
+  container.innerHTML = "";
+
+  partes.forEach((p, i) => {
+    const btn = document.createElement("button");
+    btn.className = "btn-outline-gold";
+    btn.textContent = `Parte ${i + 1} (${p.length} chars)`;
+    btn.onclick = () => {
+      navigator.clipboard
+        .writeText(p)
+        .then(() => mostrarAviso(`Parte ${i + 1} copiada!`));
+    };
+    container.appendChild(btn);
+  });
+
+  // Botão para ver relatório completo
+  const btnFull = document.createElement("button");
+  btnFull.className = "btn-outline-gold";
+  btnFull.textContent = "Ver relatório completo";
+  btnFull.onclick = () => abrirModalCompleto(partes.join("\n"));
+  container.appendChild(btnFull);
+
+  const modal = document.getElementById("modal-relatorio");
+  if (modal) modal.style.display = "flex";
+}
+
+/**
+ * Closes the report division modal.
+ */
+function fecharModalRelatorio() {
+  const modal = document.getElementById("modal-relatorio");
+  if (modal) modal.style.display = "none";
+}
+
+/**
+ * Opens a simple modal to display the full report text with copy option.
+ * @param {string} texto - Full report text.
+ */
+function abrirModalCompleto(texto) {
+  // Remove existing if present
+  const existing = document.getElementById("modal-relatorio-completo");
+  if (existing) existing.remove();
+
+  const modalHtml = `
+    <div id="modal-relatorio-completo" class="modal-pcerj" style="display:flex; position:fixed; inset:0; background:rgba(0,0,0,0.95); align-items:center; justify-content:center; z-index:10002;">
+      <div class="modal-content" style="max-width:600px; max-height:80vh; overflow:auto; background:#111; border:2px solid #d4af37; padding:20px; border-radius:12px;">
+        <div class="modal-header">
+          <h3><i class="fa-solid fa-copy"></i> RELATÓRIO COMPLETO</h3>
+          <button onclick="document.getElementById('modal-relatorio-completo').remove()" class="btn-close">&times;</button>
+        </div>
+        <textarea id='full-report-text' readonly style='width:100%; height:60vh; background:#111; color:#ccc; border:none; resize:none;'>${texto.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</textarea>
+        <button class="btn-outline-gold" style="margin-top:10px; width:100%;" onclick="navigator.clipboard.writeText(document.getElementById('full-report-text').value).then(()=>mostrarAviso('Relatório completo copiado!'))"><i class="fa-solid fa-copy"></i> Copiar tudo</button>
+      </div>
+    </div>`;
+  document.body.insertAdjacentHTML("beforeend", modalHtml);
+}
+
+
 const API_BASE = "";
 
 let dadosInatividadeGlobal = [];

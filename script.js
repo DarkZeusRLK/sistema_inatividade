@@ -390,6 +390,7 @@ function resetarTelas() {
     "secao-gestao-ferias",
     "secao-ensino",
     "secao-logs",
+    "secao-tesouraria",
   ];
 
   secoes.forEach((id) => {

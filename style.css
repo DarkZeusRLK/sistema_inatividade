@@ -257,6 +257,97 @@ body {
   transition: background-color 0.2s ease;
 }
 
+/* =========================================================
+   5.1 FORMULÁRIOS (Tesouraria e afins)
+   ========================================================= */
+.form-group {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  color: var(--gold);
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-group small {
+  color: var(--gray);
+  font-size: 0.75rem;
+}
+
+.form-control {
+  background: var(--bg-black);
+  color: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 14px;
+  font-size: 0.95rem;
+  font-family: "Roboto", sans-serif;
+  transition: 0.2s;
+  outline: none;
+}
+
+.form-control:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--bg-hover);
+}
+
+.form-control::placeholder {
+  color: rgba(160, 160, 165, 0.6);
+}
+
+select.form-control[multiple] {
+  padding: 6px;
+}
+
+select.form-control[multiple] option {
+  padding: 10px 12px;
+  border-radius: 4px;
+  color: var(--white);
+  background: var(--bg-black);
+}
+
+select.form-control[multiple] option:checked {
+  background: var(--gold) linear-gradient(0deg, var(--gold) 0%, var(--gold) 100%);
+  color: #000;
+  font-weight: bold;
+}
+
+select.form-control[multiple] option:disabled {
+  display: none;
+}
+
+/* Checkbox custom (mantém acessibilidade, estilo dourado) */
+.form-group input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--gold);
+  cursor: pointer;
+  margin-right: 8px;
+}
+
+.form-group:has(input[type="checkbox"]) {
+  flex-direction: row;
+  align-items: center;
+}
+
+.form-group:has(input[type="checkbox"]) label {
+  text-transform: none;
+  font-weight: normal;
+  color: var(--white);
+  font-size: 0.9rem;
+}
+
+input[type="number"].form-control::-webkit-inner-spin-button,
+input[type="number"].form-control::-webkit-outer-spin-button {
+  opacity: 1;
+}
+
 .row-selectable:hover {
   background-color: rgba(212, 175, 55, 0.1);
 }

@@ -47,18 +47,40 @@ function lerValorMascarado(inputEl) {
 }
 
 // ---------------------------------------------------------
-// Numeração sequencial do ofício (001, 002, 003... persistente)
+// Numeração sequencial do ofício
+//
+// Fonte da verdade: canal do Discord (1406087625080705034), via backend.
+// O backend lê as mensagens já postadas naquele canal, filtra pela sigla
+// da matriz (PMERJ/PCERJ/PRF) e retorna o maior número já usado + 1.
+// Isso evita colisão entre pessoas diferentes gerando documentos ao mesmo tempo.
+//
+// Se o backend estiver indisponível (offline, erro de rede etc.), cai para
+// um contador local (localStorage) apenas como plano B - nesse caso avisamos
+// claramente o usuário, pois pode colidir com o número de outra pessoa.
 // ---------------------------------------------------------
-const OFICIO_STORAGE_KEY = "tesouraria_oficio_sequencial";
+const OFICIO_STORAGE_PREFIX = "tesouraria_oficio_fallback_";
 
-function obterProximoNumeroOficio() {
-  const atual = parseInt(localStorage.getItem(OFICIO_STORAGE_KEY) || "0", 10);
-  const proximo = atual + 1;
-  return proximo;
+async function obterProximoNumeroOficio(sigla) {
+  try {
+    const res = await fetch(`${API_BASE}/api/oficio-contador.js?org=${encodeURIComponent(sigla)}`);
+    if (!res.ok) throw new Error(`API respondeu ${res.status}`);
+    const data = await res.json();
+    if (typeof data.proximoNumero !== "number") throw new Error("Resposta inesperada da API");
+    return { numero: data.proximoNumero, fonte: "discord" };
+  } catch (erro) {
+    console.warn("Contador remoto de ofício indisponível, usando fallback local:", erro);
+    const chave = OFICIO_STORAGE_PREFIX + sigla;
+    const atual = parseInt(localStorage.getItem(chave) || "0", 10);
+    return { numero: atual + 1, fonte: "local" };
+  }
 }
 
-function confirmarUsoNumeroOficio(numero) {
-  localStorage.setItem(OFICIO_STORAGE_KEY, String(numero));
+function confirmarUsoNumeroOficio(sigla, numero, fonte) {
+  // Só precisamos gravar localmente quando a numeração veio do fallback local;
+  // quando vem do Discord, o próprio documento postado lá já "confirma" o número.
+  if (fonte === "local") {
+    localStorage.setItem(OFICIO_STORAGE_PREFIX + sigla, String(numero));
+  }
 }
 
 function formatarNumeroOficio(numero) {
@@ -265,7 +287,7 @@ function calcularTesouraria() {
 // ---------------------------------------------------------
 // Botão "Baixar Documento (PDF)" - preenche o template oculto e exporta
 // ---------------------------------------------------------
-function baixarDocumentoTesouraria() {
+async function baixarDocumentoTesouraria() {
   if (!_dadosTesourariaAtual) {
     alert('Clique em "Calcular Valores" antes de gerar o documento.');
     return;
@@ -277,8 +299,24 @@ function baixarDocumentoTesouraria() {
   const agora = new Date();
   const dataFormatada = agora.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
 
-  // Número sequencial do ofício (001, 002, 003...), confirmado apenas ao efetivamente baixar
-  const numeroOficio = obterProximoNumeroOficio();
+  const btnDownload = document.getElementById("btn-download-doc");
+  const textoOriginalBotao = btnDownload.innerHTML;
+  btnDownload.disabled = true;
+  btnDownload.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Consultando numeração...';
+
+  const { numero: numeroOficio, fonte } = await obterProximoNumeroOficio(matriz.sigla);
+
+  btnDownload.disabled = false;
+  btnDownload.innerHTML = textoOriginalBotao;
+
+  if (fonte === "local") {
+    const continuar = confirm(
+      "Não foi possível consultar o canal do Discord para conferir o último número de ofício.\n\n" +
+      `Será usado o número local ${formatarNumeroOficio(numeroOficio)} (pode colidir com o de outra pessoa se ela também estiver offline).\n\n` +
+      "Deseja continuar mesmo assim?"
+    );
+    if (!continuar) return;
+  }
 
   document.getElementById("doc-instituicao").textContent = matriz.instituicao;
   document.getElementById("doc-oficio").textContent = `OFÍCIO N.º ${formatarNumeroOficio(numeroOficio)}/${agora.getFullYear()} - ${matriz.sigla}`;
@@ -322,7 +360,7 @@ function baixarDocumentoTesouraria() {
     .from(elemento)
     .save()
     .then(() => {
-      confirmarUsoNumeroOficio(numeroOficio);
+      confirmarUsoNumeroOficio(matriz.sigla, numeroOficio, fonte);
     });
 }
 

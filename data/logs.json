@@ -1,6 +1,27 @@
 {
   "entries": [
     {
+      "id": "1783473267599-e5uom6g0",
+      "createdAt": "2026-07-08T01:14:27.599Z",
+      "type": "exoneracao",
+      "org": "PMERJ",
+      "emissor": {
+        "id": "1417469775776579635",
+        "nome": "[CB] Kleiton | 2382",
+        "nick": "[CB] Kleiton | 2382",
+        "avatar": "https://cdn.discordapp.com/avatars/1417469775776579635/e2a85a9c62b9d29c3c38428139b64607.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1475570392721658120",
+          "nomeCidade": "GUSTA BORGES",
+          "idPassaporte": "1260",
+          "cargo": "・Cabo"
+        }
+      ],
+      "quantidadeExonerados": 1
+    },
+    {
       "id": "1783473227478-atp9v6gu",
       "createdAt": "2026-07-08T01:13:47.478Z",
       "type": "exoneracao",

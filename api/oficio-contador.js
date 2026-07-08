@@ -37,9 +37,9 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const token = process.env.DISCORD_BOT_TOKEN;
+  const token = process.env.Discord_Bot_Token;
   if (!token) {
-    res.status(500).json({ erro: "DISCORD_BOT_TOKEN não configurado no servidor." });
+    res.status(500).json({ erro: "Discord_Bot_Token não configurado no servidor." });
     return;
   }
 

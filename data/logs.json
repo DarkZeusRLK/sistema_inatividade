@@ -1,6 +1,342 @@
 {
   "entries": [
     {
+      "id": "1783473427762-j8cst1o7",
+      "createdAt": "2026-07-08T01:17:07.762Z",
+      "type": "exoneracao",
+      "org": "PMERJ",
+      "emissor": {
+        "id": "1417469775776579635",
+        "nome": "[CB] Kleiton | 2382",
+        "nick": "[CB] Kleiton | 2382",
+        "avatar": "https://cdn.discordapp.com/avatars/1417469775776579635/e2a85a9c62b9d29c3c38428139b64607.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1381752538566492160",
+          "nomeCidade": "ThurzinX",
+          "idPassaporte": "1969",
+          "cargo": "・Cabo"
+        }
+      ],
+      "quantidadeExonerados": 1
+    },
+    {
+      "id": "1783473368103-sa5tmmkl",
+      "createdAt": "2026-07-08T01:16:08.103Z",
+      "type": "exoneracao",
+      "org": "PMERJ",
+      "emissor": {
+        "id": "1417469775776579635",
+        "nome": "[CB] Kleiton | 2382",
+        "nick": "[CB] Kleiton | 2382",
+        "avatar": "https://cdn.discordapp.com/avatars/1417469775776579635/e2a85a9c62b9d29c3c38428139b64607.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1391097210292146418",
+          "nomeCidade": "Kaioba caos",
+          "idPassaporte": "23523",
+          "cargo": "・Aluno PMERJ"
+        }
+      ],
+      "quantidadeExonerados": 1
+    },
+    {
+      "id": "1783473338968-gczsg1tq",
+      "createdAt": "2026-07-08T01:15:38.968Z",
+      "type": "exoneracao",
+      "org": "PMERJ",
+      "emissor": {
+        "id": "1417469775776579635",
+        "nome": "[CB] Kleiton | 2382",
+        "nick": "[CB] Kleiton | 2382",
+        "avatar": "https://cdn.discordapp.com/avatars/1417469775776579635/e2a85a9c62b9d29c3c38428139b64607.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1440145788159135866",
+          "nomeCidade": "Rick Rohden",
+          "idPassaporte": "11721",
+          "cargo": "・Soldado"
+        }
+      ],
+      "quantidadeExonerados": 1
+    },
+    {
+      "id": "1783473267599-e5uom6g0",
+      "createdAt": "2026-07-08T01:14:27.599Z",
+      "type": "exoneracao",
+      "org": "PMERJ",
+      "emissor": {
+        "id": "1417469775776579635",
+        "nome": "[CB] Kleiton | 2382",
+        "nick": "[CB] Kleiton | 2382",
+        "avatar": "https://cdn.discordapp.com/avatars/1417469775776579635/e2a85a9c62b9d29c3c38428139b64607.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1475570392721658120",
+          "nomeCidade": "GUSTA BORGES",
+          "idPassaporte": "1260",
+          "cargo": "・Cabo"
+        }
+      ],
+      "quantidadeExonerados": 1
+    },
+    {
+      "id": "1783473227478-atp9v6gu",
+      "createdAt": "2026-07-08T01:13:47.478Z",
+      "type": "exoneracao",
+      "org": "PMERJ",
+      "emissor": {
+        "id": "1417469775776579635",
+        "nome": "[CB] Kleiton | 2382",
+        "nick": "[CB] Kleiton | 2382",
+        "avatar": "https://cdn.discordapp.com/avatars/1417469775776579635/e2a85a9c62b9d29c3c38428139b64607.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1176944253285433464",
+          "nomeCidade": "Vinicius",
+          "idPassaporte": "23857",
+          "cargo": "・Aluno PMERJ"
+        }
+      ],
+      "quantidadeExonerados": 1
+    },
+    {
+      "id": "1783473185500-d87rhhdp",
+      "createdAt": "2026-07-08T01:13:05.500Z",
+      "type": "exoneracao",
+      "org": "PMERJ",
+      "emissor": {
+        "id": "1417469775776579635",
+        "nome": "[CB] Kleiton | 2382",
+        "nick": "[CB] Kleiton | 2382",
+        "avatar": "https://cdn.discordapp.com/avatars/1417469775776579635/e2a85a9c62b9d29c3c38428139b64607.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1166802720322240597",
+          "nomeCidade": "Cris ranieri",
+          "idPassaporte": "1077",
+          "cargo": "・Cabo"
+        }
+      ],
+      "quantidadeExonerados": 1
+    },
+    {
+      "id": "1783473140653-9aifeoig",
+      "createdAt": "2026-07-08T01:12:20.653Z",
+      "type": "exoneracao",
+      "org": "PMERJ",
+      "emissor": {
+        "id": "1417469775776579635",
+        "nome": "[CB] Kleiton | 2382",
+        "nick": "[CB] Kleiton | 2382",
+        "avatar": "https://cdn.discordapp.com/avatars/1417469775776579635/e2a85a9c62b9d29c3c38428139b64607.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1074076257580490773",
+          "nomeCidade": "Gabriel",
+          "idPassaporte": "23535",
+          "cargo": "・Aluno PMERJ"
+        }
+      ],
+      "quantidadeExonerados": 1
+    },
+    {
+      "id": "1783473103723-vsfohryk",
+      "createdAt": "2026-07-08T01:11:43.723Z",
+      "type": "exoneracao",
+      "org": "PMERJ",
+      "emissor": {
+        "id": "1417469775776579635",
+        "nome": "[CB] Kleiton | 2382",
+        "nick": "[CB] Kleiton | 2382",
+        "avatar": "https://cdn.discordapp.com/avatars/1417469775776579635/e2a85a9c62b9d29c3c38428139b64607.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "995756873837981716",
+          "nomeCidade": "Cocao skss",
+          "idPassaporte": "23693",
+          "cargo": "・Aluno PMERJ"
+        }
+      ],
+      "quantidadeExonerados": 1
+    },
+    {
+      "id": "1783473060089-v9jn2cpu",
+      "createdAt": "2026-07-08T01:11:00.090Z",
+      "type": "exoneracao",
+      "org": "PMERJ",
+      "emissor": {
+        "id": "1417469775776579635",
+        "nome": "[CB] Kleiton | 2382",
+        "nick": "[CB] Kleiton | 2382",
+        "avatar": "https://cdn.discordapp.com/avatars/1417469775776579635/e2a85a9c62b9d29c3c38428139b64607.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "905957437402664991",
+          "nomeCidade": "DinoX",
+          "idPassaporte": "15275",
+          "cargo": "・Soldado"
+        }
+      ],
+      "quantidadeExonerados": 1
+    },
+    {
+      "id": "1783473016393-299m42ro",
+      "createdAt": "2026-07-08T01:10:16.394Z",
+      "type": "exoneracao",
+      "org": "PMERJ",
+      "emissor": {
+        "id": "1417469775776579635",
+        "nome": "[CB] Kleiton | 2382",
+        "nick": "[CB] Kleiton | 2382",
+        "avatar": "https://cdn.discordapp.com/avatars/1417469775776579635/e2a85a9c62b9d29c3c38428139b64607.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "565326263888379914",
+          "nomeCidade": "Ozzy Osbourn",
+          "idPassaporte": "15100",
+          "cargo": "・Aluno PMERJ"
+        }
+      ],
+      "quantidadeExonerados": 1
+    },
+    {
+      "id": "1783472971293-k71erufy",
+      "createdAt": "2026-07-08T01:09:31.293Z",
+      "type": "exoneracao",
+      "org": "PMERJ",
+      "emissor": {
+        "id": "1417469775776579635",
+        "nome": "[CB] Kleiton | 2382",
+        "nick": "[CB] Kleiton | 2382",
+        "avatar": "https://cdn.discordapp.com/avatars/1417469775776579635/e2a85a9c62b9d29c3c38428139b64607.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1295490876411215882",
+          "nomeCidade": "Italo Triger",
+          "idPassaporte": "3506",
+          "cargo": "・Aluno PMERJ"
+        }
+      ],
+      "quantidadeExonerados": 1
+    },
+    {
+      "id": "1783472943985-nvo1ekqt",
+      "createdAt": "2026-07-08T01:09:03.985Z",
+      "type": "exoneracao",
+      "org": "PMERJ",
+      "emissor": {
+        "id": "1417469775776579635",
+        "nome": "[CB] Kleiton | 2382",
+        "nick": "[CB] Kleiton | 2382",
+        "avatar": "https://cdn.discordapp.com/avatars/1417469775776579635/e2a85a9c62b9d29c3c38428139b64607.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1129439719378395137",
+          "nomeCidade": "Levix Vlh",
+          "idPassaporte": "1776",
+          "cargo": "・Aluno PMERJ"
+        }
+      ],
+      "quantidadeExonerados": 1
+    },
+    {
+      "id": "1783472916506-eqmm1zji",
+      "createdAt": "2026-07-08T01:08:36.506Z",
+      "type": "exoneracao",
+      "org": "PMERJ",
+      "emissor": {
+        "id": "1417469775776579635",
+        "nome": "[CB] Kleiton | 2382",
+        "nick": "[CB] Kleiton | 2382",
+        "avatar": "https://cdn.discordapp.com/avatars/1417469775776579635/e2a85a9c62b9d29c3c38428139b64607.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "587134125991919616",
+          "nomeCidade": "Sasa",
+          "idPassaporte": "23359",
+          "cargo": "・Aluno PMERJ"
+        }
+      ],
+      "quantidadeExonerados": 1
+    },
+    {
+      "id": "1783472873497-t5dqh4q5",
+      "createdAt": "2026-07-08T01:07:53.498Z",
+      "type": "exoneracao",
+      "org": "PMERJ",
+      "emissor": {
+        "id": "1417469775776579635",
+        "nome": "[CB] Kleiton | 2382",
+        "nick": "[CB] Kleiton | 2382",
+        "avatar": "https://cdn.discordapp.com/avatars/1417469775776579635/e2a85a9c62b9d29c3c38428139b64607.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "523058282093477889",
+          "nomeCidade": "Bak insane",
+          "idPassaporte": "1907",
+          "cargo": "・Soldado"
+        }
+      ],
+      "quantidadeExonerados": 1
+    },
+    {
+      "id": "1783472836793-xvpu9zom",
+      "createdAt": "2026-07-08T01:07:16.794Z",
+      "type": "exoneracao",
+      "org": "PMERJ",
+      "emissor": {
+        "id": "1417469775776579635",
+        "nome": "[CB] Kleiton | 2382",
+        "nick": "[CB] Kleiton | 2382",
+        "avatar": "https://cdn.discordapp.com/avatars/1417469775776579635/e2a85a9c62b9d29c3c38428139b64607.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "506876402499452939",
+          "nomeCidade": "Miranda",
+          "idPassaporte": "20691",
+          "cargo": "・Aluno PMERJ"
+        }
+      ],
+      "quantidadeExonerados": 1
+    },
+    {
+      "id": "1783472795758-wx2d28z1",
+      "createdAt": "2026-07-08T01:06:35.758Z",
+      "type": "exoneracao",
+      "org": "PMERJ",
+      "emissor": {
+        "id": "1417469775776579635",
+        "nome": "[CB] Kleiton | 2382",
+        "nick": "[CB] Kleiton | 2382",
+        "avatar": "https://cdn.discordapp.com/avatars/1417469775776579635/e2a85a9c62b9d29c3c38428139b64607.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "674418600626356235",
+          "nomeCidade": "Bigode santo",
+          "idPassaporte": "3584",
+          "cargo": "・Cabo"
+        }
+      ],
+      "quantidadeExonerados": 1
+    },
+    {
       "id": "1783304442645-829irt43",
       "createdAt": "2026-07-06T02:20:42.645Z",
       "type": "exoneracao",

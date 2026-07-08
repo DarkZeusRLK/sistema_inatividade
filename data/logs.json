@@ -1,6 +1,27 @@
 {
   "entries": [
     {
+      "id": "1783472795758-wx2d28z1",
+      "createdAt": "2026-07-08T01:06:35.758Z",
+      "type": "exoneracao",
+      "org": "PMERJ",
+      "emissor": {
+        "id": "1417469775776579635",
+        "nome": "[CB] Kleiton | 2382",
+        "nick": "[CB] Kleiton | 2382",
+        "avatar": "https://cdn.discordapp.com/avatars/1417469775776579635/e2a85a9c62b9d29c3c38428139b64607.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "674418600626356235",
+          "nomeCidade": "Bigode santo",
+          "idPassaporte": "3584",
+          "cargo": "・Cabo"
+        }
+      ],
+      "quantidadeExonerados": 1
+    },
+    {
       "id": "1783304442645-829irt43",
       "createdAt": "2026-07-06T02:20:42.645Z",
       "type": "exoneracao",

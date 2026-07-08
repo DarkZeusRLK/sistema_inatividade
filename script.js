@@ -264,14 +264,6 @@ function exibirModalConfirmacao(titulo, htmlMensagem, onConfirmar) {
 // 2. INICIALIZACAO
 // =========================================================
 document.addEventListener("DOMContentLoaded", () => {
-  // Hide any duplicate Ensino sections that may be nested inside other tabs
-  const ensinoSections = document.querySelectorAll('#secao-ensino');
-  if (ensinoSections.length > 1) {
-    ensinoSections.forEach((el, i) => {
-      if (i > 0) el.style.display = 'none';
-    });
-  }
-
   const sessao = obterSessao();
   if (!sessao) return;
   if (sessao.tema) document.body.classList.add(sessao.tema);
@@ -423,8 +415,6 @@ function resetarTelas() {
     .forEach((item) => item.classList.remove("active"));
 }
 
-window.abrirInatividade = function () {
-
 window.abrirTesouraria = function () {
   const sessao = obterSessao();
   if (!sessao) return;
@@ -436,8 +426,9 @@ window.abrirTesouraria = function () {
   }
   document.getElementById('nav-tesouraria').classList.add('active');
   document.getElementById('titulo-pagina').innerText = `TESOURARIA - ${getOrgLabel(sessao.org).nome}`;
-}
+};
 
+window.abrirInatividade = function () {
   const sessao = obterSessao();
   if (!sessao) return;
   resetarTelas();

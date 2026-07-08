@@ -218,9 +218,9 @@
 
       <div id="aviso-global" class="aviso-toast" style="display: none;"></div>
 
-      <div class="content-body" id="secao-inatividade">
-                <section id="secao-ensino" style="display: none; padding: 20px;">
-<div class="info-alert-gold">
+      <!-- Seção principal de Inatividade -->
+      <section id="secao-inatividade" style="display: block; padding: 20px;">
+        <div class="info-alert-gold">
           <div class="alert-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
           <div class="alert-text">
             <h3>Aviso de Inatividade</h3>
@@ -262,11 +262,10 @@
             </table>
           </div>
         </div>
-      </div>
+      </section>
 
       <section id="secao-logs" style="display: none; padding: 20px;">
-        <section id="secao-ensino" style="display: none; padding: 20px;">
-<div class="info-alert-gold">
+        <div class="info-alert-gold">
           <div class="alert-icon"><i class="fa-solid fa-clipboard-list"></i></div>
           <div class="alert-text">
             <h3>Central de Logs v1.23</h3>
@@ -307,49 +306,134 @@
       
     <!-- Treasury Section -->
     <section id="secao-tesouraria" style="display: none; padding: 20px;">
-      <h2> Tesouraria </h2>
-      <div class="form-group">
-        <label for="select-matriz">Seleciona sua matriz</label>
-        <select id="select-matriz" class="form-control">
-          <option value="">--Selecione--</option>
-          <option value="PCERJ">PCERJ</option>
-          <option value="PMERJ">PMERJ</option>
-          <option value="PRF">PRF</option>
-        </select>
+      <div class="info-alert-gold">
+        <div class="alert-icon"><i class="fa-solid fa-wallet"></i></div>
+        <div class="alert-text">
+          <h3>Tesouraria - Repasse Institucional</h3>
+          <p>Selecione a matriz e as unidades para gerar o edital de repasse no modelo oficial.</p>
+        </div>
       </div>
-      <div class="form-group">
-        <label for="select-servico">Seleciona seu serviço</label>
-        <select id="select-servico" class="form-control" multiple size="8">
-          <option value="CORE">CORE</option>
-          <option value="GEM">GEM</option>
-          <option value="SAER">SAER</option>
-          <option value="CGPC">CGPC</option>
-          <option value="BOPE">BOPE</option>
-          <option value="GAM">GAM</option>
-          <option value="BTM">BTM</option>
-          <option value="COE">COE</option>
-          <option value="SPEED">SPEED</option>
-          <option value="BATEDOR">BATEDOR</option>
-          <option value="GRR">GRR</option>
-          <option value="DOA">DOA</option>
-        </select>
+
+      <div class="table-card" style="padding: 20px;">
+        <div class="form-group">
+          <label for="select-matriz">Selecione sua matriz</label>
+          <select id="select-matriz" class="form-control">
+            <option value="">--Selecione--</option>
+            <option value="PCERJ">PCERJ</option>
+            <option value="PMERJ">PMERJ</option>
+            <option value="PRF">PRF</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="select-servico">Selecione as unidades (mant. Ctrl/Cmd para multi-seleção)</label>
+          <select id="select-servico" class="form-control" multiple size="8">
+            <option value="CORE" data-matriz="PCERJ">CORE</option>
+            <option value="GEM" data-matriz="PCERJ">GEM</option>
+            <option value="SAER" data-matriz="PCERJ">SAER</option>
+            <option value="CGPC" data-matriz="PCERJ">CGPC</option>
+            <option value="BOPE" data-matriz="PMERJ">BOPE</option>
+            <option value="GAM" data-matriz="PMERJ">GAM</option>
+            <option value="BTM" data-matriz="PMERJ">BTM</option>
+            <option value="GRR" data-matriz="PRF">GRR</option>
+            <option value="DOA" data-matriz="PRF">DOA</option>
+            <option value="BATEDOR" data-matriz="PRF">BATEDOR</option>
+            <option value="SPEED" data-matriz="PRF">SPEED</option>
+          </select>
+          <small style="color:#888;">R$ 3.000.000,00 fixo por unidade selecionada (exceto CGPC, valor manual).</small>
+        </div>
+
+        <div class="form-group" id="cgpc-input-group" style="display:none;">
+          <label for="input-cgpc">Valor personalizado CGPC (R$)</label>
+          <input type="number" id="input-cgpc" class="form-control" placeholder="Ex: 1500000" min="0" step="0.01" />
+        </div>
+
+        <div class="form-group">
+          <label for="input-administracao">Bonificação da Administração (R$)</label>
+          <input type="number" id="input-administracao" class="form-control" placeholder="0,00" min="0" step="0.01" />
+        </div>
+
+        <div class="form-group">
+          <input type="checkbox" id="chk-ensino" />
+          <label for="chk-ensino">Incluir Divisão de Ensino (puxa automaticamente da aba de Metas de Ensino)</label>
+        </div>
+        <div id="ensino-preview-tesouraria" style="display:none; font-size:0.8rem; color:#aaa; margin: -10px 0 15px 0; padding-left: 4px;"></div>
+
+        <div class="form-group">
+          <label for="input-assinatura">Assinatura (nome do Tesoureiro)</label>
+          <input type="text" id="input-assinatura" class="form-control" placeholder="Seu nome" />
+        </div>
+
+        <button id="btn-calcular-tesouraria" class="btn-outline-gold">Calcular Valores</button>
+        <pre id="resultado-tesouraria" style="white-space: pre-wrap; background:#111; color:#ccc; padding:10px; margin-top:10px; display:none; border-radius:6px; border:1px solid #333;"></pre>
+        <button id="btn-download-doc" class="btn-gold" style="display:none; margin-top:10px;">
+          <i class="fa-solid fa-file-pdf"></i> Baixar Documento (PDF)
+        </button>
       </div>
-      <div class="form-group">
-        <input type="checkbox" id="chk-ensino" />
-        <label for="chk-ensino">Incluir Divisão de Ensino</label>
-      </div>
-      <div class="form-group" id="cgpc-input-group" style="display:none;">
-        <label for="input-cgpc">Valor personalizado CGPC (R$)</label>
-        <input type="number" id="input-cgpc" class="form-control" placeholder="Valor" />
-      </div>
-      <div class="form-group">
-        <label for="input-assinatura">Assinatura (nome)</label>
-        <input type="text" id="input-assinatura" class="form-control" placeholder="Seu nome" />
-      </div>
-      <button id="btn-calcular-tesouraria" class="btn-outline-gold">Calcular Valores</button>
-      <pre id="resultado-tesouraria" style="white-space: pre-wrap; background:#111; color:#ccc; padding:10px; margin-top:10px; display:none;"></pre>
-      <button id="btn-download-doc" class="btn-outline-gold" style="display:none; margin-top:10px;">Download Documento</button>
     </section>
+
+    <!-- Template de impressão do Edital de Repasse (fora da tela, usado apenas para gerar o PDF) -->
+    <div id="documento-print-wrapper" style="position: fixed; top: -10000px; left: -10000px; z-index: -1;">
+      <div id="documento-print" style="width: 794px; background: #fff; color: #111; font-family: Arial, Helvetica, sans-serif; padding: 40px; box-sizing: border-box; border: 1px solid #a9c6e8;">
+        <div style="text-align:right; margin-bottom: 15px;">
+          <span style="border:1px dashed #999; padding: 4px 8px; font-size: 10px; font-weight: bold; color:#333;">USO ADMINISTRATIVO</span>
+          <span style="border:1px dashed #999; padding: 4px 8px; font-size: 10px; font-weight: bold; color:#333; margin-left: 6px;">ACESSO RESTRITO</span>
+        </div>
+        <div style="text-align:center; margin-bottom: 25px;">
+          <div style="font-size: 18px; font-weight: bold; color:#0b2b52;">GOVERNO DO ESTADO DO RIO DE JANEIRO</div>
+          <div id="doc-instituicao" style="font-size: 18px; font-weight: bold; color:#0b2b52;">-</div>
+        </div>
+        <div style="background:#eef4fb; border:1px solid #c9dcf0; padding: 15px; text-align:center; margin-bottom: 20px;">
+          <div style="font-size: 20px; font-weight: bold; color:#0b2b52;">EDITAL DE LICITAÇÃO</div>
+          <div id="doc-oficio" style="font-size: 12px; font-weight: bold; margin-top: 4px;">-</div>
+          <div id="doc-data" style="font-size: 12px; font-weight: bold;">-</div>
+        </div>
+        <p style="font-size: 12px; line-height: 1.5; margin-bottom: 20px;">
+          Ao Comando Geral,<br>
+          Tendo em vista a necessidade de manutenção das atividades administrativas, instrucionais, operacionais e
+          especializadas das instituições vinculadas à segurança pública, apresenta-se o presente documento para formalizar a
+          solicitação de repasse financeiro destinado ao custeio dos setores e unidades abaixo discriminados.
+        </p>
+        <div style="font-size: 15px; font-weight: bold; color:#0b2b52; margin-bottom: 8px;">1. QUADRO DE DISTRIBUIÇÃO ORÇAMENTÁRIA</div>
+        <table style="width:100%; border-collapse: collapse; font-size: 12px; margin-bottom: 25px;">
+          <thead>
+            <tr style="background:#0b2b52; color:#fff;">
+              <th style="padding:6px; text-align:left; border:1px solid #ccc;">SETOR / UNIDADE</th>
+              <th style="padding:6px; text-align:left; border:1px solid #ccc;">FINALIDADE</th>
+              <th style="padding:6px; text-align:right; border:1px solid #ccc;">VALOR</th>
+            </tr>
+          </thead>
+          <tbody id="doc-itens-tbody"></tbody>
+        </table>
+        <div style="font-size: 15px; font-weight: bold; color:#0b2b52; margin-bottom: 8px;">2. RESUMO GERAL E DADOS PARA REPASSE</div>
+        <table style="width:100%; border-collapse: collapse; font-size: 12px; margin-bottom: 25px;">
+          <tr>
+            <td style="width:50%; vertical-align: top; border:1px solid #ccc; padding: 0;">
+              <div style="background:#0b2b52; color:#fff; padding:6px; font-weight:bold;">RESUMO FINANCEIRO</div>
+              <div style="padding: 8px;"><b>Valor total:</b> <span id="doc-valor-total">R$ 0,00</span></div>
+              <div style="padding: 8px;"><b>Modalidade:</b> Repasse Administrativo Interno</div>
+              <div style="padding: 8px;"><b>Status:</b> Aguardando Repasse</div>
+            </td>
+            <td style="width:50%; vertical-align: top; border:1px solid #ccc; padding: 0;">
+              <div style="background:#0b2b52; color:#fff; padding:6px; font-weight:bold;">DADOS PARA REPASSE</div>
+              <div style="padding: 8px;"><b>Nº da Conta:</b> ______________</div>
+              <div style="padding: 8px;"><b>Titular:</b> <span id="doc-titular">______________</span></div>
+              <div style="padding: 8px;"><b>Banco:</b> Fleeca Bank</div>
+            </td>
+          </tr>
+        </table>
+        <p style="font-size: 12px; margin-bottom: 40px;">
+          Sem mais para o momento, encaminha-se o presente termo para ciência, análise e providências cabíveis do Comando Geral.
+        </p>
+        <div style="text-align:center; font-size: 12px;">
+          <div style="font-weight:bold; margin-bottom: 40px;">Cordialmente,</div>
+          <div style="border-top: 1px solid #333; width: 250px; margin: 0 auto; padding-top: 6px;" id="doc-tesoureiro-label">Tesoureiro</div>
+        </div>
+        <div style="margin-top: 30px; font-size: 9px; color:#888; border-top: 1px solid #eee; padding-top: 8px;">
+          Protocolo Geral n.º 001/2026 - Controle de Repasse Institucional
+        </div>
+      </div>
+    </div>
         <section id="secao-ensino" style="display: none; padding: 20px;">
 <div class="info-alert-gold">
           <div class="alert-icon"><i class="fa-solid fa-chalkboard-user"></i></div>
@@ -399,7 +483,6 @@
       </section>
 
       <section id="secao-meta-core" style="display: none; padding: 20px;">
-        <section id="secao-ensino" style="display: none; padding: 20px;">
 <div class="info-alert-gold">
           <div class="alert-icon"><i class="fa-solid fa-crosshairs"></i></div>
           <div class="alert-text">
@@ -432,7 +515,6 @@
       </section>
 
       <section id="secao-meta-grr" style="display: none; padding: 20px;">
-        <section id="secao-ensino" style="display: none; padding: 20px;">
 <div class="info-alert-gold">
           <div class="alert-icon"><i class="fa-solid fa-shield-halved"></i></div>
           <div class="alert-text">
@@ -465,7 +547,6 @@
       </section>
 
       <section id="secao-meta-bope" style="display: none; padding: 20px;">
-        <section id="secao-ensino" style="display: none; padding: 20px;">
 <div class="info-alert-gold">
           <div class="alert-icon"><i class="fa-solid fa-skull"></i></div>
           <div class="alert-text">
@@ -498,7 +579,6 @@
       </section>
 
       <section id="secao-meta-cot" style="display: none; padding: 20px;">
-        <section id="secao-ensino" style="display: none; padding: 20px;">
 <div class="info-alert-gold">
           <div class="alert-icon"><i class="fa-solid fa-user-secret"></i></div>
           <div class="alert-text">
@@ -531,7 +611,6 @@
       </section>
 
       <section id="secao-gestao-ferias" style="display: none; padding: 20px;">
-        <section id="secao-ensino" style="display: none; padding: 20px;">
 <div class="info-alert-gold">
           <div class="alert-icon"><i class="fa-solid fa-umbrella-beach"></i></div>
           <div class="alert-text">
@@ -595,12 +674,14 @@
     </div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="script.js"></script>
   <script src="metas/script-core.js"></script>
   <script src="metas/script-grr.js"></script>
   <script src="metas/script-bope.js"></script>
   <script src="metas/script-cot.js"></script>
   <script src="metas/script-ensino.js"></script>
+  <script src="tesouraria.js"></script>
 </body>
 
 </html>

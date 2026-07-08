@@ -209,8 +209,12 @@ function calcularTesouraria() {
     const dados = montarItensTesouraria();
     const total = dados.itens.reduce((soma, item) => soma + item.valor, 0);
     const assinatura = document.getElementById("input-assinatura").value.trim() || "________________________";
+    const passaporte = document.getElementById("input-passaporte").value.trim();
+    if (!passaporte) {
+      throw new Error("Informe o Passaporte do Tesoureiro.");
+    }
 
-    _dadosTesourariaAtual = { ...dados, total, assinatura };
+    _dadosTesourariaAtual = { ...dados, total, assinatura, passaporte };
 
     const linhasHtml = dados.itens
       .map(
@@ -244,7 +248,7 @@ function calcularTesouraria() {
           <strong>${formatarMoeda(total)}</strong>
         </div>
         <div class="resultado-assinatura">
-          <i class="fa-solid fa-signature"></i> ${assinatura}
+          <i class="fa-solid fa-signature"></i> ${assinatura} <span class="resultado-passaporte">(Passaporte: ${passaporte})</span>
         </div>
       </div>
     `;
@@ -267,7 +271,7 @@ function baixarDocumentoTesouraria() {
     return;
   }
 
-  const { matriz, itens, total, assinatura } = _dadosTesourariaAtual;
+  const { matriz, itens, total, assinatura, passaporte } = _dadosTesourariaAtual;
 
   // Data sempre a partir do relógio local do usuário no momento do download
   const agora = new Date();
@@ -280,6 +284,7 @@ function baixarDocumentoTesouraria() {
   document.getElementById("doc-oficio").textContent = `OFÍCIO N.º ${formatarNumeroOficio(numeroOficio)}/${agora.getFullYear()} - ${matriz.sigla}`;
   document.getElementById("doc-data").textContent = `Rio de Janeiro, ${dataFormatada}.`;
   document.getElementById("doc-valor-total").textContent = formatarMoeda(total);
+  document.getElementById("doc-numero-conta").textContent = passaporte;
   document.getElementById("doc-titular").textContent = assinatura;
   document.getElementById("doc-assinatura-nome").textContent = assinatura;
   document.getElementById("doc-tesoureiro-label").textContent = matriz.tesoureiro;

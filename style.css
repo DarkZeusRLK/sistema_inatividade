@@ -477,6 +477,12 @@ input[type="number"].form-control::-webkit-outer-spin-button {
   margin-right: 6px;
 }
 
+.resultado-passaporte {
+  color: var(--gray);
+  font-style: normal;
+  font-size: 0.8rem;
+}
+
 .resultado-erro {
   display: flex;
   align-items: center;

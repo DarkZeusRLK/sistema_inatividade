@@ -31,6 +31,41 @@ function formatarMoeda(valor) {
 }
 
 // ---------------------------------------------------------
+// Máscara de milhar em tempo real para inputs de valor (1.500.000)
+// ---------------------------------------------------------
+function aplicarMascaraMilhar(inputEl) {
+  inputEl.addEventListener("input", () => {
+    const somenteDigitos = inputEl.value.replace(/\D/g, "");
+    inputEl.value = somenteDigitos ? Number(somenteDigitos).toLocaleString("pt-BR") : "";
+  });
+}
+
+function lerValorMascarado(inputEl) {
+  if (!inputEl || !inputEl.value) return 0;
+  const somenteDigitos = inputEl.value.replace(/\D/g, "");
+  return somenteDigitos ? parseInt(somenteDigitos, 10) : 0;
+}
+
+// ---------------------------------------------------------
+// Numeração sequencial do ofício (001, 002, 003... persistente)
+// ---------------------------------------------------------
+const OFICIO_STORAGE_KEY = "tesouraria_oficio_sequencial";
+
+function obterProximoNumeroOficio() {
+  const atual = parseInt(localStorage.getItem(OFICIO_STORAGE_KEY) || "0", 10);
+  const proximo = atual + 1;
+  return proximo;
+}
+
+function confirmarUsoNumeroOficio(numero) {
+  localStorage.setItem(OFICIO_STORAGE_KEY, String(numero));
+}
+
+function formatarNumeroOficio(numero) {
+  return String(numero).padStart(3, "0");
+}
+
+// ---------------------------------------------------------
 // Filtra as unidades do <select id="select-servico"> conforme a matriz
 // ---------------------------------------------------------
 function atualizarOpcoesServico() {
@@ -114,7 +149,7 @@ function montarItensTesouraria() {
   const itens = [];
 
   // Administração (valor manual, sempre presente no modelo)
-  const valorAdmin = parseFloat(document.getElementById("input-administracao").value) || 0;
+  const valorAdmin = lerValorMascarado(document.getElementById("input-administracao"));
   itens.push({
     setor: "Administração",
     finalidade: `Bonificações da Administração ${matriz.sigla}`,
@@ -144,7 +179,7 @@ function montarItensTesouraria() {
   unidadesSelecionadas.forEach((unidade) => {
     let valor;
     if (unidade === "CGPC") {
-      valor = parseFloat(document.getElementById("input-cgpc").value) || 0;
+      valor = lerValorMascarado(document.getElementById("input-cgpc"));
       if (valor <= 0) {
         throw new Error("Informe o valor personalizado do CGPC.");
       }
@@ -177,18 +212,46 @@ function calcularTesouraria() {
 
     _dadosTesourariaAtual = { ...dados, total, assinatura };
 
-    let texto = `MATRIZ: ${dados.matriz.instituicao} (${dados.matriz.sigla})\n\n`;
-    dados.itens.forEach((item) => {
-      texto += `• ${item.setor.padEnd(14, " ")} ${item.finalidade.padEnd(55, " ")} ${formatarMoeda(item.valor)}\n`;
-    });
-    texto += `\nVALOR TOTAL: ${formatarMoeda(total)}\n`;
-    texto += `Assinatura: ${assinatura}`;
+    const linhasHtml = dados.itens
+      .map(
+        (item) => `
+          <tr>
+            <td class="rt-setor">${item.setor}</td>
+            <td class="rt-finalidade">${item.finalidade}</td>
+            <td class="rt-valor">${formatarMoeda(item.valor)}</td>
+          </tr>`
+      )
+      .join("");
 
-    resultadoEl.textContent = texto;
+    resultadoEl.innerHTML = `
+      <div class="resultado-header">
+        <span class="resultado-tag"><i class="fa-solid fa-building-shield"></i> ${dados.matriz.sigla}</span>
+        <span class="resultado-instituicao">${dados.matriz.instituicao}</span>
+      </div>
+      <table class="resultado-tabela">
+        <thead>
+          <tr>
+            <th>Setor</th>
+            <th>Finalidade</th>
+            <th style="text-align:right;">Valor</th>
+          </tr>
+        </thead>
+        <tbody>${linhasHtml}</tbody>
+      </table>
+      <div class="resultado-footer">
+        <div class="resultado-total">
+          <span>VALOR TOTAL</span>
+          <strong>${formatarMoeda(total)}</strong>
+        </div>
+        <div class="resultado-assinatura">
+          <i class="fa-solid fa-signature"></i> ${assinatura}
+        </div>
+      </div>
+    `;
     resultadoEl.style.display = "block";
     btnDownload.style.display = "inline-flex";
   } catch (erro) {
-    resultadoEl.textContent = `⚠ ${erro.message}`;
+    resultadoEl.innerHTML = `<div class="resultado-erro"><i class="fa-solid fa-triangle-exclamation"></i> ${erro.message}</div>`;
     resultadoEl.style.display = "block";
     btnDownload.style.display = "none";
     _dadosTesourariaAtual = null;
@@ -205,13 +268,20 @@ function baixarDocumentoTesouraria() {
   }
 
   const { matriz, itens, total, assinatura } = _dadosTesourariaAtual;
-  const hoje = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+
+  // Data sempre a partir do relógio local do usuário no momento do download
+  const agora = new Date();
+  const dataFormatada = agora.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+
+  // Número sequencial do ofício (001, 002, 003...), confirmado apenas ao efetivamente baixar
+  const numeroOficio = obterProximoNumeroOficio();
 
   document.getElementById("doc-instituicao").textContent = matriz.instituicao;
-  document.getElementById("doc-oficio").textContent = `OFÍCIO N.º 000/2026 - ${matriz.sigla}`;
-  document.getElementById("doc-data").textContent = `Rio de Janeiro, ${hoje}.`;
+  document.getElementById("doc-oficio").textContent = `OFÍCIO N.º ${formatarNumeroOficio(numeroOficio)}/${agora.getFullYear()} - ${matriz.sigla}`;
+  document.getElementById("doc-data").textContent = `Rio de Janeiro, ${dataFormatada}.`;
   document.getElementById("doc-valor-total").textContent = formatarMoeda(total);
   document.getElementById("doc-titular").textContent = assinatura;
+  document.getElementById("doc-assinatura-nome").textContent = assinatura;
   document.getElementById("doc-tesoureiro-label").textContent = matriz.tesoureiro;
 
   const tbody = document.getElementById("doc-itens-tbody");
@@ -242,7 +312,13 @@ function baixarDocumentoTesouraria() {
     return;
   }
 
-  html2pdf().set(opcoes).from(elemento).save();
+  html2pdf()
+    .set(opcoes)
+    .from(elemento)
+    .save()
+    .then(() => {
+      confirmarUsoNumeroOficio(numeroOficio);
+    });
 }
 
 // ---------------------------------------------------------
@@ -254,10 +330,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const chkEnsino = document.getElementById("chk-ensino");
   const btnCalcular = document.getElementById("btn-calcular-tesouraria");
   const btnDownload = document.getElementById("btn-download-doc");
+  const inputCgpc = document.getElementById("input-cgpc");
+  const inputAdmin = document.getElementById("input-administracao");
 
   if (selectMatriz) selectMatriz.addEventListener("change", atualizarOpcoesServico);
   if (selectServico) selectServico.addEventListener("change", atualizarVisibilidadeCGPC);
   if (chkEnsino) chkEnsino.addEventListener("change", atualizarPreviewEnsino);
   if (btnCalcular) btnCalcular.addEventListener("click", calcularTesouraria);
   if (btnDownload) btnDownload.addEventListener("click", baixarDocumentoTesouraria);
+  if (inputCgpc) aplicarMascaraMilhar(inputCgpc);
+  if (inputAdmin) aplicarMascaraMilhar(inputAdmin);
 });

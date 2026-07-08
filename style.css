@@ -348,6 +348,148 @@ input[type="number"].form-control::-webkit-outer-spin-button {
   opacity: 1;
 }
 
+/* =========================================================
+   5.2 RESULTADO DO CÁLCULO (Tesouraria)
+   ========================================================= */
+.resultado-card {
+  background: var(--bg-black);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-top: 15px;
+  overflow: hidden;
+  animation: resultadoFadeIn 0.25s ease;
+}
+
+@keyframes resultadoFadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.resultado-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--border);
+}
+
+.resultado-tag {
+  background: var(--gold);
+  color: #000;
+  font-weight: bold;
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+}
+
+.resultado-instituicao {
+  color: var(--gray);
+  font-size: 0.85rem;
+}
+
+.resultado-tabela {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.resultado-tabela thead th {
+  text-align: left;
+  padding: 10px 20px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--gold);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.resultado-tabela tbody td {
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 0.85rem;
+  vertical-align: top;
+}
+
+.resultado-tabela tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.resultado-tabela tbody tr:hover {
+  background: var(--bg-hover);
+}
+
+.rt-setor {
+  color: var(--gold);
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.rt-finalidade {
+  color: var(--white);
+}
+
+.rt-valor {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--white);
+}
+
+.resultado-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.resultado-total {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.resultado-total span {
+  color: var(--gray);
+  font-size: 0.7rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.resultado-total strong {
+  color: var(--gold);
+  font-size: 1.4rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.resultado-assinatura {
+  color: var(--gray);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+.resultado-assinatura i {
+  color: var(--gold);
+  margin-right: 6px;
+}
+
+.resultado-erro {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+
+.resultado-erro i {
+  font-size: 1.2rem;
+}
+
 .row-selectable:hover {
   background-color: rgba(212, 175, 55, 0.1);
 }

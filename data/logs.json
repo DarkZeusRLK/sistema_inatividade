@@ -1,6 +1,75 @@
 {
   "entries": [
     {
+      "id": "1783646992716-cg6eggio",
+      "createdAt": "2026-07-10T01:29:52.718Z",
+      "type": "exoneracao",
+      "org": "PMERJ",
+      "emissor": {
+        "id": "465045110506389505",
+        "nome": "[3° SGT] Sofia | 1200",
+        "nick": "[3° SGT] Sofia | 1200",
+        "avatar": "https://cdn.discordapp.com/avatars/465045110506389505/5f4ea77e54df3fe3b22657c07a99d4c8.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "369565784667848704",
+          "nomeCidade": "Antagonista",
+          "idPassaporte": "24094",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "460902117771837450",
+          "nomeCidade": "Genival",
+          "idPassaporte": "23454",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "671835802401112096",
+          "nomeCidade": "Maria Lopes",
+          "idPassaporte": "23527",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "676925252470702082",
+          "nomeCidade": "Geraldo Luís",
+          "idPassaporte": "24331",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "702672754347868241",
+          "nomeCidade": "Gagau",
+          "idPassaporte": "24092",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "895832711049121823",
+          "nomeCidade": "Jota Nll",
+          "idPassaporte": "2845",
+          "cargo": "・Cabo"
+        },
+        {
+          "discordUser": "1114646516313903257",
+          "nomeCidade": "Trem Macabro",
+          "idPassaporte": "24104",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "1209923576707289118",
+          "nomeCidade": "Yan garcia",
+          "idPassaporte": "13829",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "1226198856971063397",
+          "nomeCidade": "Beloto First",
+          "idPassaporte": "7754",
+          "cargo": "・Aluno PMERJ"
+        }
+      ],
+      "quantidadeExonerados": 9
+    },
+    {
       "id": "1783473427762-j8cst1o7",
       "createdAt": "2026-07-08T01:17:07.762Z",
       "type": "exoneracao",

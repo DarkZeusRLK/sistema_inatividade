@@ -1,6 +1,105 @@
 {
   "entries": [
     {
+      "id": "1785203374857-8l2xz1ow",
+      "createdAt": "2026-07-28T01:49:34.857Z",
+      "type": "exoneracao",
+      "org": "PCERJ",
+      "emissor": {
+        "id": "698368546094186578",
+        "nome": "![DEL G.] Dark Tenebras 🦅",
+        "nick": "![DEL G.] Dark Tenebras 🦅",
+        "avatar": "https://cdn.discordapp.com/avatars/698368546094186578/2435ec30800706d04fff326f64a4baf8.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "206808641226014720",
+          "nomeCidade": "Arlequina",
+          "idPassaporte": "2141",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1485835235257094297",
+          "nomeCidade": "Perigosa",
+          "idPassaporte": "3846",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "419986685930110976",
+          "nomeCidade": "Leozinho",
+          "idPassaporte": "11437",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "728418855118176307",
+          "nomeCidade": "Gege",
+          "idPassaporte": "16351",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1473320739016015892",
+          "nomeCidade": "CHUCRA",
+          "idPassaporte": "9020",
+          "cargo": "・Investigador 3ª Classe"
+        },
+        {
+          "discordUser": "529674424291688458",
+          "nomeCidade": "Husupreme",
+          "idPassaporte": "1515",
+          "cargo": "・Investigador 3ª Classe"
+        },
+        {
+          "discordUser": "568181387069358120",
+          "nomeCidade": "Marcio sutt",
+          "idPassaporte": "22450",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1284333482163572791",
+          "nomeCidade": "Santos",
+          "idPassaporte": "6977",
+          "cargo": "・Investigador 3ª Classe"
+        },
+        {
+          "discordUser": "412991525577031710",
+          "nomeCidade": "Patygol",
+          "idPassaporte": "22862",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "662134608137158666",
+          "nomeCidade": "faustao",
+          "idPassaporte": "22848",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1481036081972510894",
+          "nomeCidade": "Vitor Rabelo",
+          "idPassaporte": "22738",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "306624293385535489",
+          "nomeCidade": "Jotaene Malvadeza (a mesma irá fazer cirurgia)",
+          "idPassaporte": "1158",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "708485881698451509",
+          "nomeCidade": "Gabriel Eniessi",
+          "idPassaporte": "19443",
+          "cargo": "・Investigador 3ª Classe"
+        },
+        {
+          "discordUser": "1059551364323221614",
+          "nomeCidade": "Jully Neurotica (a mesma irá fazer cirurgia)",
+          "idPassaporte": "1560",
+          "cargo": "・Aluno PCERJ"
+        }
+      ],
+      "quantidadeExonerados": 14
+    },
+    {
       "id": "1784296738292-hyv98shy",
       "createdAt": "2026-07-17T13:58:58.292Z",
       "type": "exoneracao",

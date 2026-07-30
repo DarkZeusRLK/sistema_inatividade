@@ -1,6 +1,141 @@
 {
   "entries": [
     {
+      "id": "1785421878174-6gi7oxb2",
+      "createdAt": "2026-07-30T14:31:18.174Z",
+      "type": "exoneracao",
+      "org": "PRF",
+      "emissor": {
+        "id": "410090992520396801",
+        "nome": "[AGT 1ª GRR] Mcquen T | 1135 🏹",
+        "nick": "[AGT 1ª GRR] Mcquen T | 1135 🏹",
+        "avatar": "https://cdn.discordapp.com/avatars/410090992520396801/4570f9bc6cf3dc67d31167197c69b80a.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1185629436503130132",
+          "nomeCidade": "near zf",
+          "idPassaporte": "2605",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "785333463015489536",
+          "nomeCidade": "Castellani S",
+          "idPassaporte": "1377",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "523151630129037319",
+          "nomeCidade": "Danilo Migue",
+          "idPassaporte": "12302",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "872946334490050651",
+          "nomeCidade": "ALOK ALVES",
+          "idPassaporte": "12195",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1024668090048446574",
+          "nomeCidade": "shaulin",
+          "idPassaporte": "7866",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1491592491290460281",
+          "nomeCidade": "wzz",
+          "idPassaporte": "17680",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "703675702041378826",
+          "nomeCidade": "Tchucao N",
+          "idPassaporte": "18533",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "796497275828305971",
+          "nomeCidade": "Dudu Duodio",
+          "idPassaporte": "19271",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1081017452143591534",
+          "nomeCidade": "junin",
+          "idPassaporte": "19573",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1514348089098506498",
+          "nomeCidade": "jack Duodio",
+          "idPassaporte": "19270",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1238228085799780353",
+          "nomeCidade": "Charlie",
+          "idPassaporte": "20804",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1145401551582674954",
+          "nomeCidade": "hnkgd",
+          "idPassaporte": "1622",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "878094500667478099",
+          "nomeCidade": "miguelzinho",
+          "idPassaporte": "21182",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1353507382780755980",
+          "nomeCidade": "Surf godd",
+          "idPassaporte": "16242",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "693504592004251679",
+          "nomeCidade": "RAZER BLACK",
+          "idPassaporte": "24943",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "270266236166733825",
+          "nomeCidade": "Dimitri Fahu",
+          "idPassaporte": "25594",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "564230342173523969",
+          "nomeCidade": "Vitin zecakr",
+          "idPassaporte": "6317",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1120846954239377479",
+          "nomeCidade": "Luke Nuziel",
+          "idPassaporte": "28021",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1191434421748891752",
+          "nomeCidade": "gmsrlk",
+          "idPassaporte": "18589",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1296854642017177612",
+          "nomeCidade": "Lock RD",
+          "idPassaporte": "3134",
+          "cargo": "・Aluno PRF"
+        }
+      ],
+      "quantidadeExonerados": 20
+    },
+    {
       "id": "1785276685629-y13ibhtp",
       "createdAt": "2026-07-28T22:11:25.629Z",
       "type": "exoneracao",

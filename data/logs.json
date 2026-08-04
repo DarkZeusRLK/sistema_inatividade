@@ -1,6 +1,93 @@
 {
   "entries": [
     {
+      "id": "1785802653046-80kv3kmf",
+      "createdAt": "2026-08-04T00:17:33.047Z",
+      "type": "exoneracao",
+      "org": "PCERJ",
+      "emissor": {
+        "id": "910951838260559973",
+        "nome": "[COORD] Carpa | 🦅",
+        "nick": "[COORD] Carpa | 🦅",
+        "avatar": "https://cdn.discordapp.com/avatars/910951838260559973/ca781854d7e4de16c9e34f5e9fc9a412.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1267557577781416041",
+          "nomeCidade": "Lazy",
+          "idPassaporte": "3012",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1296631255865098295",
+          "nomeCidade": "Davi Got",
+          "idPassaporte": "24538",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "270213189952602112",
+          "nomeCidade": "Peter Fisher",
+          "idPassaporte": "26351",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "903087245601415179",
+          "nomeCidade": "Bruna Gama",
+          "idPassaporte": "8143",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "383017908327940096",
+          "nomeCidade": "Nobre falcao",
+          "idPassaporte": "29182",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "799093225813442570",
+          "nomeCidade": "kaoa piracer",
+          "idPassaporte": "28063",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "815924828677865492",
+          "nomeCidade": "João",
+          "idPassaporte": "27243",
+          "cargo": "・Investigador 3ª Classe"
+        },
+        {
+          "discordUser": "920306199969300500",
+          "nomeCidade": "sant dulego",
+          "idPassaporte": "22082",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "975493913718718555",
+          "nomeCidade": "Papamike",
+          "idPassaporte": "20391",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1319341783637032980",
+          "nomeCidade": "Mototaxi Nelson",
+          "idPassaporte": "27797",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1445286506171465749",
+          "nomeCidade": "xindas.",
+          "idPassaporte": "30086",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1182002369840545893",
+          "nomeCidade": "James",
+          "idPassaporte": "2383",
+          "cargo": "・Investigador 2ª Classe"
+        }
+      ],
+      "quantidadeExonerados": 12
+    },
+    {
       "id": "1785421878174-6gi7oxb2",
       "createdAt": "2026-07-30T14:31:18.174Z",
       "type": "exoneracao",

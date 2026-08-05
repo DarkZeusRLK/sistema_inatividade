@@ -1,6 +1,81 @@
 {
   "entries": [
     {
+      "id": "1785945502986-pdtstxdg",
+      "createdAt": "2026-08-05T15:58:22.986Z",
+      "type": "exoneracao",
+      "org": "PRF",
+      "emissor": {
+        "id": "410090992520396801",
+        "nome": "[COORD PRF] Mcquen T | 1135 🏹",
+        "nick": "[COORD PRF] Mcquen T | 1135 🏹",
+        "avatar": "https://cdn.discordapp.com/avatars/410090992520396801/4570f9bc6cf3dc67d31167197c69b80a.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1467271851528163646",
+          "nomeCidade": "Cabelin",
+          "idPassaporte": "1263",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "720830722037907456",
+          "nomeCidade": "Ghostzada",
+          "idPassaporte": "22808",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1394884456791281769",
+          "nomeCidade": "Joao Peixoto",
+          "idPassaporte": "25149",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1251986709600800790",
+          "nomeCidade": "Lucio flavio",
+          "idPassaporte": "17853",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1352590546094260381",
+          "nomeCidade": "jose pequeno",
+          "idPassaporte": "28266",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1177772392374878331",
+          "nomeCidade": "robson freit",
+          "idPassaporte": "23506",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1045447806757896222",
+          "nomeCidade": "francesco",
+          "idPassaporte": "31220",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "694086717937811458",
+          "nomeCidade": "Cancio",
+          "idPassaporte": "28843",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "755839013725798520",
+          "nomeCidade": "Nando",
+          "idPassaporte": "31812",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1081204413223415878",
+          "nomeCidade": "polly mvpz",
+          "idPassaporte": "2187",
+          "cargo": "・Aluno PRF"
+        }
+      ],
+      "quantidadeExonerados": 10
+    },
+    {
       "id": "1785802653046-80kv3kmf",
       "createdAt": "2026-08-04T00:17:33.047Z",
       "type": "exoneracao",

@@ -1,6 +1,27 @@
 {
   "entries": [
     {
+      "id": "1786239559357-5p8vpojp",
+      "createdAt": "2026-08-09T01:39:19.357Z",
+      "type": "exoneracao",
+      "org": "PCERJ",
+      "emissor": {
+        "id": "698368546094186578",
+        "nome": "![DEL G.] Dark Tenebras 🦅",
+        "nick": "![DEL G.] Dark Tenebras 🦅",
+        "avatar": "https://cdn.discordapp.com/avatars/698368546094186578/ed5e50e5eb50ee61074e7b014a6dfbfc.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1309224506908213328",
+          "nomeCidade": "pecinha funfa",
+          "idPassaporte": "32786",
+          "cargo": "・Aluno PCERJ"
+        }
+      ],
+      "quantidadeExonerados": 1
+    },
+    {
       "id": "1785978659854-41yrz58a",
       "createdAt": "2026-08-06T01:10:59.858Z",
       "type": "exoneracao",

@@ -1,6 +1,99 @@
 {
   "entries": [
     {
+      "id": "1786240615582-z3nig9ji",
+      "createdAt": "2026-08-09T01:56:55.582Z",
+      "type": "exoneracao",
+      "org": "PCERJ",
+      "emissor": {
+        "id": "1089279107155632248",
+        "nome": "[COORD] Zorro |🦅",
+        "nick": "[COORD] Zorro |🦅",
+        "avatar": "https://cdn.discordapp.com/avatars/1089279107155632248/496cc6fa094c7b51700399d9c99f8b96.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1145505611967102986",
+          "nomeCidade": "Scoptoddy (o mesmo irá fazer cirurgia)",
+          "idPassaporte": "25807",
+          "cargo": "・Investigador 2ª Classe"
+        },
+        {
+          "discordUser": "1072179952428011640",
+          "nomeCidade": "felps baiacu",
+          "idPassaporte": "31608",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1497060465191424131",
+          "nomeCidade": "luiz santos",
+          "idPassaporte": "31860",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1316281774866694188",
+          "nomeCidade": "gabriel silva",
+          "idPassaporte": "25031",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1421119078042697799",
+          "nomeCidade": "chuck norris",
+          "idPassaporte": "13335",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1497680281396842629",
+          "nomeCidade": "Salame Piracicaba",
+          "idPassaporte": "28026",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1415787240444923914",
+          "nomeCidade": "henri kkkk",
+          "idPassaporte": "25130",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "768156975833022514",
+          "nomeCidade": "jughead",
+          "idPassaporte": "17555",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1119683798725050409",
+          "nomeCidade": "misterio",
+          "idPassaporte": "33903",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1464073239448785059",
+          "nomeCidade": "Bahia",
+          "idPassaporte": "5073",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1491413025029095514",
+          "nomeCidade": "FELIPE SANTOS",
+          "idPassaporte": "27615",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1474713556447395974",
+          "nomeCidade": "breno rioo",
+          "idPassaporte": "33869",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "899130709103493151",
+          "nomeCidade": "arnaldo naldo",
+          "idPassaporte": "3660",
+          "cargo": "・Aluno PCERJ"
+        }
+      ],
+      "quantidadeExonerados": 13
+    },
+    {
       "id": "1786239559357-5p8vpojp",
       "createdAt": "2026-08-09T01:39:19.357Z",
       "type": "exoneracao",

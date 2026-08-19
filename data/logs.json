@@ -1,6 +1,45 @@
 {
   "entries": [
     {
+      "id": "1787097969617-avpxcorw",
+      "createdAt": "2026-08-19T00:06:09.617Z",
+      "type": "exoneracao",
+      "org": "PCERJ",
+      "emissor": {
+        "id": "1089279107155632248",
+        "nome": "[COORD] Zorro |🦅",
+        "nick": "[COORD] Zorro |🦅",
+        "avatar": "https://cdn.discordapp.com/avatars/1089279107155632248/496cc6fa094c7b51700399d9c99f8b96.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "729060391451361412",
+          "nomeCidade": "pietro shaolin",
+          "idPassaporte": "28401",
+          "cargo": "・Investigador 2ª Classe"
+        },
+        {
+          "discordUser": "325041099783536660",
+          "nomeCidade": "Galo",
+          "idPassaporte": "32797",
+          "cargo": "・Investigador 3ª Classe"
+        },
+        {
+          "discordUser": "567520863017238529",
+          "nomeCidade": "Aguiar",
+          "idPassaporte": "588",
+          "cargo": "・Investigador 2ª Classe"
+        },
+        {
+          "discordUser": "1510699006362390608",
+          "nomeCidade": "Marcelo Leee",
+          "idPassaporte": "25031",
+          "cargo": "・Investigador 2ª Classe"
+        }
+      ],
+      "quantidadeExonerados": 4
+    },
+    {
       "id": "1786640922655-buubbkyj",
       "createdAt": "2026-08-13T17:08:42.655Z",
       "type": "exoneracao",

@@ -1,6 +1,27 @@
 {
   "entries": [
     {
+      "id": "1787098284199-5fkugek3",
+      "createdAt": "2026-08-19T00:11:24.199Z",
+      "type": "exoneracao",
+      "org": "PCERJ",
+      "emissor": {
+        "id": "1089279107155632248",
+        "nome": "[COORD] Zorro |🦅",
+        "nick": "[COORD] Zorro |🦅",
+        "avatar": "https://cdn.discordapp.com/avatars/1089279107155632248/496cc6fa094c7b51700399d9c99f8b96.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "699025926398148649",
+          "nomeCidade": "Henry Tenebras",
+          "idPassaporte": "33312",
+          "cargo": "・Aluno PCERJ"
+        }
+      ],
+      "quantidadeExonerados": 1
+    },
+    {
       "id": "1787097969617-avpxcorw",
       "createdAt": "2026-08-19T00:06:09.617Z",
       "type": "exoneracao",

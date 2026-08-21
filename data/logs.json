@@ -1,6 +1,141 @@
 {
   "entries": [
     {
+      "id": "1787350657444-55lu8xum",
+      "createdAt": "2026-08-21T22:17:37.444Z",
+      "type": "exoneracao",
+      "org": "PMERJ",
+      "emissor": {
+        "id": "632990574479278090",
+        "nome": "![SUB CMD PMERJ] Tedy M Tenebras",
+        "nick": "![SUB CMD PMERJ] Tedy M Tenebras",
+        "avatar": "https://cdn.discordapp.com/avatars/632990574479278090/a_6d54fb81d25463e8c41f45be184c196a.gif"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1257299249453076653",
+          "nomeCidade": "Joao",
+          "idPassaporte": "29977",
+          "cargo": "・Cabo"
+        },
+        {
+          "discordUser": "1323506701768462361",
+          "nomeCidade": "Lian Scott",
+          "idPassaporte": "32226",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "632024802072461334",
+          "nomeCidade": "Pavano",
+          "idPassaporte": "33962",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "1417231070210031676",
+          "nomeCidade": "Mano B",
+          "idPassaporte": "26004",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "1007346142641672283",
+          "nomeCidade": "Joberval",
+          "idPassaporte": "31890",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "505226148498767872",
+          "nomeCidade": "LBB BomENovo",
+          "idPassaporte": "36629",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "1284538325226618972",
+          "nomeCidade": "Brutus Falle",
+          "idPassaporte": "36610",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "781171031422795817",
+          "nomeCidade": "Ribeiro R",
+          "idPassaporte": "37375",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "501075873269809172",
+          "nomeCidade": "LCK Alles",
+          "idPassaporte": "38698",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "939545027942707221",
+          "nomeCidade": "Santos Goat",
+          "idPassaporte": "38878",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "952319255251157053",
+          "nomeCidade": "Nascimento",
+          "idPassaporte": "1456",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "1063115846186172416",
+          "nomeCidade": "Emanuel",
+          "idPassaporte": "38889",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "1207905839852163214",
+          "nomeCidade": "Cenoura",
+          "idPassaporte": "38738",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "638531245651001364",
+          "nomeCidade": "Jota Silva",
+          "idPassaporte": "26219",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "1374034339607744592",
+          "nomeCidade": "Franthesco",
+          "idPassaporte": "39447",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "1484018726637539480",
+          "nomeCidade": "Livia Freman",
+          "idPassaporte": "16721",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "702650334861983855",
+          "nomeCidade": "Big Smoke",
+          "idPassaporte": "39800",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "714958359131848735",
+          "nomeCidade": "Jhonwick",
+          "idPassaporte": "1260",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "830933099948539924",
+          "nomeCidade": "Hard Brunin",
+          "idPassaporte": "38538",
+          "cargo": "・Soldado"
+        },
+        {
+          "discordUser": "505863226051788800",
+          "nomeCidade": "Pedrao",
+          "idPassaporte": "20744",
+          "cargo": "・Cabo"
+        }
+      ],
+      "quantidadeExonerados": 20
+    },
+    {
       "id": "1787152402737-eadsx2zz",
       "createdAt": "2026-08-19T15:13:22.737Z",
       "type": "exoneracao",

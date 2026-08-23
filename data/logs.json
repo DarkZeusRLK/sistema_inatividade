@@ -1,6 +1,81 @@
 {
   "entries": [
     {
+      "id": "1787521455115-tyb2eq8b",
+      "createdAt": "2026-08-23T21:44:15.119Z",
+      "type": "exoneracao",
+      "org": "PCERJ",
+      "emissor": {
+        "id": "1089279107155632248",
+        "nome": "[COORD] Zorro |🦅",
+        "nick": "[COORD] Zorro |🦅",
+        "avatar": "https://cdn.discordapp.com/avatars/1089279107155632248/496cc6fa094c7b51700399d9c99f8b96.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "823990071018913822",
+          "nomeCidade": "Biel cesar",
+          "idPassaporte": "37588",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "588417560538644510",
+          "nomeCidade": "Corvo",
+          "idPassaporte": "36599",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1170433560214253588",
+          "nomeCidade": "Melo",
+          "idPassaporte": "1640",
+          "cargo": "・Investigador 2ª Classe"
+        },
+        {
+          "discordUser": "1374850075070824470",
+          "nomeCidade": "Luan silva",
+          "idPassaporte": "39551",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "822641454999404595",
+          "nomeCidade": "Marcos Vinicius",
+          "idPassaporte": "39856",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "873983428872257536",
+          "nomeCidade": "Xande digueto",
+          "idPassaporte": "26377",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1319042662095130669",
+          "nomeCidade": "procurado porgolpe",
+          "idPassaporte": "39063",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "672291962262650902",
+          "nomeCidade": "Charlie Gomes",
+          "idPassaporte": "36442",
+          "cargo": "・Investigador 3ª Classe"
+        },
+        {
+          "discordUser": "1073441184116134019",
+          "nomeCidade": "guilherme ( O msm ira trocar )",
+          "idPassaporte": "2247",
+          "cargo": "・Investigador 2ª Classe"
+        },
+        {
+          "discordUser": "1493684051201097799",
+          "nomeCidade": "fatal speed",
+          "idPassaporte": "39981",
+          "cargo": "・Aluno PCERJ"
+        }
+      ],
+      "quantidadeExonerados": 10
+    },
+    {
       "id": "1787350657444-55lu8xum",
       "createdAt": "2026-08-21T22:17:37.444Z",
       "type": "exoneracao",

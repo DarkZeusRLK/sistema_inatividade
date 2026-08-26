@@ -1,6 +1,171 @@
 {
   "entries": [
     {
+      "id": "1787756095931-e2gqd4z5",
+      "createdAt": "2026-08-26T14:54:55.932Z",
+      "type": "exoneracao",
+      "org": "PRF",
+      "emissor": {
+        "id": "410090992520396801",
+        "nome": "[COORD PRF] Mcquen Volkov🏹",
+        "nick": "[COORD PRF] Mcquen Volkov🏹",
+        "avatar": "https://cdn.discordapp.com/avatars/410090992520396801/4570f9bc6cf3dc67d31167197c69b80a.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "383647957779742722",
+          "nomeCidade": "bravo bradok",
+          "idPassaporte": "28913",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1054851896390729820",
+          "nomeCidade": "lucas burbon",
+          "idPassaporte": "37395",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1112561117869379616",
+          "nomeCidade": "Miguel lkzzz",
+          "idPassaporte": "37430",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1451977583708344425",
+          "nomeCidade": "cesinha fps",
+          "idPassaporte": "2190",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1511814789511250170",
+          "nomeCidade": "Eustenio",
+          "idPassaporte": "4378",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "566332718175092746",
+          "nomeCidade": "pipi vinte",
+          "idPassaporte": "37905",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "754727297432551464",
+          "nomeCidade": "Maradona",
+          "idPassaporte": "37912",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1526534301896806440",
+          "nomeCidade": "Ronaldinho S",
+          "idPassaporte": "37913",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "501688045607714817",
+          "nomeCidade": "orlando joga",
+          "idPassaporte": "38365",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1140918546537390141",
+          "nomeCidade": "Sombra Mais",
+          "idPassaporte": "2741",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1161349847358652478",
+          "nomeCidade": "JHONY BRAVO",
+          "idPassaporte": "38361",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1458577920674107487",
+          "nomeCidade": "Marquinhos",
+          "idPassaporte": "38417",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1522335685212897403",
+          "nomeCidade": "ravizinho",
+          "idPassaporte": "37531",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1532423909775904866",
+          "nomeCidade": "Aline",
+          "idPassaporte": "34902",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "487709549609091072",
+          "nomeCidade": "Francisco",
+          "idPassaporte": "38743",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "520932141253656597",
+          "nomeCidade": "chavaes",
+          "idPassaporte": "38047",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "707475551857803326",
+          "nomeCidade": "Bagda",
+          "idPassaporte": "35015",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1071864249028190308",
+          "nomeCidade": "Coronado",
+          "idPassaporte": "11859",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1236446703167606948",
+          "nomeCidade": "Gustavo",
+          "idPassaporte": "38695",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1432512686817546364",
+          "nomeCidade": "Goes Saboado",
+          "idPassaporte": "38229",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "249319681985478657",
+          "nomeCidade": "Esttevan",
+          "idPassaporte": "39040",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "309110753778991125",
+          "nomeCidade": "Jabe",
+          "idPassaporte": "39028",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "363357644574031876",
+          "nomeCidade": "Jorge Antony",
+          "idPassaporte": "39029",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "395595782549405696",
+          "nomeCidade": "CZARPAOLO CP",
+          "idPassaporte": "39043",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "852964791282434078",
+          "nomeCidade": "xarope marqu",
+          "idPassaporte": "33906",
+          "cargo": "・Aluno PRF"
+        }
+      ],
+      "quantidadeExonerados": 25
+    },
+    {
       "id": "1787745690951-k2i318zw",
       "createdAt": "2026-08-26T12:01:30.952Z",
       "type": "exoneracao",

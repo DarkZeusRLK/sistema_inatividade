@@ -1,6 +1,51 @@
 {
   "entries": [
     {
+      "id": "1787756104361-c9m98tq7",
+      "createdAt": "2026-08-26T14:55:04.361Z",
+      "type": "exoneracao",
+      "org": "PRF",
+      "emissor": {
+        "id": "410090992520396801",
+        "nome": "[COORD PRF] Mcquen Volkov🏹",
+        "nick": "[COORD PRF] Mcquen Volkov🏹",
+        "avatar": "https://cdn.discordapp.com/avatars/410090992520396801/4570f9bc6cf3dc67d31167197c69b80a.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "706881019793506378",
+          "nomeCidade": "Guster",
+          "idPassaporte": "39492",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1021579864748339210",
+          "nomeCidade": "zeh dadinho",
+          "idPassaporte": "17131",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "500259275160158210",
+          "nomeCidade": "Cassiano",
+          "idPassaporte": "37974",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "736334707087900682",
+          "nomeCidade": "JEFIN T",
+          "idPassaporte": "39877",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "835192944050700288",
+          "nomeCidade": "cabore makit",
+          "idPassaporte": "35937",
+          "cargo": "・Aluno PRF"
+        }
+      ],
+      "quantidadeExonerados": 5
+    },
+    {
       "id": "1787756095931-e2gqd4z5",
       "createdAt": "2026-08-26T14:54:55.932Z",
       "type": "exoneracao",

@@ -1,6 +1,33 @@
 {
   "entries": [
     {
+      "id": "1787879185301-82390wsa",
+      "createdAt": "2026-08-28T01:06:25.301Z",
+      "type": "exoneracao",
+      "org": "PCERJ",
+      "emissor": {
+        "id": "1089279107155632248",
+        "nome": "[COORD] Zorro |🦅",
+        "nick": "[COORD] Zorro |🦅",
+        "avatar": "https://cdn.discordapp.com/avatars/1089279107155632248/496cc6fa094c7b51700399d9c99f8b96.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1020720140054183988",
+          "nomeCidade": "KAWAN RUPINADO",
+          "idPassaporte": "37487",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1441872096950091856",
+          "nomeCidade": "charuto",
+          "idPassaporte": "23738",
+          "cargo": "・Aluno PCERJ"
+        }
+      ],
+      "quantidadeExonerados": 2
+    },
+    {
       "id": "1787756104361-c9m98tq7",
       "createdAt": "2026-08-26T14:55:04.361Z",
       "type": "exoneracao",

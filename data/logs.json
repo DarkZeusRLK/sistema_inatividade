@@ -1,6 +1,81 @@
 {
   "entries": [
     {
+      "id": "1788362435786-nfb3591k",
+      "createdAt": "2026-09-02T15:20:35.786Z",
+      "type": "exoneracao",
+      "org": "PRF",
+      "emissor": {
+        "id": "410090992520396801",
+        "nome": "[COORD PRF] Mcquen Volkov🏹",
+        "nick": "[COORD PRF] Mcquen Volkov🏹",
+        "avatar": "https://cdn.discordapp.com/avatars/410090992520396801/4570f9bc6cf3dc67d31167197c69b80a.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "482913385370091522",
+          "nomeCidade": "Angola Miran",
+          "idPassaporte": "37014",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "339537206806970388",
+          "nomeCidade": "Claudin Ripá",
+          "idPassaporte": "37940",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "677269915107065886",
+          "nomeCidade": "joel",
+          "idPassaporte": "39565",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "625437896068825094",
+          "nomeCidade": "Medeiros",
+          "idPassaporte": "39505",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "969274359011217518",
+          "nomeCidade": "dom bolo",
+          "idPassaporte": "40224",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1496125406141747253",
+          "nomeCidade": "Anne Tenner",
+          "idPassaporte": "40789",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1409626334665113672",
+          "nomeCidade": "Fernando Mal",
+          "idPassaporte": "41334",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1373110829414875147",
+          "nomeCidade": "Pedro",
+          "idPassaporte": "39922",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1421866537794535496",
+          "nomeCidade": "Sagaz",
+          "idPassaporte": "6356",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "939859370957758514",
+          "nomeCidade": "flicking unk",
+          "idPassaporte": "7343",
+          "cargo": "・Aluno PRF"
+        }
+      ],
+      "quantidadeExonerados": 10
+    },
+    {
       "id": "1788320713264-8o8lq4hj",
       "createdAt": "2026-09-02T03:45:13.264Z",
       "type": "exoneracao",

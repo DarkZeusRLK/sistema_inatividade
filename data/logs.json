@@ -1,6 +1,27 @@
 {
   "entries": [
     {
+      "id": "1788742207154-wi8212sa",
+      "createdAt": "2026-09-07T00:50:07.154Z",
+      "type": "exoneracao",
+      "org": "PCERJ",
+      "emissor": {
+        "id": "1089279107155632248",
+        "nome": "[COORD] Zorro |🦅",
+        "nick": "[COORD] Zorro |🦅",
+        "avatar": "https://cdn.discordapp.com/avatars/1089279107155632248/20e75d51cff2966fb64f15f7a70f1d49.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1332837187577839688",
+          "nomeCidade": "celsinho rocha",
+          "idPassaporte": "35689",
+          "cargo": "・Aluno PCERJ"
+        }
+      ],
+      "quantidadeExonerados": 1
+    },
+    {
       "id": "1788741980366-c5oplwb9",
       "createdAt": "2026-09-07T00:46:20.367Z",
       "type": "exoneracao",

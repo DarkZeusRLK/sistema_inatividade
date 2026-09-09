@@ -1,6 +1,63 @@
 {
   "entries": [
     {
+      "id": "1788997671647-7u4h9c31",
+      "createdAt": "2026-09-09T23:47:51.647Z",
+      "type": "exoneracao",
+      "org": "PCERJ",
+      "emissor": {
+        "id": "1089279107155632248",
+        "nome": "[COORD] Zorro |🦅",
+        "nick": "[COORD] Zorro |🦅",
+        "avatar": "https://cdn.discordapp.com/avatars/1089279107155632248/cc6bf06dc305f2591840dd8e0bb2d92b.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "240693423663742976",
+          "nomeCidade": "Heitor oliveira",
+          "idPassaporte": "28437",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "783191210298310679",
+          "nomeCidade": "silveira zeroum",
+          "idPassaporte": "44221",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "818316723408076831",
+          "nomeCidade": "cigado vasconcello",
+          "idPassaporte": "45806",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1153915611051720704",
+          "nomeCidade": "limaozin",
+          "idPassaporte": "31114",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1375875716528476240",
+          "nomeCidade": "joao rogerin",
+          "idPassaporte": "30054",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1514074496301011157",
+          "nomeCidade": "gnzin goat",
+          "idPassaporte": "44221",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "603207268351082506",
+          "nomeCidade": "Tadeu Smith",
+          "idPassaporte": "25050",
+          "cargo": "・Aluno PCERJ"
+        }
+      ],
+      "quantidadeExonerados": 7
+    },
+    {
       "id": "1788742207154-wi8212sa",
       "createdAt": "2026-09-07T00:50:07.154Z",
       "type": "exoneracao",

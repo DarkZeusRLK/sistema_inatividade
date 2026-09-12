@@ -1,6 +1,45 @@
 {
   "entries": [
     {
+      "id": "1789182317810-uif4x99j",
+      "createdAt": "2026-09-12T03:05:17.810Z",
+      "type": "exoneracao",
+      "org": "PMERJ",
+      "emissor": {
+        "id": "632990574479278090",
+        "nome": "![SUB CMD PMERJ] Tedy M Tenebras",
+        "nick": "![SUB CMD PMERJ] Tedy M Tenebras",
+        "avatar": "https://cdn.discordapp.com/avatars/632990574479278090/a_dfe9371527cc5ef9b587bc1aeae46354.gif"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1328758803218563154",
+          "nomeCidade": "DIAS",
+          "idPassaporte": "27811",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "472092611159785483",
+          "nomeCidade": "Belmas",
+          "idPassaporte": "46462",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "868509535696990238",
+          "nomeCidade": "VT METEBALA",
+          "idPassaporte": "6561",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "1117864033022914682",
+          "nomeCidade": "Marly  Realb",
+          "idPassaporte": "16435",
+          "cargo": "・Cabo"
+        }
+      ],
+      "quantidadeExonerados": 4
+    },
+    {
       "id": "1789182309023-gjljgnoy",
       "createdAt": "2026-09-12T03:05:09.024Z",
       "type": "exoneracao",

@@ -1,6 +1,171 @@
 {
   "entries": [
     {
+      "id": "1789182309023-gjljgnoy",
+      "createdAt": "2026-09-12T03:05:09.024Z",
+      "type": "exoneracao",
+      "org": "PMERJ",
+      "emissor": {
+        "id": "632990574479278090",
+        "nome": "![SUB CMD PMERJ] Tedy M Tenebras",
+        "nick": "![SUB CMD PMERJ] Tedy M Tenebras",
+        "avatar": "https://cdn.discordapp.com/avatars/632990574479278090/a_dfe9371527cc5ef9b587bc1aeae46354.gif"
+      },
+      "exonerados": [
+        {
+          "discordUser": "761937149519724544",
+          "nomeCidade": "Guxta Bolado",
+          "idPassaporte": "25956",
+          "cargo": "・Soldado"
+        },
+        {
+          "discordUser": "1053058341666037861",
+          "nomeCidade": "Boto Lima",
+          "idPassaporte": "27316",
+          "cargo": "・Cabo"
+        },
+        {
+          "discordUser": "1412480109486543030",
+          "nomeCidade": "Brunin Loko",
+          "idPassaporte": "3973",
+          "cargo": "・Soldado"
+        },
+        {
+          "discordUser": "1087896673407205407",
+          "nomeCidade": "Vovo Ramirez",
+          "idPassaporte": "41434",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "713946131759104002",
+          "nomeCidade": "Ninezx",
+          "idPassaporte": "42348",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "799798718395449394",
+          "nomeCidade": "Juca Wiki",
+          "idPassaporte": "42420",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "870069932321292398",
+          "nomeCidade": "Junin Coiote",
+          "idPassaporte": "10108",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "993686651995947038",
+          "nomeCidade": "Dodô Cooper",
+          "idPassaporte": "42635",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "1052560014222573609",
+          "nomeCidade": "Jp SIlent",
+          "idPassaporte": "34550",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "1187442922988240927",
+          "nomeCidade": "Moraes",
+          "idPassaporte": "42432",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "1320163514156974183",
+          "nomeCidade": "Cortezin",
+          "idPassaporte": "11965",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "1020723208640528475",
+          "nomeCidade": "Julinha",
+          "idPassaporte": "42862",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "1254589147755319328",
+          "nomeCidade": "Peconha",
+          "idPassaporte": "42866",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "1367996416617615441",
+          "nomeCidade": "Santos Elemi",
+          "idPassaporte": "42876",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "1465894271281401866",
+          "nomeCidade": "Jeff Keysuke",
+          "idPassaporte": "42762",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "1204977519976259667",
+          "nomeCidade": "Ndzim",
+          "idPassaporte": "42716",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "1509059860854214797",
+          "nomeCidade": "Jotade Serio",
+          "idPassaporte": "26224",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "1233856279680651465",
+          "nomeCidade": "Dante Monten",
+          "idPassaporte": "43377",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "657389872159391774",
+          "nomeCidade": "Patraozinho",
+          "idPassaporte": "44398",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "869329758951993437",
+          "nomeCidade": "Pit Dixavas",
+          "idPassaporte": "44375",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "1482752634774355968",
+          "nomeCidade": "Thzxvn Zxvn",
+          "idPassaporte": "44361",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "1057293690202243104",
+          "nomeCidade": "Psy Unstopbl",
+          "idPassaporte": "38230",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "1414112962901311620",
+          "nomeCidade": "SoarezTry",
+          "idPassaporte": "11142",
+          "cargo": "・Cabo"
+        },
+        {
+          "discordUser": "558101127552303114",
+          "nomeCidade": "TucaGomes",
+          "idPassaporte": "44977",
+          "cargo": "・Aluno PMERJ"
+        },
+        {
+          "discordUser": "1498098609894330548",
+          "nomeCidade": "abominavel",
+          "idPassaporte": "41383",
+          "cargo": "・Aluno PMERJ"
+        }
+      ],
+      "quantidadeExonerados": 25
+    },
+    {
       "id": "1788997768571-peakef0x",
       "createdAt": "2026-09-09T23:49:28.573Z",
       "type": "exoneracao",

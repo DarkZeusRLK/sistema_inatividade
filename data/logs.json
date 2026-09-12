@@ -1,6 +1,39 @@
 {
   "entries": [
     {
+      "id": "1789253263874-ngpzb8u3",
+      "createdAt": "2026-09-12T22:47:43.884Z",
+      "type": "exoneracao",
+      "org": "PCERJ",
+      "emissor": {
+        "id": "1089279107155632248",
+        "nome": "[CMD GEM] Zorro 🦅",
+        "nick": "[CMD GEM] Zorro 🦅",
+        "avatar": "https://cdn.discordapp.com/avatars/1089279107155632248/cc6bf06dc305f2591840dd8e0bb2d92b.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "993677418378309673",
+          "nomeCidade": "pesadelo carioca",
+          "idPassaporte": "47503",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1079757357304795206",
+          "nomeCidade": "znkkj",
+          "idPassaporte": "30541",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1067254554426617956",
+          "nomeCidade": "junior heali",
+          "idPassaporte": "46224",
+          "cargo": "・Aluno PCERJ"
+        }
+      ],
+      "quantidadeExonerados": 3
+    },
+    {
       "id": "1789182317810-uif4x99j",
       "createdAt": "2026-09-12T03:05:17.810Z",
       "type": "exoneracao",

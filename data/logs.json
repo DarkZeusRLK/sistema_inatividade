@@ -1,6 +1,81 @@
 {
   "entries": [
     {
+      "id": "1789419621454-7oinfnc8",
+      "createdAt": "2026-09-14T21:00:21.455Z",
+      "type": "exoneracao",
+      "org": "PCERJ",
+      "emissor": {
+        "id": "1089279107155632248",
+        "nome": "[CMD GEM] Zorro 🦅",
+        "nick": "[CMD GEM] Zorro 🦅",
+        "avatar": "https://cdn.discordapp.com/avatars/1089279107155632248/cc6bf06dc305f2591840dd8e0bb2d92b.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1466148157543940443",
+          "nomeCidade": "Bélgica",
+          "idPassaporte": "1575",
+          "cargo": "・Investigador 2ª Classe"
+        },
+        {
+          "discordUser": "1533202603356196868",
+          "nomeCidade": "gbr reis",
+          "idPassaporte": "45693",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1064913950841512077",
+          "nomeCidade": "igor canarinho",
+          "idPassaporte": "48835",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1204486313894608979",
+          "nomeCidade": "neymar janaino",
+          "idPassaporte": "6599",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1237976350845829130",
+          "nomeCidade": "tzuke nevas",
+          "idPassaporte": "48532",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1296907006841716806",
+          "nomeCidade": "jeferson spaten",
+          "idPassaporte": "47520",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1381471409343041577",
+          "nomeCidade": "migul",
+          "idPassaporte": "22913",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1412622472922136589",
+          "nomeCidade": "Cebola Tesudin",
+          "idPassaporte": "48023",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1481942911921819752",
+          "nomeCidade": "Lagarto Pexeira",
+          "idPassaporte": "46698",
+          "cargo": "・Aluno PCERJ"
+        },
+        {
+          "discordUser": "1538741095037411369",
+          "nomeCidade": "Stenyo",
+          "idPassaporte": "31872",
+          "cargo": "・Investigador 2ª Classe"
+        }
+      ],
+      "quantidadeExonerados": 10
+    },
+    {
       "id": "1789253263874-ngpzb8u3",
       "createdAt": "2026-09-12T22:47:43.884Z",
       "type": "exoneracao",

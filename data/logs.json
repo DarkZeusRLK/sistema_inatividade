@@ -1,6 +1,27 @@
 {
   "entries": [
     {
+      "id": "1789484969869-rlw2w3yb",
+      "createdAt": "2026-09-15T15:09:29.869Z",
+      "type": "exoneracao",
+      "org": "PCERJ",
+      "emissor": {
+        "id": "1089279107155632248",
+        "nome": "[CMD GEM] Zorro 🦅",
+        "nick": "[CMD GEM] Zorro 🦅",
+        "avatar": "https://cdn.discordapp.com/avatars/1089279107155632248/cc6bf06dc305f2591840dd8e0bb2d92b.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1147666736225722378",
+          "nomeCidade": "Gboss",
+          "idPassaporte": "17",
+          "cargo": "・Aluno PCERJ"
+        }
+      ],
+      "quantidadeExonerados": 1
+    },
+    {
       "id": "1789419621454-7oinfnc8",
       "createdAt": "2026-09-14T21:00:21.455Z",
       "type": "exoneracao",

@@ -1,6 +1,153 @@
 {
   "entries": [
     {
+      "id": "1789681883863-jnfpxlx7",
+      "createdAt": "2026-09-17T21:51:23.863Z",
+      "type": "exoneracao",
+      "org": "PRF",
+      "emissor": {
+        "id": "208969433966706689",
+        "nome": "[INSP PRF] Guga | 28319 🏹",
+        "nick": "[INSP PRF] Guga | 28319 🏹",
+        "avatar": "https://cdn.discordapp.com/avatars/208969433966706689/732d68614fb866d8e96f1b11a1892767.png"
+      },
+      "exonerados": [
+        {
+          "discordUser": "1130583403478122558",
+          "nomeCidade": "John Silva",
+          "idPassaporte": "37374",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1197587234254237748",
+          "nomeCidade": "Carioca Savi",
+          "idPassaporte": "8662",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1234991886712963087",
+          "nomeCidade": "marreta",
+          "idPassaporte": "38364",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1472287218746785802",
+          "nomeCidade": "will smith",
+          "idPassaporte": "40771",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1473321941505933373",
+          "nomeCidade": "jessica",
+          "idPassaporte": "41290",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1261288932444995644",
+          "nomeCidade": "purple mixcd",
+          "idPassaporte": "17943",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1283189049556865064",
+          "nomeCidade": "Julio Cesar",
+          "idPassaporte": "37371",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1327775695807713292",
+          "nomeCidade": "Sakura Swag",
+          "idPassaporte": "19328",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1256293229578686716",
+          "nomeCidade": "Brian DuNort",
+          "idPassaporte": "43521",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1536506806342520863",
+          "nomeCidade": "Dimitry K",
+          "idPassaporte": "40413",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "787121262286864384",
+          "nomeCidade": "apemilondas",
+          "idPassaporte": "20776",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1032353238340603904",
+          "nomeCidade": "PYSICO SILVA",
+          "idPassaporte": "44324",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "336271690575380482",
+          "nomeCidade": "Cristofer",
+          "idPassaporte": "44532",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "554362273989263372",
+          "nomeCidade": "LUCAS ROCHA",
+          "idPassaporte": "44490",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "662447781146787865",
+          "nomeCidade": "Renan",
+          "idPassaporte": "34387",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1523225537537900605",
+          "nomeCidade": "erick",
+          "idPassaporte": "44608",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "698366955496931340",
+          "nomeCidade": "Gudan SadBoy",
+          "idPassaporte": "44166",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "510748576842776586",
+          "nomeCidade": "Oliver Tree",
+          "idPassaporte": "15659",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "672518319177465867",
+          "nomeCidade": "Pigmeu Zeus",
+          "idPassaporte": "45506",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1189611270446534687",
+          "nomeCidade": "Cowboy agro",
+          "idPassaporte": "45648",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "1397750881398685828",
+          "nomeCidade": "DHK",
+          "idPassaporte": "14550",
+          "cargo": "・Aluno PRF"
+        },
+        {
+          "discordUser": "993369806478786560",
+          "nomeCidade": "lucas pain",
+          "idPassaporte": "41654",
+          "cargo": "・Aluno PRF"
+        }
+      ],
+      "quantidadeExonerados": 22
+    },
+    {
       "id": "1789484969869-rlw2w3yb",
       "createdAt": "2026-09-15T15:09:29.869Z",
       "type": "exoneracao",
